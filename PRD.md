@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | **Product** | `aio` — All-In-One auto-connect layer for AI coding agents |
-| **Package** | `all-in-one-repo` (npm, installed from GitHub) |
-| **Version** | 1.0.0 |
+| **Package** | `aio-connect` (npm registry; GitHub repo `MRaihan-XXL/all-in-one-repo`) |
+| **Version** | 1.1.0 |
 | **Status** | Approved for implementation |
 | **License** | GPL-3.0 |
 | **Docs language** | English (international) |
@@ -14,7 +14,8 @@
 ## 1. Background
 
 Developers increasingly run several AI coding agents side by side (opencode,
-Claude Code, Kimi Code, jcode, freebuff, Hermes — plus whatever comes next).
+Claude Code, Kimi Code, jcode, freebuff, Hermes, Codex, Gemini — plus whatever
+comes next).
 Each agent keeps its own session, its own config, and its own way of loading
 context. Locally cloned repositories, installed CLI tools, and agent skills
 live in separate places, so every new session starts "cold": the agent does not
@@ -44,18 +45,20 @@ agent directly and prompts in plain language — no slash commands.
 
 ## 3. Users
 
-1. **Primary** — the owner: power user running 6 agents + 43 cloned repos +
+1. **Primary** — the owner: power user running 8 agents + 97 cloned repos +
    a local tools database on one Windows machine.
 2. **Secondary** — public GitHub users: anyone installing
-   `npm install -g github:<owner>/all-in-one-repo` on their own machine with
+   `npm install -g aio-connect` on their own machine with
    their own repos/agents (data folder optional).
 
 ## 4. Functional requirements
 
 ### FR1 — Agent detection & permanent wiring
-`aio` detects installed agents on `PATH` (at minimum: `opencode`, `claude`,
-`kimi`, `jcode`, `freebuff`, `hermes`) and writes the auto-use block into each
-agent's instruction file (global instruction file as fallback). Configuration
+`aio` detects installed agents by `PATH` binary **or** their configuration
+directory (minimum set: `opencode`, `claude`, `kimi`, `jcode`, `freebuff`,
+`hermes`, `codex`, `gemini`) and writes the auto-use block into each
+agent's canonical instruction file (`AGENTS.md` / `CLAUDE.md` / `GEMINI.md`,
+global `~/AGENTS.md` as fallback). Configuration
 persists: after one run, every later agent session is already wired.
 
 **Acceptance:** running `aio` reports per-agent status
@@ -91,9 +94,10 @@ counts for the machine.
 folder → re-run → manifest count increases.
 
 ### FR5 — Auto-update
-`aio update` reinstalls the package from the GitHub repository
-(`npm install -g github:<owner>/all-in-one-repo`) and then automatically
-re-runs setup with the new code, so rules/manifest pick up the new version.
+`aio update` reinstalls the package from npm (`npm install -g aio-connect`;
+GitHub `github:<owner>/all-in-one-repo` remains a fallback source) and then
+automatically re-runs setup with the new code, so rules/manifest pick up the
+new version.
 
 **Acceptance:** `aio update` exits 0 on success, prints new version + setup
 report; offline → clear error, exit 1, no partial damage.
@@ -108,7 +112,9 @@ the manifest, it must start that step with:
 
 where `<function>` is the manifest description (what the tool/repo does).
 
-**Acceptance:** rule present in block with that exact format.
+**Acceptance:** rule present in block with that exact format **and** emitted
+by real agents in live sessions (proven on this machine: claude, jcode via
+antigravity, and opencode all printed the line unprompted).
 
 ### FR7 — Backup & rollback
 Every file is backed up to `~/.aio/backups/` before first modification.
@@ -146,7 +152,7 @@ scan (tokens/passwords/usernames) on tracked files passes.
 | Command | Behavior |
 |---|---|
 | `aio` | Full setup: scan → manifest → inject → MCP ensure → path fix → status table |
-| `aio update` | Reinstall latest from GitHub → re-run setup automatically |
+| `aio update` | Reinstall latest from npm → re-run setup automatically |
 | `aio rollback` | Remove injected block + reverse MCP additions from ledger |
 | `aio --help` | Usage + branding |
 | `aio --version` | Print package version |
@@ -157,36 +163,46 @@ containing `ai-tools.db` / `TOOLS-INDEX.md`). Environment overrides:
 
 ## 7. Branding & documentation deliverables
 
-- **Logo** `docs/logo.svg` — mark + wordmark, referenced in README header.
+- **Logo system** `assets/` — "three streams, one node" motif: tile, mark,
+  wordmark, lockups, monochrome, favicon + presentation page
+  `assets/logo-gallery.html`; `docs/logo.svg` mirrors the tile for README.
 - **Animated flowchart** `docs/flow.svg` — SMIL-animated diagram:
-  prompt → agent → manifest (repos/tools/skills) → disclosed output.
-- **Banner** — ASCII wordmark printed by every `aio` command.
+  prompt → agent → manifest (repos/tools/skills) → disclosed output;
+  explained in `docs/flow.md`.
+- **Banner** — strict-grid ASCII wordmark printed by every `aio` command
+  (regression-tested for alignment).
 - **README.md** (English) — badges, logo, flowchart, quick start, commands,
   update & privacy sections.
 - **docs/CONFIG.md** — every file `aio` touches, rollback, troubleshooting.
+- **docs/SCREENSHOTS.md** — homepage screenshot evidence, method + 97-row index.
 
 ## 8. Out of scope
 
 - Background daemon / autostart service (config-only persistence by decision).
-- Publishing to the public npm registry (GitHub-install distribution only).
+- ~~Publishing to the public npm registry~~ — **superseded**: v1.1.0 publishes
+  as `aio-connect` (the name `aio` was taken).
 - Cloud sync of the manifest; web UI; per-prompt live version checks.
 
 ## 9. Acceptance checklist
 
-- [x] `node --test` passes (idempotency, rollback, scan, tool fallback).
-- [x] On the owner machine: block in 4 instruction files (exactly 1× each),
+- [x] `node --test` passes (idempotency, rollback, scan, tool fallback,
+      disclosure format, TOML/JSON ensure, banner grid) — 9/9.
+- [x] On the owner machine: block in **7** instruction files (exactly 1× each),
       MCP entries unchanged/complete, 2 stale registry paths repaired.
-- [x] Manifest shows REPOS + TOOLS + SKILLS with counts.
-- [x] Re-run `aio` → no duplicates (FR4).
+- [x] Manifest shows REPOS + TOOLS + SKILLS with counts (97 · 23 · 67).
+- [x] Re-run `aio` → no duplicates (FR4); setup → rollback → setup cycle
+      removes/restores 7/7 blocks.
 - [x] Public repo pushed; tracked-files secret scan clean (FR8).
-- [x] Fresh `npm install -g github:…` → `aio --help` works; `aio update`
-      exits 0 (FR5).
+- [x] Fresh install → `aio --help` works; `aio update` exits 0 (FR5).
+- [x] FR6 emitted by real agents in live sessions (claude, jcode, opencode).
+- [ ] npm publish of `aio-connect@1.1.0` (blocked on interactive `npm login`)
+      + fresh-install verification from the registry.
 
-Verified 2026-09-28: tests 5/5; setup → rollback → setup cycle proven on the
-owner machine (blocks removed/restored 4/4, pre-existing MCP entries never
-touched, ledger `[]`); manifest `REPOS 43 · TOOLS 23 · SKILLS 67`; repo
-`MRaihan-XXL/all-in-one-repo` public, commit `04abce3`, 17 files, 6-pattern
-secret scan clean; `aio update` reinstall + re-setup verified.
+Verified 2026-09-28: tests 9/9; setup → rollback → setup cycle proven on the
+owner machine (blocks removed/restored **7/7**, pre-existing MCP entries never
+touched, ledger-driven MCP reversal for the entries aio created); manifest
+`REPOS 97 · TOOLS 23 · SKILLS 67`; 97/97 homepage screenshots; repo
+`MRaihan-XXL/all-in-one-repo` public; FR6 live-tested on three agents.
 
 ## 10. Revision history
 
@@ -194,3 +210,4 @@ secret scan clean; `aio update` reinstall + re-setup verified.
 |---|---|
 | 2026-09-14 | v1 — initial PRD (FR1–FR8, branding, auto-update, disclosure) |
 | 2026-09-28 | v1.1 — acceptance checklist signed off after end-to-end verification |
+| 2026-09-28 | v1.2 — 8 agents (codex/gemini, dir-based detection, 6 MCP formats), npm `aio-connect`, FR6 live proof, brand kit, screenshot evidence index |

@@ -12,7 +12,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="license: GPL-3.0">
   <img src="https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg" alt="node >= 22">
-  <img src="https://img.shields.io/badge/agents-6-orange.svg" alt="6 agents supported">
+  <img src="https://img.shields.io/badge/npm-aio--connect-orange.svg" alt="npm: aio-connect">
+  <img src="https://img.shields.io/badge/agents-8-orange.svg" alt="8 agents supported">
   <img src="https://img.shields.io/badge/zero%20runtime%20deps-stdlib-lightgrey.svg" alt="zero runtime dependencies">
 </p>
 
@@ -37,8 +38,9 @@ instruction files by hand.
    `REPOS · TOOLS · SKILLS`.
 3. **Inject** — appends a marker-delimited *auto-use block* to each agent's
    instruction file (idempotent — always exactly one copy).
-4. **Ensure** — adds `codebase-memory-mcp` to opencode / claude / kimi configs
-   when the binary exists and the entry is missing.
+4. **Ensure** — adds `codebase-memory-mcp` to opencode / claude / kimi /
+   jcode / codex / gemini configs when the binary exists and the entry is
+   missing.
 5. **Repair** — fixes stale path references after folder renames.
 
 Then you just open an agent and write normal, plain-language prompts. The agent
@@ -50,11 +52,13 @@ routes itself through the manifest and **must disclose what it used**:
 
 ## Install
 
-The npm name `aio` is taken, so install straight from GitHub:
-
 ```bash
-npm install -g github:MRaihan-XXL/all-in-one-repo
+npm install -g aio-connect
 ```
+
+> The npm name `aio` was already taken — the package is published as
+> **`aio-connect`**, the binary stays `aio`. (Installing straight from GitHub
+> with `npm install -g github:MRaihan-XXL/all-in-one-repo` also works.)
 
 Requires **Node.js ≥ 22** (uses the built-in `node:sqlite`, optional).
 
@@ -62,7 +66,7 @@ Requires **Node.js ≥ 22** (uses the built-in `node:sqlite`, optional).
 
 ```bash
 aio                # scan + generate + inject (default command)
-aio update         # update from GitHub, then re-run setup
+aio update         # update from npm, then re-run setup
 aio rollback       # surgically remove everything aio injected
 aio --help         # full help
 ```
@@ -82,7 +86,8 @@ Short version:
 - `aio-context.md` — generated manifest (yours to delete anytime)
 - one `AIO AUTO-CONTEXT` block in each agent's instruction file
   (`~/.config/opencode/AGENTS.md`, `~/.claude/CLAUDE.md`,
-  `~/.kimi-code/AGENTS.md`, `~/AGENTS.md`)
+  `~/.kimi-code/AGENTS.md`, `~/.jcode/AGENTS.md`, `~/.codex/AGENTS.md`,
+  `~/.gemini/GEMINI.md`, `~/AGENTS.md`)
 - MCP entry for `codebase-memory-mcp` — only if missing, only if detected
 - a file backup of every file before it is modified → `~/.aio/backups/`
 
@@ -94,7 +99,7 @@ Nothing else is touched. Local data (`ai-tools.db`, `TOOLS-INDEX.md`,
 - **Clone a new repo?** Run `aio` again — it rescans on every run, so new
   repositories and tools appear in the manifest automatically.
 - **Agent updated its config format?** `aio update` pulls the latest rules
-  from this repository and re-runs setup.
+  from npm and re-runs setup.
 - **Want your machine back?** `aio rollback` removes the injected block and
   any MCP entry that *aio itself* added (your own entries are never touched;
   file backups are kept as a safety net).
@@ -106,9 +111,21 @@ Nothing else is touched. Local data (`ai-tools.db`, `TOOLS-INDEX.md`,
 | `opencode` | `~/.config/opencode/AGENTS.md` | ✅ `opencode.jsonc` |
 | `claude` | `~/.claude/CLAUDE.md` | ✅ `~/.claude.json` |
 | `kimi` | `~/.kimi-code/AGENTS.md` | ✅ `~/.kimi-code/mcp.json` |
-| `jcode` | `~/AGENTS.md` (fallback) | — |
+| `jcode` | `~/.jcode/AGENTS.md` (fallback `~/AGENTS.md`) | ✅ `~/.jcode/mcp.json` |
+| `codex` | `~/.codex/AGENTS.md` | ✅ `~/.codex/config.toml` |
+| `gemini` | `~/.gemini/GEMINI.md` | ✅ `~/.gemini/settings.json` |
 | `freebuff` | `~/AGENTS.md` (fallback) | — |
 | `hermes` | `~/AGENTS.md` | — |
+
+Detection is by `PATH` binary **or** the agent's config directory — codex and
+gemini are wired even without a shell wrapper.
+
+## Brand kit
+
+The identity ("three streams, one node"), palette, favicon sizes, CLI banner
+grid and usage rules live in
+**[assets/logo-gallery.html](./assets/logo-gallery.html)** (open it in a
+browser); source SVGs are in [`assets/`](./assets/).
 
 ## Development
 
