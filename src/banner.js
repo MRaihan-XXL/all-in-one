@@ -10,23 +10,23 @@ export function getVersion() {
   }
 }
 
-const ART = [
-  '  █████╗  ██╗   ██████╗ ',
-  ' ██╔══██╗ ██║  ██╔═══██╗',
-  ' ████████║ ██║  ██║   ██║',
-  ' ██╔══██║ ██║  ██║   ██║',
-  ' ██║  ██║ ██║  ╚██████╔╝',
-  ' ╚═╝  ╚═╝ ╚═╝   ╚═════╝ ',
-];
+// Strict grid: each glyph is a fixed width, joined with single spaces — every
+// row is exactly 8+1+4+1+8 = 22 columns, so letters can never come out crooked.
+const GLYPHS = {
+  A: [' ██████ ', '██    ██', '██    ██', '████████', '██    ██', '██    ██'],
+  I: ['████', ' ██ ', ' ██ ', ' ██ ', ' ██ ', '████'],
+  O: [' ██████ ', '██    ██', '██    ██', '██    ██', '██    ██', ' ██████ '],
+};
+export const ART = GLYPHS.A.map((row, i) => `${row} ${GLYPHS.I[i]} ${GLYPHS.O[i]}`);
 
 export function banner() {
   const color = process.stdout.isTTY;
-  const green = color ? '\x1b[32m' : '';
+  const accent = color ? '\x1b[38;5;203m' : '';
   const dim = color ? '\x1b[2m' : '';
   const reset = color ? '\x1b[0m' : '';
   const version = getVersion();
   const lines = [
-    ...ART.map((l) => green + l + reset),
+    ...ART.map((l) => accent + l + reset),
     `${dim}  all-in-one-repo v${version} — auto-connect AI agents to your repos, tools & skills${reset}`,
     `${dim}  GPL-3.0 · https://github.com/MRaihan-XXL/all-in-one-repo${reset}`,
   ];

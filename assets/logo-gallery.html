@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aio — brand kit</title>
+<style>
+  :root{
+    --ink:#101418; --paper:#F7F5F2; --accent:#FF4A1C;
+    --line:#E4E0DA; --mute:#6B6862;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font:15px/1.6 ui-sans-serif,system-ui,"Segoe UI",sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:64px 40px 96px}
+  .kicker{font:600 11px/1 ui-monospace,Consolas,monospace;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--accent)}
+  h1{font-size:44px;line-height:1.05;letter-spacing:-.02em;margin:14px 0 10px;font-weight:680}
+  h2{font-size:20px;letter-spacing:-.01em;margin:56px 0 6px;font-weight:640}
+  .sub{color:var(--mute);margin:0 0 8px;max-width:64ch}
+  .rule{border:0;border-top:1px solid var(--line);margin:56px 0 0}
+  .grid{display:grid;gap:16px;margin-top:20px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;
+    padding:28px;display:flex;align-items:center;justify-content:center;min-height:170px}
+  .card.dark{background:var(--ink);border-color:var(--ink)}
+  .card.tall{min-height:230px}
+  .cap{font:600 11px/1.5 ui-monospace,Consolas,monospace;color:var(--mute);
+    letter-spacing:.08em;text-transform:uppercase;margin-top:8px}
+  .sizes{display:flex;align-items:flex-end;gap:24px;padding:8px 0}
+  .sizes figure{margin:0;text-align:center}
+  .swatches{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px}
+  .sw{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+  .sw .chip{height:92px}
+  .sw .meta{padding:12px 14px;font:13px/1.5 ui-monospace,Consolas,monospace}
+  .sw .meta b{display:block;font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px}
+  .sw .meta span{color:var(--mute)}
+  pre.cli{background:var(--ink);color:var(--paper);border-radius:14px;
+    padding:26px 30px;overflow:auto;font:14px/1.45 ui-monospace,Consolas,monospace}
+  pre.cli .a{color:#FF6A45}
+  pre.cli .d{color:#8A9099}
+  .rules{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+  .rules ul{margin:0;padding:18px 18px 18px 38px;background:#fff;border:1px solid var(--line);
+    border-radius:14px}
+  .rules li{margin:6px 0}
+  .rules .no li::marker{content:"✗  ";color:var(--accent)}
+  .rules .yes li::marker{content:"✓  ";color:#1B7F4B}
+  code{font:13px ui-monospace,Consolas,monospace;background:#EEEAE4;padding:1px 6px;border-radius:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">Brand kit · v1.1.0</div>
+  <h1>aio — all-in-one-repo</h1>
+  <p class="sub">Identity system for the auto-connect layer of AI coding agents.
+  Motif: <b>three streams, one node</b> — many agents, repos and tools converging
+  into a single context. Flat, geometric, no gradients.</p>
+
+  <hr class="rule">
+
+  <h2>Lockup</h2>
+  <p class="sub">Primary horizontal lockup: app tile + geometric wordmark. The i-dot
+  carries the accent, echoing the convergence node.</p>
+  <div class="grid g2">
+    <div class="card tall"><img src="logo-lockup.svg" alt="aio lockup" width="420"></div>
+    <div class="card dark tall"><img src="logo-lockup-reversed.svg" alt="aio lockup on dark" width="420"></div>
+  </div>
+  <div class="cap">left: paper background · right: ink background (reversed treatment)</div>
+
+  <h2>Mark &amp; tile</h2>
+  <div class="grid g4">
+    <div class="card"><img src="logo-tile.svg" alt="tile" width="112"></div>
+    <div class="card"><img src="logo-mark.svg" alt="mark" width="112"></div>
+    <div class="card dark"><img src="logo-mark-reversed.svg" alt="mark reversed" width="112"></div>
+    <div class="card"><img src="logo-favicon.svg" alt="favicon" width="112"></div>
+  </div>
+  <div class="cap">app tile · mark on light · mark on ink · favicon (same geometry, tuned for 32 px)</div>
+
+  <h2>Wordmark</h2>
+  <div class="grid g2">
+    <div class="card"><img src="logo-wordmark.svg" alt="wordmark" width="300"></div>
+    <div class="card"><img src="logo-mono-black.svg" alt="mono black" width="400"></div>
+  </div>
+  <div class="cap">single-color letterforms (constructed paths — no font dependency)</div>
+
+  <h2>Monochrome</h2>
+  <div class="grid g2">
+    <div class="card"><img src="logo-mono-black.svg" alt="mono black" width="400"></div>
+    <div class="card dark"><img src="logo-mono-white.svg" alt="mono white" width="400"></div>
+  </div>
+  <div class="cap">single-ink fallbacks for embossing, fax-grade contexts and print</div>
+
+  <h2>Real sizes</h2>
+  <div class="card" style="justify-content:flex-start">
+    <div class="sizes">
+      <figure><img src="logo-favicon.svg" width="16" height="16" alt="16"><figcaption class="cap">16</figcaption></figure>
+      <figure><img src="logo-favicon.svg" width="32" height="32" alt="32"><figcaption class="cap">32</figcaption></figure>
+      <figure><img src="logo-tile.svg" width="48" height="48" alt="48"><figcaption class="cap">48</figcaption></figure>
+      <figure><img src="logo-tile.svg" width="64" height="64" alt="64"><figcaption class="cap">64</figcaption></figure>
+      <figure><img src="logo-tile.svg" width="96" height="96" alt="96"><figcaption class="cap">96</figcaption></figure>
+    </div>
+  </div>
+
+  <h2>Palette</h2>
+  <div class="swatches">
+    <div class="sw"><div class="chip" style="background:#101418"></div>
+      <div class="meta"><b>Ink</b><span>#101418 · surfaces, type</span></div></div>
+    <div class="sw"><div class="chip" style="background:#FF4A1C"></div>
+      <div class="meta"><b>Vermilion</b><span>#FF4A1C · the node, accents only</span></div></div>
+    <div class="sw"><div class="chip" style="background:#F7F5F2;border-bottom:1px solid var(--line)"></div>
+      <div class="meta"><b>Paper</b><span>#F7F5F2 · background, reversed mark</span></div></div>
+  </div>
+
+  <h2>CLI banner</h2>
+  <p class="sub">Console identity: strict 22-column grid — glyphs are joined
+  row-by-row from fixed-width parts, so the letters can never drift out of alignment.</p>
+  <pre class="cli"><span class="a"> ██████  ████  ██████
+██    ██  ██  ██    ██
+██    ██  ██  ██    ██
+████████  ██  ██    ██
+██    ██  ██  ██    ██
+██    ██ ████  ██████ </span>
+<span class="d">  all-in-one-repo v1.1.0 — auto-connect AI agents to your repos, tools &amp; skills
+  GPL-3.0 · https://github.com/MRaihan-XXL/all-in-one-repo</span></pre>
+
+  <h2>Usage rules</h2>
+  <div class="rules">
+    <div class="yes">
+      <ul>
+        <li>Keep clear space equal to the node diameter around the mark.</li>
+        <li>Use the accent only for the node / i-dot — never for body text.</li>
+        <li>Reverse to paper-on-ink on dark surfaces.</li>
+        <li>Scale the favicon geometry below 64 px; full mark above.</li>
+      </ul>
+    </div>
+    <div class="no">
+      <ul>
+        <li>No gradients, glows, or starbursts on the mark.</li>
+        <li>Don’t stretch, rotate, or recolor the streams.</li>
+        <li>Don’t outline the tile or add drop shadows.</li>
+        <li>Don’t place the ink mark on busy photos.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

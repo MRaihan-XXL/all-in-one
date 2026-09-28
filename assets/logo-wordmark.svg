@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 128" width="210" height="128" role="img" aria-label="aio wordmark">
+  <!-- geometric single-story letterforms: constructed paths, no fonts -->
+  <g fill="none" stroke="#101418" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="44" cy="70" r="26"/>          <!-- a: bowl -->
+    <path d="M70 44 V100"/>                   <!-- a: stem -->
+    <path d="M110 44 V100"/>                  <!-- i -->
+    <circle cx="164" cy="70" r="26"/>         <!-- o -->
+  </g>
+  <circle cx="110" cy="24" r="8" fill="#FF4A1C"/> <!-- i: dot = accent -->
+</svg>
