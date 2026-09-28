@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 890 430" width="890" height="430" role="img" aria-label="How aio works: prompt to agent to disclosed result, fed by the aio manifest">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#8fd460"/>
+    </marker>
+    <marker id="ah-dim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#5c8a4e"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="890" height="430" rx="16" fill="#0a0f0a"/>
+  <rect x="1" y="1" width="888" height="428" rx="15" fill="none" stroke="#1e2b1e" stroke-width="2"/>
+
+  <!-- boxes -->
+  <g font-family="'Segoe UI',system-ui,-apple-system,sans-serif">
+    <g>
+      <rect x="40" y="160" width="210" height="76" rx="12" fill="#123b12" stroke="#8fd460" stroke-width="2"/>
+      <text x="145" y="193" text-anchor="middle" font-size="17" font-weight="600" fill="#e9f6e2">Your prompt</text>
+      <text x="145" y="216" text-anchor="middle" font-size="12.5" fill="#9dc48d">plain language, no /command</text>
+    </g>
+    <g>
+      <rect x="320" y="60" width="270" height="76" rx="12" fill="#123b12" stroke="#8fd460" stroke-width="2"/>
+      <text x="455" y="93" text-anchor="middle" font-size="17" font-weight="600" fill="#e9f6e2">AI agent</text>
+      <text x="455" y="116" text-anchor="middle" font-size="12.5" fill="#9dc48d">opencode · claude · kimi · jcode · freebuff · hermes</text>
+    </g>
+    <g>
+      <rect x="320" y="290" width="270" height="76" rx="12" fill="#0f2f0f" stroke="#5c8a4e" stroke-width="2" stroke-dasharray="7 5"/>
+      <text x="455" y="323" text-anchor="middle" font-size="17" font-weight="600" fill="#d7ecd0">aio manifest</text>
+      <text x="455" y="346" text-anchor="middle" font-size="12.5" fill="#9dc48d">REPOS · TOOLS · SKILLS (auto-generated)</text>
+    </g>
+    <g>
+      <rect x="645" y="160" width="210" height="76" rx="12" fill="#123b12" stroke="#8fd460" stroke-width="2"/>
+      <text x="750" y="193" text-anchor="middle" font-size="17" font-weight="600" fill="#e9f6e2">Your answer</text>
+      <text x="750" y="216" text-anchor="middle" font-size="12.5" fill="#9dc48d">usage disclosed, sources named</text>
+    </g>
+  </g>
+
+  <!-- arrows -->
+  <g fill="none" stroke="#8fd460" stroke-width="2.5" stroke-linecap="round">
+    <path id="p1" d="M250,198 H285 V98 H316" marker-end="url(#ah)"/>
+    <path id="p3" d="M590,98 H615 V198 H641" marker-end="url(#ah)"/>
+  </g>
+  <path id="p2" d="M455,286 V140" fill="none" stroke="#5c8a4e" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#ah-dim)"/>
+
+  <!-- flow labels -->
+  <g font-family="'Segoe UI',system-ui,-apple-system,sans-serif" font-size="11.5" fill="#7ea873">
+    <text x="256" y="216">1 · prompt</text>
+    <text x="468" y="224">2 · auto context (no slash-command)</text>
+    <text x="626" y="154">3 · disclosed result</text>
+  </g>
+
+  <!-- traveling pulses -->
+  <g fill="#c9f0b6">
+    <circle r="5">
+      <animateMotion dur="2.4s" begin="0s" repeatCount="indefinite" path="M250,198 H285 V98 H316"/>
+    </circle>
+    <circle r="5" fill="#8fd460">
+      <animateMotion dur="2.4s" begin="0.8s" repeatCount="indefinite" path="M455,286 V140"/>
+    </circle>
+    <circle r="5">
+      <animateMotion dur="2.4s" begin="1.6s" repeatCount="indefinite" path="M590,98 H615 V198 H641"/>
+    </circle>
+  </g>
+
+  <!-- legend -->
+  <g font-family="'Segoe UI',system-ui,-apple-system,sans-serif" font-size="12.5" fill="#9dc48d">
+    <text x="445" y="405" text-anchor="middle">Agent reads the manifest on its own and reports:  [aio] Using &lt;name&gt; (&lt;type&gt;) — &lt;function&gt;</text>
+  </g>
+</svg>

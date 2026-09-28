@@ -1,0 +1,17 @@
+# --- local data NEVER uploaded (FR8) ---
+ai-tools.db
+screenshots/
+TRACKING.md
+TOOLS-INDEX.md
+aio-context.md
+*.env
+.env*
+
+# --- backups & runtime state (machine-local) ---
+.aio/
+node_modules/
+
+# --- editor/OS noise ---
+*.log
+Thumbs.db
+.DS_Store

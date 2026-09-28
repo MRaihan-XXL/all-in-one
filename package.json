@@ -1,0 +1,46 @@
+{
+  "name": "all-in-one-repo",
+  "version": "1.0.0",
+  "description": "aio — auto-connect your AI coding agents to your local repos, tools & skills. No slash-commands.",
+  "type": "module",
+  "bin": {
+    "aio": "./bin/aio.js"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.js\""
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "bin",
+    "src",
+    "test",
+    "assets",
+    "docs",
+    "README.md",
+    "PRD.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "ai",
+    "agent",
+    "ai-agent",
+    "opencode",
+    "claude-code",
+    "mcp",
+    "context",
+    "auto-connect",
+    "cli"
+  ],
+  "author": "MRaihan-XXL",
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MRaihan-XXL/all-in-one-repo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MRaihan-XXL/all-in-one-repo/issues"
+  },
+  "homepage": "https://github.com/MRaihan-XXL/all-in-one-repo#readme"
+}
