@@ -25,8 +25,8 @@ Environment:
   AIO_REPOS_DIR, AIO_HOME  Same as --repos / --home
 
 What it does:
-  1. Scans installed agents (opencode, claude, kimi, jcode, freebuff, hermes),
-     cloned repos, local tools catalog, and global skills.
+  1. Scans installed agents (opencode, claude, kimi, jcode, freebuff, hermes,
+     codex, gemini), cloned repos, local tools catalog, and global skills.
   2. Generates a context manifest (aio-context.md) listing REPOS/TOOLS/SKILLS.
   3. Injects a marker-delimited auto-use block into each agent's instruction
      file — idempotent, always exactly one copy.

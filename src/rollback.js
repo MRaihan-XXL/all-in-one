@@ -10,6 +10,9 @@ export function runRollback() {
     { label: 'opencode', file: path.join(home, '.config', 'opencode', 'AGENTS.md') },
     { label: 'claude', file: path.join(home, '.claude', 'CLAUDE.md') },
     { label: 'kimi', file: path.join(home, '.kimi-code', 'AGENTS.md') },
+    { label: 'jcode', file: path.join(home, '.jcode', 'AGENTS.md') },
+    { label: 'codex', file: path.join(home, '.codex', 'AGENTS.md') },
+    { label: 'gemini', file: path.join(home, '.gemini', 'GEMINI.md') },
     { label: 'global', file: path.join(home, 'AGENTS.md') },
   ];
 

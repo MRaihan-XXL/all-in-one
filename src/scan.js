@@ -3,7 +3,19 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
-export const AGENT_NAMES = ['opencode', 'claude', 'kimi', 'jcode', 'freebuff', 'hermes'];
+// Agent spec: PATH binary OR instruction-parent dir present (codex/gemini may be
+// configured without a shell wrapper).
+const AGENTS = [
+  { name: 'opencode', dirHint: '.config/opencode' },
+  { name: 'claude', dirHint: '.claude' },
+  { name: 'kimi', dirHint: '.kimi-code' },
+  { name: 'jcode', dirHint: '.jcode' },
+  { name: 'freebuff', dirHint: null },
+  { name: 'hermes', dirHint: null },
+  { name: 'codex', dirHint: '.codex' },
+  { name: 'gemini', dirHint: '.gemini' },
+];
+export const AGENT_NAMES = AGENTS.map((a) => a.name);
 
 function pathDirs() {
   return (process.env.PATH || '')
@@ -27,11 +39,17 @@ function findOnPath(name) {
   return null;
 }
 
-/** Detect the known agent CLIs on PATH. */
+/** Detect the known agent CLIs: on PATH, or by their instruction directory. */
 export function detectAgents() {
-  return AGENT_NAMES.map((name) => {
+  const home = os.homedir();
+  return AGENTS.map(({ name, dirHint }) => {
     const bin = findOnPath(name);
-    return { name, found: Boolean(bin), bin };
+    const configured = Boolean(dirHint && fs.existsSync(path.join(home, dirHint)));
+    return {
+      name,
+      found: Boolean(bin) || configured,
+      bin: bin || (configured ? `(configured: ~/${dirHint})` : null),
+    };
   });
 }
 

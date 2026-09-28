@@ -12,6 +12,9 @@ function targetFiles(home) {
     { label: 'opencode', file: path.join(home, '.config', 'opencode', 'AGENTS.md') },
     { label: 'claude', file: path.join(home, '.claude', 'CLAUDE.md') },
     { label: 'kimi', file: path.join(home, '.kimi-code', 'AGENTS.md') },
+    { label: 'jcode', file: path.join(home, '.jcode', 'AGENTS.md') },
+    { label: 'codex', file: path.join(home, '.codex', 'AGENTS.md') },
+    { label: 'gemini', file: path.join(home, '.gemini', 'GEMINI.md') },
     { label: 'global', file: path.join(home, 'AGENTS.md') },
   ];
 }
@@ -83,10 +86,12 @@ export async function runSetup(opts = {}) {
       opencode: '→ .config/opencode/AGENTS.md',
       claude: '→ .claude/CLAUDE.md',
       kimi: '→ .kimi-code/AGENTS.md',
+      jcode: '→ .jcode/AGENTS.md',
+      codex: '→ .codex/AGENTS.md',
+      gemini: '→ .gemini/GEMINI.md',
       hermes: '→ ~/AGENTS.md',
-      jcode: '→ ~/AGENTS.md (fallback)',
       freebuff: '→ ~/AGENTS.md (fallback)',
-    }[a.name];
+    }[a.name] || '';
     row(a.found ? 'x' : ' ', a.name, `${a.found ? 'detected' : 'not installed'}  ${cover}`);
   }
 

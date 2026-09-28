@@ -36,10 +36,12 @@ export function buildBlock({ version, manifestPath, dataDir }) {
   lines.push(
     '',
     'Auto-use rules (plain-language prompts only — NO slash-commands required):',
-    '1. When a prompt involves a local repository, tool, service, or skill, read the manifest above and route yourself to the matching entry on your own — never ask the user to type `/command` for routing.',
-    '2. USAGE DISCLOSURE (mandatory): whenever you actually use a repository or a tool from the manifest, begin that step with exactly one line:',
+    '1. USAGE DISCLOSURE (MANDATORY — never skip): the moment you read, list, cite, or act on ANY entry from the manifest above, the FIRST line of that part of your reply must be exactly:',
     '   [aio] Using <name> (<type>) — <function>',
-    '   where <type> = repo | cli | service | skill, and <function> is the one-line description from the manifest.',
+    '   where <type> = repo | cli | service | skill, and <function> = the manifest entry\'s one-line description.',
+    '   Example: [aio] Using Stirling-PDF (repo) — HTML/CSS/JS to PDF converter',
+    '   Emit the line BEFORE the related answer text, in every response that touches the manifest — not optional, not a recap, no rewording.',
+    '2. When a prompt involves a local repository, tool, service, or skill, read the manifest above and route yourself to the matching entry on your own — never ask the user to type `/command` for routing.',
     '3. Prefer manifest entries (already installed locally) over proposing new installs.',
     '4. If the user mentions a repo/tool that is not in the manifest, tell them to run `aio` again to rescan.',
     '5. Reply in the user’s language.'
@@ -145,13 +147,18 @@ export function ledgerList() {
   return ledgerRead();
 }
 
-function ensureJsonEntry(file, key, entry, label, rootKey) {
-  if (!fs.existsSync(file)) return { target: path.basename(file), status: 'file not found — skipped' };
-  let obj;
-  try {
-    obj = JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch (e) {
-    return { target: path.basename(file), status: `parse error: ${e.message}` };
+export function ensureJsonEntry(file, key, entry, label, rootKey, create = false) {
+  let obj = {};
+  if (fs.existsSync(file)) {
+    try {
+      obj = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch (e) {
+      return { target: path.basename(file), status: `parse error: ${e.message}` };
+    }
+  } else if (create && fs.existsSync(path.dirname(file))) {
+    obj = {}; // agent config dir present → bootstrap the file (gemini settings.json)
+  } else {
+    return { target: path.basename(file), status: 'file not found — skipped' };
   }
   const holder = rootKey ? (obj[rootKey] ||= {}) : obj;
   if (holder[key]) return { target: path.basename(file), status: 'present' };
@@ -160,6 +167,23 @@ function ensureJsonEntry(file, key, entry, label, rootKey) {
   const text = JSON.stringify(obj, null, 2) + '\n';
   JSON.parse(text); // verify before write
   fs.writeFileSync(file, text);
+  ledgerAdd(file, key);
+  return { target: path.basename(file), status: 'added' };
+}
+
+/** codex config.toml: append [mcp_servers.<key>] only when absent. */
+export function ensureTomlEntry(file, key, entry, label) {
+  if (!fs.existsSync(file)) return { target: path.basename(file), status: 'file not found — skipped' };
+  const txt = fs.readFileSync(file, 'utf8');
+  const header = `[mcp_servers.${key}]`;
+  if (txt.includes(header) || txt.includes(`[mcp_servers."${key}"]`)) {
+    return { target: path.basename(file), status: 'present' };
+  }
+  backup(file, label);
+  const body = Object.entries(entry)
+    .map(([k, v]) => `${k} = ${JSON.stringify(v)}`)
+    .join('\n');
+  fs.writeFileSync(file, txt.replace(/\s*$/, '') + `\n\n${header}\n${body}\n`);
   ledgerAdd(file, key);
   return { target: path.basename(file), status: 'added' };
 }
@@ -183,23 +207,25 @@ function ensureOpencodeJsonc(key, entry) {
   return { target: 'opencode.jsonc', status: 'added' };
 }
 
-/** Ensure codebase-memory-mcp exists in opencode / claude / kimi configs. */
+/** Ensure codebase-memory-mcp exists in opencode / claude / kimi / jcode / codex / gemini configs. */
 export function ensureMcp(binary) {
   const entry = { command: binary };
+  const home = os.homedir();
   const results = [];
   results.push(ensureOpencodeJsonc(MCP_KEY, { type: 'local', command: binary }));
   results.push(
-    ensureJsonEntry(path.join(os.homedir(), '.claude.json'), MCP_KEY, entry, 'claude-json', 'mcpServers')
+    ensureJsonEntry(path.join(home, '.claude.json'), MCP_KEY, entry, 'claude-json', 'mcpServers')
   );
   results.push(
-    ensureJsonEntry(
-      path.join(os.homedir(), '.kimi-code', 'mcp.json'),
-      MCP_KEY,
-      entry,
-      'kimi-mcp',
-      'mcpServers'
-    )
+    ensureJsonEntry(path.join(home, '.kimi-code', 'mcp.json'), MCP_KEY, entry, 'kimi-mcp', 'mcpServers')
   );
+  results.push(
+    ensureJsonEntry(path.join(home, '.jcode', 'mcp.json'), MCP_KEY, entry, 'jcode-mcp', 'servers')
+  );
+  results.push(
+    ensureJsonEntry(path.join(home, '.gemini', 'settings.json'), MCP_KEY, entry, 'gemini-settings', 'mcpServers', true)
+  );
+  results.push(ensureTomlEntry(path.join(home, '.codex', 'config.toml'), MCP_KEY, entry, 'codex-toml'));
   return results;
 }
 
@@ -212,18 +238,27 @@ export function removeMcpAdditions() {
       continue;
     }
     const txt = fs.readFileSync(file, 'utf8');
-    if (!txt.includes(`"${key}"`)) {
+    if (!txt.includes(key)) {
       out.push({ target: path.basename(file), status: 'already gone' });
       continue;
     }
     backup(file, 'rollback-mcp');
-    if (file.endsWith('.jsonc')) {
+    if (file.endsWith('.toml')) {
+      const esc = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(`\\n?\\[mcp_servers\\."?${esc}"?\\][^\\[]*`, 'g');
+      fs.writeFileSync(file, txt.replace(re, ''));
+    } else if (file.endsWith('.jsonc')) {
       const re = new RegExp(`${JSON.stringify(key).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*\\{[^{}]*\\},?\\s*`, 'g');
       fs.writeFileSync(file, txt.replace(re, ''));
     } else {
       const obj = JSON.parse(txt);
-      const root = obj.mcpServers && typeof obj.mcpServers === 'object' ? obj.mcpServers : obj;
-      delete root[key];
+      for (const rk of ['mcpServers', 'servers']) {
+        if (obj[rk] && typeof obj[rk] === 'object' && key in obj[rk]) {
+          delete obj[rk][key];
+          break;
+        }
+      }
+      if (key in obj) delete obj[key];
       fs.writeFileSync(file, JSON.stringify(obj, null, 2) + '\n');
     }
     out.push({ target: path.basename(file), status: 'removed' });
@@ -245,6 +280,9 @@ export function fixPaths() {
     path.join(home, '.claude', 'CLAUDE.md'),
     path.join(home, '.config', 'opencode', 'AGENTS.md'),
     path.join(home, '.kimi-code', 'AGENTS.md'),
+    path.join(home, '.jcode', 'AGENTS.md'),
+    path.join(home, '.codex', 'AGENTS.md'),
+    path.join(home, '.gemini', 'GEMINI.md'),
   ];
   const results = [];
   for (const file of targets) {
