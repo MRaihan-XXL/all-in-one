@@ -173,17 +173,24 @@ containing `ai-tools.db` / `TOOLS-INDEX.md`). Environment overrides:
 
 ## 9. Acceptance checklist
 
-- [ ] `node --test` passes (idempotency, rollback, scan, tool fallback).
-- [ ] On the owner machine: block in 4 instruction files (exactly 1× each),
+- [x] `node --test` passes (idempotency, rollback, scan, tool fallback).
+- [x] On the owner machine: block in 4 instruction files (exactly 1× each),
       MCP entries unchanged/complete, 2 stale registry paths repaired.
-- [ ] Manifest shows REPOS + TOOLS + SKILLS with counts.
-- [ ] Re-run `aio` → no duplicates (FR4).
-- [ ] Public repo pushed; tracked-files secret scan clean (FR8).
-- [ ] Fresh `npm install -g github:…` → `aio --help` works; `aio update`
+- [x] Manifest shows REPOS + TOOLS + SKILLS with counts.
+- [x] Re-run `aio` → no duplicates (FR4).
+- [x] Public repo pushed; tracked-files secret scan clean (FR8).
+- [x] Fresh `npm install -g github:…` → `aio --help` works; `aio update`
       exits 0 (FR5).
+
+Verified 2026-09-28: tests 5/5; setup → rollback → setup cycle proven on the
+owner machine (blocks removed/restored 4/4, pre-existing MCP entries never
+touched, ledger `[]`); manifest `REPOS 43 · TOOLS 23 · SKILLS 67`; repo
+`MRaihan-XXL/all-in-one-repo` public, commit `04abce3`, 17 files, 6-pattern
+secret scan clean; `aio update` reinstall + re-setup verified.
 
 ## 10. Revision history
 
 | Date | Change |
 |---|---|
 | 2026-09-14 | v1 — initial PRD (FR1–FR8, branding, auto-update, disclosure) |
+| 2026-09-28 | v1.1 — acceptance checklist signed off after end-to-end verification |
