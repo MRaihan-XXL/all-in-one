@@ -10,7 +10,7 @@ aio — all-in-one-repo
 
 Usage:
   aio                      Wire up every detected agent (default: setup)
-  aio update               Update from GitHub, then re-run setup
+  aio update               Update from npm, then re-run setup
   aio rollback             Remove everything aio injected (backups are kept)
 
 Options:

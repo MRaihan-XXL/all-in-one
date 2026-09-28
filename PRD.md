@@ -195,14 +195,18 @@ containing `ai-tools.db` / `TOOLS-INDEX.md`). Environment overrides:
 - [x] Public repo pushed; tracked-files secret scan clean (FR8).
 - [x] Fresh install → `aio --help` works; `aio update` exits 0 (FR5).
 - [x] FR6 emitted by real agents in live sessions (claude, jcode, opencode).
-- [ ] npm publish of `aio-connect@1.1.0` (blocked on interactive `npm login`)
-      + fresh-install verification from the registry.
+- [x] npm publish of `aio-connect@1.1.0` → live on the public registry;
+      fresh install from npm → `aio --version` 1.1.0, `aio --help` works;
+      `aio update` exits 0 (FR5, from the registry).
 
 Verified 2026-09-28: tests 9/9; setup → rollback → setup cycle proven on the
 owner machine (blocks removed/restored **7/7**, pre-existing MCP entries never
 touched, ledger-driven MCP reversal for the entries aio created); manifest
 `REPOS 97 · TOOLS 23 · SKILLS 67`; 97/97 homepage screenshots; repo
-`MRaihan-XXL/all-in-one-repo` public; FR6 live-tested on three agents.
+`MRaihan-XXL/all-in-one-repo` public; FR6 live-tested on three agents
+(claude, jcode, opencode); `aio-connect@1.1.0` published (2FA enforced by
+npm), fresh-install + `aio update` verified from the registry, owner machine
+migrated off the old `all-in-one-repo@1.0.0` package.
 
 ## 10. Revision history
 

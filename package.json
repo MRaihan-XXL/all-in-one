@@ -4,7 +4,7 @@
   "description": "aio — auto-connect your AI coding agents to your local repos, tools & skills. No slash-commands.",
   "type": "module",
   "bin": {
-    "aio": "./bin/aio.js"
+    "aio": "bin/aio.js"
   },
   "scripts": {
     "test": "node --test \"test/*.js\""
