@@ -3,10 +3,10 @@ import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 
 export function runUpdate({ binPath }) {
-  const repo = 'github:MRaihan-XXL/all-in-one-repo';
+  const pkg = 'aio-connect';
 
-  console.log(`[aio] Updating from ${repo} ...`);
-  const install = spawnSync('npm', ['install', '-g', repo], {
+  console.log(`[aio] Updating ${pkg} from npm ...`);
+  const install = spawnSync('npm', ['install', '-g', pkg], {
     shell: true,
     stdio: 'inherit',
     cwd: os.homedir(),
