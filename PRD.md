@@ -225,7 +225,20 @@ touched, ledger-driven MCP reversal for the entries aio created); manifest
 npm), fresh-install + `aio update` verified from the registry, owner machine
 migrated off the old `all-in-one-repo@1.0.0` package.
 
-## 10. Revision history
+## 10. Known limitations
+
+- **kimi — FR6 not applied.** After 9 attempts kimi quotes the disclosure rule
+  verbatim but does not emit the `[aio] Using …` line in its reply — a
+  model/harness-dependent behavior, not a packaging bug. Workaround: native
+  Moonshot login or manual review of the injected block. Wiring (FR1) and MCP
+  ensure pass for kimi; FR6 compliance for kimi must not be claimed
+  unconditionally.
+- **Install scripts are Windows-first.** CI (`.github/workflows/ci.yml`) covers
+  windows/ubuntu/macos for `npm test` + CLI help (`node bin/aio.js --help`);
+  `scripts/install-tools.mjs` (uv/npm/go) is Windows-first and untested on
+  Linux/macOS.
+
+## 11. Revision history
 
 | Date | Change |
 |---|---|

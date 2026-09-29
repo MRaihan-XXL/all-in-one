@@ -84,3 +84,32 @@ Auto-use rules (plain-language prompts only — NO slash-commands required):
 | agent ignores the manifest | check the block exists: search `aio:auto-config` in its instruction file |
 | want a clean machine | `aio rollback` (backups in `~/.aio/backups/`) |
 | update to latest rules | `aio update` |
+
+### Node version warning → install Node ≥ 22
+`[aio] warning: Node … detected — Node >= 22 recommended` (src/setup.js):
+Node ≥ 22 is required for native `node:sqlite` / ESM top-level await.
+Install from [nodejs.org](https://nodejs.org), then re-run `aio`.
+
+### `manifest missing or stale` → run `aio`
+`aio` regenerates the manifest on every run (fresh REPOS/TOOLS/SKILLS scan).
+Check age and `REPOS` count with `aio status` (it flags a manifest older than
+7 days).
+
+### `agent shows [issue] file exists but has no aio block` → run `aio`
+`aio status` flags this as `[issue] <agent>: file exists but has no aio block`,
+emitted when the instruction file exists but the marker block was removed by
+hand. Re-running `aio` (re)injects it; the block is idempotent, so it is safe
+to re-run any time.
+
+### `wrong repos/data location` → `aio --repos <dir> --home <dir>`
+Or set the env vars `AIO_REPOS_DIR` / `AIO_HOME` instead of the flags.
+`aio status` prints the resolved paths it actually used, so you can confirm
+the override took effect.
+
+### `something broke after wiring` → `aio rollback`
+Removes every injected block and every MCP addition aio recorded, while
+keeping the timestamped backups in `~/.aio/backups/` as a safety net.
+
+### `npx aio-connect` fails offline → `npm i -g aio-connect`
+`npx` needs the npm registry to resolve the package. Run `npm i -g aio-connect`
+once while online; after that `aio` works offline (no network calls).

@@ -117,6 +117,15 @@ Short version:
 Nothing else is touched. Local data (`ai-tools.db`, `TOOLS-INDEX.md`,
 `TRACKING.md`, screenshots) is **git-ignored** and never uploaded.
 
+## Privacy & control
+
+aio only writes to files you can see — the agent instruction files listed in
+`aio status`, plus the manifest and state under `~/.aio/`. Every file is
+backed up first to `~/.aio/backups/` with timestamps. Injection is
+idempotent: a marker-delimited block, always exactly one copy. `aio rollback`
+removes every injection and MCP addition while keeping those backups. No
+telemetry, no network calls beyond your own agent's.
+
 ## Keeping it fresh
 
 - **Clone a new repo?** Run `aio` again — it rescans on every run, so new
@@ -129,16 +138,21 @@ Nothing else is touched. Local data (`ai-tools.db`, `TOOLS-INDEX.md`,
 
 ## Supported agents
 
-| Agent | Where the auto-use block lands | MCP ensured |
-|---|---|---|
-| `opencode` | `~/.config/opencode/AGENTS.md` | ✅ `opencode.jsonc` |
-| `claude` | `~/.claude/CLAUDE.md` | ✅ `~/.claude.json` |
-| `kimi` | `~/.kimi-code/AGENTS.md` | ✅ `~/.kimi-code/mcp.json` |
-| `jcode` | `~/.jcode/AGENTS.md` (fallback `~/AGENTS.md`) | ✅ `~/.jcode/mcp.json` |
-| `codex` | `~/.codex/AGENTS.md` | ✅ `~/.codex/config.toml` |
-| `gemini` | `~/.gemini/GEMINI.md` | ✅ `~/.gemini/settings.json` |
-| `freebuff` | `~/AGENTS.md` (fallback) | — |
-| `hermes` | `~/AGENTS.md` | — |
+| Agent | Where the auto-use block lands | MCP ensured | FR6 (disclosure) |
+|---|---|---|---|
+| `opencode` | `~/.config/opencode/AGENTS.md` | ✅ `opencode.jsonc` | PASS |
+| `claude` | `~/.claude/CLAUDE.md` | ✅ `~/.claude.json` | PASS |
+| `kimi` | `~/.kimi-code/AGENTS.md` | ✅ `~/.kimi-code/mcp.json` | **⚠ model-dependent** |
+| `jcode` | `~/.jcode/AGENTS.md` (fallback `~/AGENTS.md`) | ✅ `~/.jcode/mcp.json` | PASS |
+| `codex` | `~/.codex/AGENTS.md` | ✅ `~/.codex/config.toml` | PASS |
+| `gemini` | `~/.gemini/GEMINI.md` | ✅ `~/.gemini/settings.json` | PASS |
+| `freebuff` | `~/AGENTS.md` (fallback) | — | PASS |
+| `hermes` | `~/AGENTS.md` | — | PASS |
+
+> **FR6 = a free-form prompt compliance probe:** the agent must output the
+> manifest's usage-disclosure line `[aio] Using [<name>](<url>) (<type>) — <function>`
+> as the FIRST line of its reply. kimi quotes the rule verbatim but does not
+> apply it after 9 attempts — model/harness-dependent, not a packaging bug.
 
 Detection is by `PATH` binary **or** the agent's config directory — codex and
 gemini are wired even without a shell wrapper.
