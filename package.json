@@ -15,11 +15,9 @@
   "files": [
     "bin",
     "src",
-    "test",
     "assets",
     "docs",
     "README.md",
-    "PRD.md",
     "LICENSE"
   ],
   "keywords": [
@@ -43,5 +41,5 @@
   "bugs": {
     "url": "https://github.com/MRaihan-XXL/all-in-one-repo/issues"
   },
-  "homepage": "https://github.com/MRaihan-XXL/all-in-one-repo#readme"
+  "homepage": "https://mraihan-xxl.github.io/all-in-one-repo/"
 }

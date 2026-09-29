@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aio — auto-connect your AI agents to your repos, tools &amp; skills</title>
+<meta name="description" content="aio writes the context blocks and manifest your AI coding agents read — repos, tools, skills, one command, no slash-commands. Works with opencode, Claude Code, Codex, Gemini CLI, kimi, hermes, freebuff, jcode.">
+<meta property="og:title" content="aio — auto-connect your AI agents">
+<meta property="og:description" content="One command. Every agent knows your repos, tools &amp; skills. Disclosure built in.">
+<meta property="og:image" content="./assets/logo-tile.svg">
+<link rel="icon" type="image/svg+xml" href="./assets/logo-favicon.svg">
+<style>
+  :root{
+    --ink:#101418;        /* canvas */
+    --paper:#F7F5F2;      /* text   */
+    --vermilion:#FF4A1C;  /* accent */
+    --line:rgba(247,245,242,.14);
+    --mute:rgba(247,245,242,.62);
+    --mono:ui-monospace,"Cascadia Code",Consolas,"SF Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--ink);color:var(--paper);
+    font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit}
+  .wrap{max-width:960px;margin:0 auto;padding:0 24px}
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:20px 0;border-bottom:1px solid var(--line);
+    position:sticky;top:0;background:rgba(16,20,24,.92);backdrop-filter:blur(8px);z-index:5;
+  }
+  header img{height:26px;display:block}
+  nav{display:flex;gap:22px;font-size:14px}
+  nav a{color:var(--mute);text-decoration:none;transition:color .15s}
+  nav a:hover{color:var(--vermilion)}
+  .hero{padding:88px 0 72px;border-bottom:1px solid var(--line)}
+  .kicker{font:600 13px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--vermilion);margin-bottom:22px}
+  h1{font-size:clamp(40px,7vw,76px);line-height:1.02;letter-spacing:-.03em;font-weight:800;max-width:14ch}
+  h1 em{font-style:normal;color:var(--vermilion)}
+  .sub{margin-top:24px;font-size:clamp(17px,2.2vw,21px);color:var(--mute);max-width:52ch}
+  .cta{margin-top:40px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .cmd{
+    display:inline-flex;align-items:center;gap:14px;
+    background:#0a0d10;border:1px solid var(--line);border-radius:8px;
+    padding:14px 18px;font:15px var(--mono);cursor:pointer;color:var(--paper);
+    transition:border-color .15s;
+  }
+  .cmd:hover{border-color:var(--vermilion)}
+  .cmd .cp{color:var(--vermilion);font-size:12px;letter-spacing:.08em}
+  .btn{
+    display:inline-block;padding:14px 22px;border-radius:8px;text-decoration:none;
+    font-weight:650;font-size:15px;transition:transform .15s;
+  }
+  .btn-primary{background:var(--vermilion);color:#fff}
+  .btn-primary:hover{transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line);color:var(--mute)}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--paper)}
+  .agents{
+    padding:26px 0;border-bottom:1px solid var(--line);
+    display:flex;flex-wrap:wrap;gap:10px 26px;align-items:center;
+    font:13px var(--mono);color:var(--mute);
+  }
+  .agents strong{color:var(--paper);font-weight:600}
+  section{padding:72px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:clamp(26px,4vw,38px);letter-spacing:-.02em;font-weight:750;margin-bottom:14px}
+  .lede{color:var(--mute);max-width:60ch;margin-bottom:44px}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+  .step{border-top:2px solid var(--vermilion);padding-top:18px}
+  .step .n{font:600 13px var(--mono);color:var(--vermilion);letter-spacing:.1em}
+  .step h3{margin:10px 0 8px;font-size:19px;letter-spacing:-.01em}
+  .step p{color:var(--mute);font-size:15px}
+  pre{
+    background:#0a0d10;border:1px solid var(--line);border-radius:10px;
+    padding:22px 24px;overflow-x:auto;font:14px/1.7 var(--mono);
+  }
+  pre .hi{color:var(--vermilion)}
+  pre .mu{color:var(--mute)}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}
+  .cell{background:var(--ink);padding:26px 24px}
+  .cell h3{font-size:16.5px;margin-bottom:8px;letter-spacing:-.01em}
+  .cell h3 span{color:var(--vermilion);font:600 12px var(--mono);margin-right:8px}
+  .cell p{color:var(--mute);font-size:14.5px}
+  footer{padding:44px 0 60px;color:var(--mute);font-size:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  footer a{color:var(--paper);text-decoration:none}
+  footer a:hover{color:var(--vermilion)}
+  @media(max-width:720px){
+    .steps,.grid{grid-template-columns:1fr}
+    .hero{padding:56px 0 48px}
+    nav a:nth-child(-n+1){display:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="./assets/logo-lockup-reversed.svg" alt="aio" width="84" height="26">
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="https://github.com/MRaihan-XXL/all-in-one-repo#readme">Docs</a>
+      <a href="https://www.npmjs.com/package/aio-connect">npm</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <div class="kicker">auto-connect · no slash-commands</div>
+    <h1>Your agents already <em>know</em> everything.</h1>
+    <p class="sub">aio writes the context blocks &amp; manifest that 8 agent CLIs read on every turn — your local repos, tools and skills, wired in one command.</p>
+    <div class="cta">
+      <button class="cmd" id="cmd" title="Click to copy">npx aio-connect <span class="cp" id="cp">COPY</span></button>
+      <a class="btn btn-primary" href="https://github.com/MRaihan-XXL/all-in-one-repo">View on GitHub</a>
+      <a class="btn btn-ghost" href="https://www.npmjs.com/package/aio-connect">npm package</a>
+    </div>
+  </div>
+
+  <div class="agents">
+    <strong>verified with</strong>
+    <span>opencode</span><span>claude</span><span>codex</span><span>gemini</span><span>kimi</span><span>hermes</span><span>freebuff</span><span>jcode</span>
+  </div>
+
+  <section id="how">
+    <h2>How it works</h2>
+    <p class="lede">Three steps, zero config files to maintain. Re-run <code style="font-family:var(--mono);color:var(--vermilion)">aio</code> any time — writes are idempotent and versioned.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="n">STEP 1 — SCAN</div>
+        <h3>Reads your machine</h3>
+        <p>Finds your cloned repos, tool registry and skill folders — including tools.db and TOOLS-INDEX.md.</p>
+      </div>
+      <div class="step">
+        <div class="n">STEP 2 — WRITE</div>
+        <h3>Injects the blocks</h3>
+        <p>Inserts a marked auto-config block into each agent's instructions file and generates one shared manifest.</p>
+      </div>
+      <div class="step">
+        <div class="n">STEP 3 — USE</div>
+        <h3>Every prompt is wired</h3>
+        <p>Agents read the manifest automatically and route to local tools first. Disclosure of usage is mandatory.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Usage, disclosed</h2>
+    <p class="lede">The moment an agent uses an entry from your manifest, its answer starts with a markdown link back to the source — attributable, auditable, first line, every time.</p>
+    <pre><span class="mu"># the rule aio writes into every agent + the manifest itself</span>
+<span class="hi">[aio] Using [&lt;name&gt;](&lt;url&gt;) (&lt;type&gt;) — &lt;function&gt;</span>
+
+<span class="mu"># real output, verbatim from a live agent session</span>
+[aio] Using [Stirling-PDF](https://github.com/Stirling-Tools/Stirling-PDF) (repo) — HTML/CSS/JS to PDF converter</pre>
+  </section>
+
+  <section id="features">
+    <h2>What you get</h2>
+    <p class="lede">One flat package, no runtime dependencies, Node ≥ 22. Everything reversible.</p>
+    <div class="grid">
+      <div class="cell"><h3><span>FR1</span>One manifest, every agent</h3><p>aio-context.md — repos, tools, skills, detected agents — a single source of truth all CLIs share.</p></div>
+      <div class="cell"><h3><span>FR2</span>Idempotent + rollback</h3><p>Blocks are marked and versioned; re-running never duplicates, <code>rollback</code> removes cleanly.</p></div>
+      <div class="cell"><h3><span>FR6</span>Mandatory disclosure</h3><p>The hard rule: any usage of a manifest entry must start the reply with the <code>[aio] Using …</code> link line.</p></div>
+      <div class="cell"><h3><span>FR7</span>MCP auto-wire</h3><p>Registers codebase-memory-mcp where supported, with a ledger so it is added exactly once.</p></div>
+      <div class="cell"><h3><span>NFR</span>Zero dependencies</h3><p>Plain Node stdlib — sqlite via <code>node:sqlite</code>, tests via <code>node --test</code>, nothing to audit.</p></div>
+      <div class="cell"><h3><span>U6</span>Public &amp; traceable</h3><p>GPL-3.0 on GitHub, published on npm as <code>aio-connect</code>, changelog in conventional commits.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>© 2026 MRaihan-XXL · GPL-3.0</span>
+    <span><a href="https://github.com/MRaihan-XXL/all-in-one-repo">GitHub</a> · <a href="https://www.npmjs.com/package/aio-connect">npm</a> · <a href="https://github.com/MRaihan-XXL/all-in-one-repo/blob/main/PRD.md">PRD</a></span>
+  </footer>
+</div>
+<script>
+document.getElementById('cmd').addEventListener('click',function(){
+  navigator.clipboard.writeText('npx aio-connect').then(function(){
+    var e=document.getElementById('cp');e.textContent='COPIED';
+    setTimeout(function(){e.textContent='COPY'},1400);
+  });
+});
+</script>
+</body>
+</html>
