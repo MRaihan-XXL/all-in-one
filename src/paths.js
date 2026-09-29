@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
 
 export const STATE_DIR = process.env.AIO_STATE_DIR
   ? path.resolve(process.env.AIO_STATE_DIR)
@@ -54,7 +55,24 @@ export function resolveDataDir(cliHome) {
     if (parent === dir) break;
     dir = parent;
   }
-  return null;
+  return bundledFallback();
+}
+
+/** First-run fallback: copy the catalog shipped inside the npm package to ~/.aio/. */
+function bundledFallback() {
+  try {
+    const src = fileURLToPath(new URL('../ai-tools.db', import.meta.url));
+    if (!fs.existsSync(src)) return null;
+    const dest = path.join(STATE_DIR, 'ai-tools.db');
+    if (!fs.existsSync(dest)) {
+      fs.mkdirSync(STATE_DIR, { recursive: true });
+      fs.copyFileSync(src, dest);
+    }
+    writeState({ dataDir: STATE_DIR });
+    return STATE_DIR;
+  } catch {
+    return null;
+  }
 }
 
 /** Priority: --repos > $AIO_REPOS_DIR > persisted state > default (if it exists). */
