@@ -4,7 +4,7 @@
 |---|---|
 | **Product** | `aio` — All-In-One auto-connect layer for AI coding agents |
 | **Package** | `aio-connect` (npm registry; GitHub repo `MRaihan-XXL/all-in-one-repo`) |
-| **Version** | 1.1.1 |
+| **Version** | 1.1.2 |
 | **Status** | Approved for implementation |
 | **License** | GPL-3.0 |
 | **Docs language** | English (international) |
@@ -45,7 +45,7 @@ agent directly and prompts in plain language — no slash commands.
 
 ## 3. Users
 
-1. **Primary** — the owner: power user running 8 agents + 97 cloned repos +
+1. **Primary** — the owner: power user running 8 agents + 231 cloned repos +
    a local tools database on one Windows machine.
 2. **Secondary** — public GitHub users: anyone installing
    `npm install -g aio-connect` on their own machine with
@@ -191,7 +191,7 @@ containing `ai-tools.db` / `TOOLS-INDEX.md`). Environment overrides:
 - **README.md** (English) — badges, logo, flowchart, quick start, commands,
   update & privacy sections.
 - **docs/CONFIG.md** — every file `aio` touches, rollback, troubleshooting.
-- **docs/SCREENSHOTS.md** — homepage screenshot evidence, method + 97-row index.
+- **docs/SCREENSHOTS.md** — homepage screenshot evidence, method + 231-row index.
 
 ## 8. Out of scope
 
@@ -203,10 +203,12 @@ containing `ai-tools.db` / `TOOLS-INDEX.md`). Environment overrides:
 ## 9. Acceptance checklist
 
 - [x] `node --test` passes (idempotency, rollback, scan, tool fallback,
-      disclosure format, TOML/JSON ensure, banner grid) — 9/9.
+      disclosure format, TOML/JSON ensure, banner grid, catalog
+      categorize/parser, status report, bundled-catalog first-run fallback)
+      — 17/17.
 - [x] On the owner machine: block in **7** instruction files (exactly 1× each),
       MCP entries unchanged/complete, 2 stale registry paths repaired.
-- [x] Manifest shows REPOS + TOOLS + SKILLS with counts (97 · 23 · 67).
+- [x] Manifest shows REPOS + TOOLS + SKILLS with counts (231 · 23 · 67).
 - [x] Re-run `aio` → no duplicates (FR4); setup → rollback → setup cycle
       removes/restores 7/7 blocks.
 - [x] Public repo pushed; tracked-files secret scan clean (FR8).
@@ -224,6 +226,10 @@ touched, ledger-driven MCP reversal for the entries aio created); manifest
 (claude, jcode, opencode); `aio-connect@1.1.0` published (2FA enforced by
 npm), fresh-install + `aio update` verified from the registry, owner machine
 migrated off the old `all-in-one-repo@1.0.0` package.
+
+Verified 2026-09-29: tests **17/17** (node --test), REPOS **231** · TOOLS 23 ·
+SKILLS 67, screenshots **231/231**, `aio status` healthy (7/7 agent blocks),
+`aio-connect@1.1.1` published (1.1.2 pending publish).
 
 ## 10. Known limitations
 
@@ -246,3 +252,4 @@ migrated off the old `all-in-one-repo@1.0.0` package.
 | 2026-09-28 | v1.1 — acceptance checklist signed off after end-to-end verification |
 | 2026-09-28 | v1.2 — 8 agents (codex/gemini, dir-based detection, 6 MCP formats), npm `aio-connect`, FR6 live proof, brand kit, screenshot evidence index |
 | 2026-09-29 | v1.3 — `aio-connect@1.1.1` published to npm (2FA web-auth): cross-platform CI workflow, portable default repos dir, `src/catalog.js` fine-grained categories + install columns in ai-tools.db, `aio status` command, install-tools script, FR6 support-matrix/privacy/troubleshooting docs, landing-page qualifiers |
+| 2026-09-29 | v1.4 — `aio-connect@1.1.2`: bundled `ai-tools.db` + first-run fallback (resolveDataDir), CI actions v5, catalog 231 repos (+30 gems & discovery), screenshots 231/231 |
