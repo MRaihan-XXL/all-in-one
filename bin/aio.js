@@ -10,12 +10,14 @@ aio — all-in-one-repo
 
 Usage:
   aio                      Wire up every detected agent (default: setup)
+  aio status               Read-only health report (state, manifest, agents)
   aio update               Update from npm, then re-run setup
   aio rollback             Remove everything aio injected (backups are kept)
 
 Options:
   --repos <dir>            Directory containing cloned git repositories
-                           (default: D:\\Tools\\github, or $AIO_REPOS_DIR)
+                           (default: first of ~/github, ~/repos, ~/Projects, …
+                           or $AIO_REPOS_DIR)
   --home <dir>             Data dir with ai-tools.db / TOOLS-INDEX.md
                            (default: $AIO_HOME, persisted state, or cwd walk)
   -h, --help               Show this help
@@ -47,7 +49,7 @@ function parseArgs(argv) {
     else rest.push(a);
   }
   const cmd = rest[0];
-  if (cmd === 'update' || cmd === 'rollback' || cmd === 'setup') opts.command = cmd;
+  if (cmd === 'update' || cmd === 'rollback' || cmd === 'setup' || cmd === 'status') opts.command = cmd;
   else if (cmd === 'help' || cmd === '--help' || cmd === '-h') opts.command = 'help';
   else if (cmd === '--version' || cmd === '-v' || cmd === 'version') opts.command = 'version';
   else if (cmd !== undefined) {
@@ -72,6 +74,11 @@ switch (opts.command) {
     const { runUpdate } = await import('../src/update.js');
     runUpdate({ binPath });
     break;
+  }
+  case 'status': {
+    const { runStatus } = await import('../src/status.js');
+    const r = runStatus(opts);
+    process.exit(r.ok ? 0 : 1);
   }
   case 'rollback': {
     console.log(banner());
