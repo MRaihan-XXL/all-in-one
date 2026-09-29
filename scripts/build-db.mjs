@@ -5,6 +5,7 @@
  */
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,13 +40,39 @@ const SKIP_DEFAULT = {
   unknown: 'no install manifest',
 };
 
+const db0 = existsSync(DB);
+const prev = db0 ? new DatabaseSync(DB) : null;
+const existing = prev
+  ? new Map(prev.prepare('SELECT * FROM repos').all().map((r) => [r.folder, r]))
+  : new Map();
+if (prev) prev.close();
+
+/* --enrich: fill description/homepage/language/stars/topics for rows that lack them (gh api) */
+let enriched = 0, enrichMiss = 0;
+const enrichMap = new Map();
+if (process.argv.includes('--enrich')) {
+  for (const r of repos) {
+    const oldE = existing.get(r.folder);
+    if (oldE?.description && oldE?.stars) continue;
+    if (!r.owner || !r.repo) continue;
+    try {
+      const out = execFileSync(
+        'gh',
+        ['api', `repos/${r.owner}/${r.repo}`, '--jq', '{description,homepage,language,stars:.stargazers_count,topics}'],
+        { encoding: 'utf8', shell: true },
+      ).trim();
+      if (out && out !== 'null') { enrichMap.set(r.folder, JSON.parse(out)); enriched++; } else enrichMiss++;
+    } catch { enrichMiss++; }
+  }
+  console.log(`enrich (gh api): ${enriched} filled, ${enrichMiss} missed`);
+}
+
 const db = new DatabaseSync(DB);
 const cols = db.prepare('PRAGMA table_info(repos)').all().map((c) => c.name);
 for (const c of ['category_group', 'install_type', 'install_cmd', 'install_status']) {
   if (!cols.includes(c)) db.exec(`ALTER TABLE repos ADD COLUMN ${c} TEXT`);
 }
 
-const existing = new Map(db.prepare('SELECT * FROM repos').all().map((r) => [r.folder, r]));
 const up = db.prepare(`
   INSERT INTO repos (folder, url, category, description, homepage, language, stars, screenshot, status, installed)
   VALUES (@folder, @url, @category, @description, @homepage, @language, @stars, @screenshot, @status, @installed)
@@ -63,12 +90,14 @@ const fineDist = {}, groupDist = {}, statusDist = {};
 db.exec('BEGIN');
 for (const r of repos) {
   const old = existing.get(r.folder);
-  const fine = old?.category === 'CLI Aktif' ? 'CLI Aktif' : categorize(r.folder, old?.description ?? '', []);
+  const en = enrichMap.get(r.folder);
+  const desc = old?.description || en?.description || '';
+  const fine = old?.category === 'CLI Aktif' ? 'CLI Aktif' : categorize(r.folder, desc, en?.topics || []);
   const group = old?.category === 'CLI Aktif' ? 'CLI Aktif' : groupOf(fine);
   const lg = logMap.get(r.folder);
   const pl = planMap.get(r.folder);
   const type = lg?.kind ?? pl?.kind ?? null;
-  const stat = lg?.status ?? (pl?.cmd ? null : SKIP_DEFAULT[pl?.kind] ? `skip: ${SKIP_DEFAULT[pl.kind]}` : null);
+  const stat = lg?.status ?? (pl?.cmd ? 'not-run' : SKIP_DEFAULT[pl?.kind] ? `skip: ${SKIP_DEFAULT[pl.kind]}` : null);
   const cmd = lg?.cmd ?? pl?.cmd ?? '';
   if (lg?.status === 'installed') installed++;
   if (lg?.status === 'failed') failed++;
@@ -76,8 +105,10 @@ for (const r of repos) {
   up.run({
     folder: r.folder, url: r.url,
     category: fine, category_group: group,
-    description: old?.description ?? '', homepage: old?.homepage ?? '', language: old?.language ?? '',
-    stars: old?.stars ?? 0, screenshot: old?.screenshot ?? '',
+    description: desc,
+    homepage: old?.homepage || en?.homepage || '',
+    language: old?.language || en?.language || '',
+    stars: old?.stars || en?.stars || 0, screenshot: old?.screenshot ?? '',
     status: old?.status ?? 'cloned (install on-demand)',
     installed: old?.installed ?? TODAY,
     install_type: type, install_cmd: cmd, install_status: stat,
