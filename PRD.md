@@ -4,7 +4,7 @@
 |---|---|
 | **Product** | `aio` — All-In-One auto-connect layer for AI coding agents |
 | **Package** | `aio-connect` (npm registry; GitHub repo `MRaihan-XXL/all-in-one-repo`) |
-| **Version** | 1.1.0 |
+| **Version** | 1.1.1 |
 | **Status** | Approved for implementation |
 | **License** | GPL-3.0 |
 | **Docs language** | English (international) |
@@ -245,3 +245,4 @@ migrated off the old `all-in-one-repo@1.0.0` package.
 | 2026-09-14 | v1 — initial PRD (FR1–FR8, branding, auto-update, disclosure) |
 | 2026-09-28 | v1.1 — acceptance checklist signed off after end-to-end verification |
 | 2026-09-28 | v1.2 — 8 agents (codex/gemini, dir-based detection, 6 MCP formats), npm `aio-connect`, FR6 live proof, brand kit, screenshot evidence index |
+| 2026-09-29 | v1.3 — `aio-connect@1.1.1` published to npm (2FA web-auth): cross-platform CI workflow, portable default repos dir, `src/catalog.js` fine-grained categories + install columns in ai-tools.db, `aio status` command, install-tools script, FR6 support-matrix/privacy/troubleshooting docs, landing-page qualifiers |
