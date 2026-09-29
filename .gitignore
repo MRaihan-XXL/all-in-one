@@ -1,5 +1,6 @@
 # --- local data NEVER uploaded (FR8) ---
-ai-tools.db
+# ai-tools.db is the shipped catalog (bundled in npm; versioned on GitHub);
+# screenshots/TRACKING/etc stay machine-local.
 screenshots/
 TRACKING.md
 TOOLS-INDEX.md
