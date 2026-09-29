@@ -57,8 +57,8 @@ Re-running `aio` **updates in place** — the block never duplicates (verified b
 
 Auto-use rules (plain-language prompts only — NO slash-commands required):
 1. USAGE DISCLOSURE (MANDATORY — never skip): … the FIRST line of that part of your reply must be exactly:
-   [aio] Using <name> (<type>) — <function>
-   Example: [aio] Using Stirling-PDF (repo) — HTML/CSS/JS to PDF converter
+   [aio] Using [<name>](<url>) (<type>) — <function>
+   Example: [aio] Using [Stirling-PDF](https://github.com/Stirling-Tools/Stirling-PDF) (repo) — HTML/CSS/JS to PDF converter
 2. When a prompt involves a local repository, tool, service, or skill, read the manifest …
 ```
 

@@ -13,7 +13,7 @@ Four nodes, three numbered hops:
 |---|---|---|
 | 1 | **Your prompt → AI agent** | plain-language input; no `/slash-command` needed |
 | 2 | **aio manifest → AI agent** | the agent pulls `REPOS · TOOLS · SKILLS` context on its own (dashed, vermilion — it is the aio-owned edge) |
-| 3 | **AI agent → Your answer** | the reply carries the disclosure line `[aio] Using <name> (<type>) — <function>` |
+| 3 | **AI agent → Your answer** | the reply carries the disclosure line `[aio] Using [<name>](<url>) (<type>) — <function>` (name linked to the manifest URL) |
 
 The manifest box is drawn **dashed** on purpose: it is not a step the user
 triggers — it is background context that feeds the agent continuously.

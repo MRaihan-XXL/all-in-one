@@ -114,6 +114,6 @@ export async function runSetup(opts = {}) {
   console.log(`Backups: ${BACKUP_DIR}`);
   console.log('Done. Open any agent directly (opencode / claude / kimi / ...) — it now knows');
   console.log('your repos, tools & skills. No slash-commands needed. Usage is disclosed as:');
-  console.log('  [aio] Using <name> (<type>) — <function>');
+  console.log('  [aio] Using [<name>](<url>) (<type>) — <function>');
   console.log('');
 }

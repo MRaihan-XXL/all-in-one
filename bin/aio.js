@@ -34,7 +34,7 @@ What it does:
   5. Repairs stale path references after folder renames.
 
 No slash-commands needed: the agent reads the manifest on its own and must
-disclose usage as:  [aio] Using <name> (<type>) — <function>
+disclose usage as:  [aio] Using [<name>](<url>) (<type>) — <function>
 `;
 
 function parseArgs(argv) {

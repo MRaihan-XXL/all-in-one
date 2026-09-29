@@ -37,7 +37,7 @@ test('stripBlock: removes injected block, restores original (FR7)', () => {
 
 test('buildBlock: mandatory usage-disclosure line (FR6)', () => {
   const b = buildBlock({ version: '1.0.0', manifestPath: '/tmp/m.md', dataDir: null });
-  assert.ok(b.includes('[aio] Using <name> (<type>) — <function>'));
+  assert.ok(b.includes('[aio] Using [<name>](<url>) (<type>) — <function>'));
   assert.ok(b.includes('NO slash-commands'));
   assert.ok(b.includes('/tmp/m.md'));
 });
