@@ -8,7 +8,9 @@ export const STATE_DIR = process.env.AIO_STATE_DIR
   : path.join(os.homedir(), '.aio');
 export const CONFIG_FILE = path.join(STATE_DIR, 'config.json');
 export const BACKUP_DIR = path.join(STATE_DIR, 'backups');
-export const DEFAULT_REPOS_DIR = 'D:\\Tools\\github';
+/** First existing repos dir under $HOME (platform-neutral; machines persist their own via state). */
+export const DEFAULT_REPOS_DIR =
+  ['github', 'repos', 'Projects', 'projects', 'code', 'dev'].map((d) => path.join(os.homedir(), d)).find((d) => fs.existsSync(d)) ?? null;
 
 export function readState() {
   try {
@@ -65,6 +67,6 @@ export function resolveReposDir(cliRepos) {
   if (process.env.AIO_REPOS_DIR) return path.resolve(process.env.AIO_REPOS_DIR);
   const st = readState();
   if (st.reposDir && fs.existsSync(st.reposDir)) return st.reposDir;
-  if (fs.existsSync(DEFAULT_REPOS_DIR)) return DEFAULT_REPOS_DIR;
+  if (DEFAULT_REPOS_DIR) return DEFAULT_REPOS_DIR;
   return null;
 }
