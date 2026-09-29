@@ -107,10 +107,13 @@ The injected block mandates: whenever an agent uses a repository or tool from
 the manifest, it must start that step with:
 
 ```
-[aio] Using <name> (<type>) — <function>
+[aio] Using [<name>](<url>) (<type>) — <function>
 ```
 
-where `<function>` is the manifest description (what the tool/repo does).
+where `<function>` is the manifest description (what the tool/repo does) and
+`[<name>](<url>)` is a **markdown link** to the entry's URL (the link form was
+explicitly chosen over a bottom-of-answer footnote). If an entry has no URL,
+the name stays plain.
 
 **Acceptance:** rule present in block with that exact format **and** emitted
 by real agents in live sessions (proven on this machine: claude, jcode via
@@ -146,6 +149,20 @@ scan (tokens/passwords/usernames) on tracked files passes.
 - **NFR5** Backups before mutation; rollback available.
 - **NFR6** Branding: `aio` prints a logo banner; README shows logo +
   animated flowchart (see §7).
+
+### Decision: why Node.js (not Python/shell)
+
+- **Requirement** — third-party users on a fresh machine must run `aio` with ONE
+  command (`npx aio-connect`), zero manual dependency setup — explicit project
+  directive: "keep Node.js".
+- **Rationale** — Node ≥22 is preinstalled or one-line installable for the
+  audience (AI agent CLIs are npm/npx: opencode, claude-code, gemini-cli, kimi).
+  Python adds a venv/PATH step on Windows (primary dev platform) and breaks the
+  npx one-shot flow; a compiled binary adds cross-platform release burden (YAGNI).
+- **Consequences** — `engines.node >=22` in `package.json`; SQLite via built-in
+  `node:sqlite` (no native deps); tests via built-in `node --test` (zero
+  runtime/test dependencies).
+- Reviewed 2026-09-29, status: Accepted.
 
 ## 6. Commands (CLI surface)
 

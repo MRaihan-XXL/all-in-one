@@ -10,6 +10,13 @@
 </p>
 
 <p align="center">
+  <a href="./PRD.md">📜 PRD</a> ·
+  <a href="./docs/flow.md">🌊 How it works</a> ·
+  <a href="./docs/CONFIG.md">⚙️ What changes</a> ·
+  <a href="./assets/logo-gallery.html">🎨 Brand kit</a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="license: GPL-3.0">
   <img src="https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg" alt="node >= 22">
   <img src="https://img.shields.io/badge/npm-aio--connect-orange.svg" alt="npm: aio-connect">
@@ -22,6 +29,16 @@
 </p>
 
 ---
+
+## Highlights
+
+- **Zero runtime dependencies** — plain Node.js ≥ 22 standard library only
+- **Idempotent** — the auto-use block exists exactly once per file, ever
+- **One command** — `aio` scans, generates and injects in a single run
+- **8 agents covered** — opencode · claude · kimi · jcode · codex · gemini · freebuff · hermes
+- **Honest agents** — usage of any repo/tool/skill is disclosed as a link:
+  `[aio] Using [<name>](<url>) (<type>) — <function>`
+- **Fully reversible** — `aio rollback` restores every touched file from backups
 
 ## Why
 
@@ -47,7 +64,13 @@ Then you just open an agent and write normal, plain-language prompts. The agent
 routes itself through the manifest and **must disclose what it used**:
 
 ```text
-[aio] Using <name> (<type>) — <function>
+[aio] Using [<name>](<url>) (<type>) — <function>
+```
+
+Example (real output from a running agent):
+
+```text
+[aio] Using [nano-pdf](https://github.com/nano-micro/nano-pdf) (skill) — Extract text from PDFs/scans (pymupdf, marker-pdf).
 ```
 
 ## Install
