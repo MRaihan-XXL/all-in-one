@@ -108,7 +108,11 @@ export function bm25Search(query, entries, limit = 8) {
 /** Rerank hits with local Ollama; returns { ai, hits } — falls back silently. */
 export async function aiRerank(query, hits) {
   if (!hits.length || process.env.AIO_NO_AI === '1') return { ai: false, hits };
-  const cands = hits.map((h, i) => `${i}. [${h.type}] ${h.name} — ${h.func}`).join('\n');
+  // token budget: rank the best 12 candidates, truncate long functions — the rest pass through unranked
+  const cands = hits
+    .slice(0, 12)
+    .map((h, i) => `${i}. [${h.type}] ${h.name} — ${String(h.func || '').slice(0, 100)}`)
+    .join('\n');
   try {
     const res = await fetch(`${OLLAMA}/api/chat`, {
       method: 'POST',
@@ -124,9 +128,9 @@ export async function aiRerank(query, hits) {
           {
             role: 'system',
             content:
-              'You rank catalog candidates for a developer need. Reply ONLY with JSON: {"top":[{"i":<index>,"why":"<max 12 words>"}]} — best first, only items that genuinely fit, max 5.',
+              'Rank catalog candidates for a developer need. Reply ONLY with JSON: {"top":[{"i":<index>,"why":"<max 10 words>"}]} — best first, max 5, only genuine fits.',
           },
-          { role: 'user', content: `Need: ${query}\nCandidates:\n${cands}` },
+          { role: 'user', content: `Need: ${query.slice(0, 160)}\nCandidates:\n${cands}` },
         ],
       }),
     });
