@@ -4,7 +4,7 @@
 |---|---|
 | **Product** | `aio` — All-In-One auto-connect layer for AI coding agents |
 | **Package** | `aio-connect` (npm registry; GitHub repo `MRaihan-XXL/all-in-one`) |
-| **Version** | 1.2.0 |
+| **Version** | 1.3.0 |
 | **Status** | Approved for implementation |
 | **License** | GPL-3.0 |
 | **Docs language** | English (international) |
@@ -23,21 +23,24 @@ know what is on the machine, and the user has to re-explain context or type
 slash-commands (`/skill`, `/mcp-tool`, …) to reach the right capability.
 
 `aio` solves this with a single command: it scans the machine, writes one
-generated **context manifest** (repositories + tools + skills), injects a small
-idempotent **auto-use rule block** into every supported agent's instruction
-file, and keeps everything fresh on later runs. After setup the user opens any
-agent directly and prompts in plain language — no slash commands.
+generated **context manifest** (live-search rules + disclosure + detected
+agents), injects a small idempotent **auto-use rule block** into every
+supported agent's instruction file, and keeps everything fresh on later runs.
+Repos, tools, skills and sites are then resolved **live at prompt time** —
+no catalog database. After setup the user opens any agent directly and
+prompts in plain language — no slash commands.
 
 ## 2. Goals
 
-- **G1** One command (`aio`) wires every installed AI agent to the local
+- **G1** One command (`aio`) wires every installed AI agent to your
   repositories, tools, and skills — permanently (config survives until changed).
 - **G2** Zero slash-commands: routing decisions are made by the agent from the
   manifest, from plain-language prompts.
-- **G3** The manifest covers **repositories AND tools** (commands, versions,
-  locations, links, descriptions) — not just code folders.
-- **G4** Stays correct over time: adding repositories or updating features only
-  requires re-running `aio` (rescan + block regeneration).
+- **G3** Coverage extends to **repositories AND tools** (commands, versions,
+  locations, links, descriptions) — resolved live at prompt time, not just
+  code folders.
+- **G4** Stays correct over time: the live catalog cannot go stale; adding
+  repositories only requires re-running `aio` (rescan + block regeneration).
 - **G5** Every agent reply that uses a local repo/tool **discloses it**: tool
   name, kind, and function (see FR6).
 - **G6** Self-updatable (`aio update`), rollback-able (`aio rollback`), and
@@ -45,9 +48,9 @@ agent directly and prompts in plain language — no slash commands.
 
 ## 3. Users
 
-1. **Primary** — the owner: power user running 8 agents + a 231-repo catalog
-   (db-first since v1.5; local clones optional) + a local tools database on one
-   Windows machine.
+1. **Primary** — the owner: power user running 8 agents on one Windows
+   machine; the catalog is **live** (GitHub 400M+ repos · npm · crates —
+   zero storage), local clones optional (install plan only).
 2. **Secondary** — public GitHub users: anyone installing
    `npm install -g aio-connect` on their own machine with
    their own repos/agents (data folder optional).
@@ -66,39 +69,41 @@ persists: after one run, every later agent session is already wired.
 (detected / instruction file / block / MCP / fallback).
 
 ### FR2 — No slash-commands (auto-use)
-The injected block tells the agent: match the user's prompt against the
-manifest and route itself to the right repository/tool/skill automatically.
-The user never types `/…` for routing.
+The injected block tells the agent: route the prompt itself — run
+`aio ask "<prompt words>"` for anything that needs a repo/tool/skill (LIVE
+GitHub/npm/crates search, zero storage), use the agent's own built-in web
+search for websites/URLs, and never ask the user to type `/…` for routing.
 
 **Acceptance:** block content contains explicit "never ask the user to type
-a slash-command" rule.
+a slash-command" rule **and** the `aio ask` → use → report → clean mandate.
 
-### FR3 — Manifest = repositories + tools + sites + skills
-Generated file `aio-context.md` with four sections:
-- **REPOS** — 7-column table (name, URL, function/description, category, stars,
-  local path) built **db-first** from `ai-tools.db`: the catalog stays complete
-  with **zero local clones**; the directory scan merges in whatever is actually
-  on disk (fresh clones win, unlisted folders are added).
-- **TOOLS** — name, command/access, version, location, link, description.
-  Source: local `ai-tools.db` (SQLite) first, `TOOLS-INDEX.md` parse as
-  fallback, nothing if both absent.
-- **SITES** — curated websites: name, URL, category, function, audience. Source:
-  the `sites` table in `ai-tools.db` (seed: `scripts/sites-seed.json`).
-- **SKILLS** — names + locations of global agent skill directories.
+### FR3 — Manifest = slim live-architecture rules (no catalog data)
+Generated file `aio-context.md` carries no catalog tables — the catalog is
+live, so there is nothing to store:
+- **Header** — live-architecture statement (GitHub 400M+ repos + public
+  skills, npm 3M+ packages, crates; websites → the agent's own web search;
+  **0 bytes stored**) + the mandatory disclosure rule + the prompt flow
+  (`aio ask` → ephemeral use → report → `borrow --clean`).
+- **AGENTS DETECTED** — per-agent found/not-installed list.
 
-**Acceptance:** after setup the manifest lists all four sections with correct
-counts for the machine (owner machine 2026-09-30: REPOS 231 · TOOLS 23 ·
-SITES 45 · SKILLS 67).
+Repositories/tools/sites/skills are no longer enumerated: `aio ask` resolves
+them at query time (FR9/FR11); the optional `--repos` dir feeds only the
+install plan.
+
+**Acceptance:** after setup the manifest exists, states "zero storage", and
+`aio doctor`/`aio status` flag a legacy (pre-v1.3) catalog layout as stale
+until refreshed.
 
 ### FR4 — Update resilience (repos & features)
 - `aio` **rescans** on every run: a repository added to the repos directory
-  appears in the manifest after a re-run.
+  is picked up by the optional install plan after a re-run (the catalog
+  itself is live, so it never goes stale).
 - The injected block is marker-delimited (`aio:auto-config:v1`) and
   **regenerated** from the running package version: updating `aio` and
   re-running replaces block content in place — never duplicated, never stale.
 
 **Acceptance:** run `aio` twice → block appears exactly once; add a dummy repo
-folder → re-run → manifest count increases.
+folder → re-run → `aio status` shows the new dir count.
 
 ### FR5 — Auto-update
 `aio update` reinstalls the package from npm (`npm install -g aio-connect`;
@@ -136,50 +141,74 @@ rollback restore.
 
 ### FR8 — Publication without local/sensitive data
 Public GitHub repository; `.gitignore` excludes local-only data: tracking/
-registry logs, the generated context manifest, and env files. The catalog
-database `ai-tools.db` is shipped on purpose (bundled in npm + versioned on
-GitHub — it is what keeps the catalog alive without local clones). No
-machine-specific absolute paths or secrets in committed code — paths are
-resolved at runtime (env var / config / discovery), README examples use
-placeholders.
+registry logs, the generated context manifest, and env files. **No database
+ships**: v1.3.0 deleted `ai-tools.db`, `src/catalog.js` and
+`scripts/build-db.mjs`, and `package.json` `files` carries only
+bin/src/assets/docs/README/LICENSE — there is no catalog file to bundle or
+version. No machine-specific absolute paths or secrets in committed code —
+paths are resolved at runtime (env var / config / discovery), README examples
+use placeholders.
 
 **Acceptance:** `git ls-files` contains none of the excluded files; secret
 scan (tokens/passwords/usernames) on tracked files passes.
 
-### FR9 — Catalog search & ephemeral borrow (`ask` / `borrow`)
-- `aio ask "<prompt>"` searches repos, tools, sites and skills from the local
-  catalog: BM25 ranking, then an optional rerank by the local Ollama `qwen3`
-  model when it is reachable (`OLLAMA_HOST`, `AIO_OLLAMA_MODEL`, `AIO_NO_AI=1`
-  disables it). Every hit prints **URL + one-line function**; `--json` emits
-  machine-readable output.
-- `aio borrow "<keywords>"` searches GitHub live (token from `gh auth token`
-  or `GITHUB_TOKEN` when available); `aio borrow --get <owner/repo>`
-  shallow-clones into `%TEMP%\aio-borrow` with a **24 h TTL** (auto-purged on
-  the next borrow run) and a **1 GB free-disk guard**; `--list` inspects temp
-  clones, `--clean` wipes them.
+### FR9 — Live search & ephemeral borrow (`ask` / `borrow`)
+- `aio ask "<prompt>"` is a **live search router**: GitHub repo search
+  (`api.github.com`, 400M+ repos) plus `filename:SKILL.md` code search,
+  npm (`registry.npmjs.org`, 3M+ packages) and crates.io (150K+ crates)
+  queried **in parallel** with a 4 s per-source timeout; intent routing
+  (rust → crates, skill words → skills, URL → web hint) and generic-word
+  stripping for GitHub. Results are merge-ranked with **BM25**, a **source
+  diversity** guarantee (≥ 2 rows per answering source), and an optional
+  qwen3 Ollama rerank only when warm and fast (≤ 3.5 s; skipped once elapsed
+  > 2.5 s). Every hit prints **URL + one-line function + source tag**;
+  `--json` emits `{query, engine, sources, count, stored: 0, hits}`.
+  **Zero storage** — nothing searched is ever written to disk. Websites are
+  covered by the agent's own web search; `AIO_OFFLINE=1` makes the offline
+  gate explicit, `AIO_NO_GH=1` skips the GitHub subprocess (tests).
+- `aio borrow` is **optional ephemeral tooling** (not a search fallback):
+  `aio borrow "<keywords>"` runs a live GitHub search when you want to clone;
+  `aio borrow --get <owner/repo>` shallow-clones into `%TEMP%\aio-borrow` with
+  a **24 h TTL** (auto-purged on the next borrow run) and a **1 GB free-disk
+  guard**; `--list` inspects temp clones, `--clean` wipes them.
 
-**Acceptance:** `node --test` covers ask search (BM25 ranking, URL + function
-per hit, sites/tools searchable, `--json`) and the borrow lifecycle (24 h TTL
-purge, `--clean`, `--list`).
+**Acceptance:** `node --test` covers live sources + intent routing (offline/
+no-gh gates), BM25 ranking, source diversity, URL + function + source tag per
+hit, `--json` (`stored: 0`), and the borrow lifecycle (24 h TTL purge,
+`--clean`, `--list`).
 
 ### FR10 — Self-diagnosis & self-upgrade (`doctor` / `evolve`)
 - `aio doctor [--check|--fix]` runs read-only checks — Node, persisted state,
-  catalog db, manifest freshness/count sync, agent blocks, Ollama reachability —
-  and exits 1 when any issue exists (`--check` = CI gate); `--fix` re-runs the
-  idempotent setup pipeline (safe fixes only).
-- `aio evolve` runs the full pipeline in one command: scan →
-  `build-db --enrich` → setup → `doctor --check` → `npm test`, prints a
-  per-step pass/fail report with timings, and **never commits or pushes** (git
-  stays with the human).
+  live source reachability (0 bytes stored), manifest freshness + live-layout
+  sync, agent blocks, Ollama reachability — and exits 1 when any issue exists
+  (`--check` = CI gate); `--fix` re-runs the idempotent setup pipeline (safe
+  fixes only).
+- `aio evolve` runs the full pipeline in one command: install-plan scan
+  (skipped when there are no local clones) → setup (manifest + blocks) →
+  `doctor --check` → `npm test`, prints a per-step pass/fail report with
+  timings, and **never commits or pushes** (git stays with the human).
 
 **Acceptance:** `node --test` covers doctor checks; `aio evolve` reports every
 step green on the owner machine (verified 2026-09-30).
+
+### FR11 — Real-time unlimited search, zero storage
+The catalog is **the network, queried at prompt time** — unlimited (400M+
+GitHub repos, 3M+ npm packages, 150K+ crates, 33K+ public skill files), always
+current, and never persisted: no SQLite file, no `catalog.js`, no build step,
+no search history. Every answering source degrades silently (4 s timeout,
+missing `gh`, rate limit → skip), so a partial answer still returns; the only
+bytes aio writes are the manifest, the agent blocks, backups and MCP state
+(see docs/CONFIG.md).
+
+**Acceptance:** `aio ask --json` reports `stored: 0` (asserted in the test
+suite) and there is no catalog file to write — `npm test` **34/34** as of
+2026-09-30.
 
 ## 5. Non-functional requirements
 
 - **NFR1** Idempotent: any run may be repeated without duplication.
 - **NFR2** Zero runtime dependencies (Node.js standard library only);
-  Node ≥ 22 (uses `node:sqlite` when present, degrades gracefully otherwise).
+  Node ≥ 22 (no SQLite — v1.3.0 removed the local database entirely).
 - **NFR3** Fail loudly: non-zero exit codes and explicit messages; never
   silently swallow errors.
 - **NFR4** Windows-first, cross-platform-friendly (PATH/PATHEXT detection,
@@ -197,9 +226,9 @@ step green on the owner machine (verified 2026-09-30).
   audience (AI agent CLIs are npm/npx: opencode, claude-code, gemini-cli, kimi).
   Python adds a venv/PATH step on Windows (primary dev platform) and breaks the
   npx one-shot flow; a compiled binary adds cross-platform release burden (YAGNI).
-- **Consequences** — `engines.node >=22` in `package.json`; SQLite via built-in
-  `node:sqlite` (no native deps); tests via built-in `node --test` (zero
-  runtime/test dependencies).
+- **Consequences** — `engines.node >=22` in `package.json`; no native deps
+  (SQLite was used only for the pre-v1.3 catalog and is gone since 1.3.0);
+  tests via built-in `node --test` (zero runtime/test dependencies).
 - Reviewed 2026-09-29, status: Accepted.
 
 ## 6. Commands (CLI surface)
@@ -208,19 +237,20 @@ step green on the owner machine (verified 2026-09-30).
 |---|---|
 | `aio` | Full setup: scan → manifest → inject → MCP ensure → path fix → status table |
 | `aio status` | Read-only health report (state, manifest, repo/install counts, agent blocks) |
-| `aio ask "<prompt>"` | Catalog search (repos/tools/sites/skills): BM25 + optional local-Ollama rerank; every hit prints link + one-line function; `--json` |
-| `aio borrow "<kw>"` | Live GitHub search; `--get <owner/repo>` shallow-clone to `%TEMP%\aio-borrow` (24 h TTL, 1 GB disk guard); `--list` / `--clean` |
-| `aio doctor [--check\|--fix]` | Self-diagnosis: node / state / db / manifest-sync / agent blocks / Ollama; `--check` = CI gate, `--fix` = safe repair |
-| `aio evolve` | Pipeline: scan → `build-db --enrich` → setup → doctor → `npm test`; never commits |
+| `aio ask "<prompt>"` | **Live search router**: GitHub (400M+ repos + `filename:SKILL.md` skills) + npm (3M+) + crates (150K+) in parallel, 4 s/source; BM25 merge + source diversity + optional warm-Ollama rerank; every hit prints link + one-line function + `<src>` tag; `--json` (`stored: 0`) |
+| `aio borrow "<kw>"` | Optional live GitHub search for what you want cloned; `--get <owner/repo>` shallow-clone to `%TEMP%\aio-borrow` (24 h TTL, 1 GB disk guard); `--list` / `--clean` |
+| `aio doctor [--check\|--fix]` | Self-diagnosis: node / state / live sources / manifest-sync / agent blocks / Ollama; `--check` = CI gate, `--fix` = safe repair |
+| `aio evolve` | Pipeline: install-plan scan (skipped without clones) → setup → doctor → `npm test`; never commits |
 | `aio update` | Reinstall latest from npm → re-run setup automatically |
 | `aio rollback` | Remove injected block + reverse MCP additions from ledger |
 | `aio --help` | Usage + branding |
 | `aio --version` | Print package version |
 
-Options: `--repos <dir>` (repositories directory), `--home <dir>` (data folder
-containing `ai-tools.db` / `TOOLS-INDEX.md`), `--json` (machine-readable output
-for `ask` / `borrow`). Environment overrides: `AIO_REPOS_DIR`, `AIO_HOME`,
-`OLLAMA_HOST`, `AIO_OLLAMA_MODEL`, `AIO_NO_AI`.
+Options: `--repos <dir>` (repositories directory — optional, install plan
+only), `--json` (machine-readable output for `ask` / `borrow`). Environment
+overrides: `AIO_REPOS_DIR`, `AIO_STATE_DIR` (state dir, default `~/.aio`),
+`AIO_OFFLINE=1`, `AIO_NO_GH=1`, `OLLAMA_HOST`, `AIO_OLLAMA_MODEL`,
+`AIO_NO_AI`. There is no `--home` flag and no `AIO_HOME` since v1.3.0.
 
 ## 7. Branding & documentation deliverables
 
@@ -240,6 +270,16 @@ for `ask` / `borrow`). Environment overrides: `AIO_REPOS_DIR`, `AIO_HOME`,
   logo, hairline rules, high-contrast type — no rainbow/glow. Animation is
   SMIL/CSS only inside the SVG (no JavaScript, no runtime dependency); the hero
   and stats strips are embedded in `index.html` as well as the README.
+- **UI assets v2 — live pipeline** (2026-09-30, v1.3.0) — same three SVGs
+  re-rendered for the 100% live architecture, each verified via headless Edge
+  screenshots: `assets/aio-hero.svg` (v1.3.0 chip, "LIVE — 0 BYTES STORED"
+  panel, rows github 400M+ / npm 3M+ / crates 150K+ / skill files 33K+, ticker
+  `$ prompt → aio ask → use → report ↗ → clean`), `assets/flow.svg` (six-step
+  live pipeline: parallel github/npm/crates/web lanes, top-8 ranked, no
+  catalog-miss branch), `assets/aio-stats.svg` (400M+ · 3M+ · 150K+ · 33K+ ·
+  0 BYTES STORED · 34/34 TESTS, eyebrow "VERIFIED — LIVE CORPUS, MEASURED
+  2026-09-30", chip "100% LIVE"). The v1.2 counts strip above is superseded
+  but kept as history.
 - **Token economy in generated docs** — `buildBlock` (src/write.js) output cut
   from 3258 → 2119 bytes per agent block (−35% ≈ −285 tokens × 7 agent files ≈
   −2000 tokens per session; every mandate and test string preserved verbatim);
@@ -250,8 +290,9 @@ for `ask` / `borrow`). Environment overrides: `AIO_REPOS_DIR`, `AIO_HOME`,
 - **README.md** (English) — CI/npm badges, animated hero + flowchart, quick
   start, commands, update & privacy sections.
 - **docs/CONFIG.md** — every file `aio` touches, rollback, troubleshooting.
-- **scripts/sites-seed.json** — curated seed (45 entries) for the `sites` table
-  behind the manifest `## SITES` block.
+- ~~**scripts/sites-seed.json** — curated seed (45 entries) for the `sites`
+  table behind the manifest `## SITES` block.~~ Removed in v1.3.0 with the
+  database (websites are now the agent's own web search).
 
 ## 8. Out of scope
 
@@ -262,15 +303,24 @@ for `ask` / `borrow`). Environment overrides: `AIO_REPOS_DIR`, `AIO_HOME`,
 
 ## 9. Acceptance checklist
 
+- [x] **v1.3.0 (2026-09-30):** `npm test` **34/34** (live sources + intent
+      routing, BM25 + source diversity, `stored: 0`, offline/no-gh gates,
+      borrow lifecycle, doctor, slim block); `aio doctor --check` **0 issues,
+      0 warnings** (live source check ok); live smoke
+      `aio ask "awesome animated chart library"` → `github+npm`, 8 hits,
+      4.4–5.0 s; no database ships (`ai-tools.db`, `src/catalog.js`,
+      `scripts/build-db.mjs` deleted).
 - [x] `node --test` passes (idempotency, rollback, scan, tool fallback,
       disclosure format, TOML/JSON ensure, banner grid, catalog
       categorize/parser, status report, bundled-catalog first-run fallback,
       ask search (BM25 + rerank), borrow lifecycle (TTL/clean), doctor checks,
-      bundle fallback, rich parseReposTable) — 30/30.
+      bundle fallback, rich parseReposTable) — 30/30. *(v1.2.0 baseline —
+      superseded by the v1.3.0 row above)*
 - [x] On the owner machine: block in **7** instruction files (exactly 1× each),
       MCP entries unchanged/complete, 2 stale registry paths repaired.
 - [x] Manifest shows REPOS + TOOLS + SITES + SKILLS with counts
-      (231 · 23 · 45 · 67).
+      (231 · 23 · 45 · 67). *(pre-v1.3 layout — the manifest is slim since
+      v1.3.0, FR3)*
 - [x] Re-run `aio` → no duplicates (FR4); setup → rollback → setup cycle
       removes/restores 7/7 blocks.
 - [x] Public repo pushed; tracked-files secret scan clean (FR8).
@@ -293,27 +343,40 @@ Verified 2026-09-29: tests **17/17** (node --test), REPOS **231** · TOOLS 23 ·
 SKILLS 67, screenshots **231/231**, `aio status` healthy (7/7 agent blocks),
 `aio-connect@1.1.2` published (live on the registry, dist-tags latest).
 
-Verified 2026-09-30: tests **30/30**; `aio ask` live (engine
+Verified 2026-09-30 (v1.2.0): tests **30/30**; `aio ask` live (engine
 `ollama:qwen3:4b`, link + function per hit); `aio borrow` live GitHub search;
 `aio doctor --check` 0 issues; `aio evolve` pipeline green; SITES **45**;
 screenshot artifacts removed by decision (`docs/SCREENSHOTS.md` + `screenshots/`
 deleted); 231 clones deleted (db-first catalog, 16.43 GB freed) with status
 healthy (0 dirs); repo renamed to `all-in-one`; `aio-connect@1.2.0` published.
 
+Verified 2026-09-30 (v1.3.0): tests **34/34**; `aio doctor --check` **0
+issues, 0 warnings** (live source reachable); live smoke `aio ask` →
+`github+npm`, 8 hits, 4.4–5.0 s with `stored: 0`; no database ships (bundle =
+bin/src/assets/docs only); hero/flow/stats SVGs v2 re-rendered and verified
+via headless Edge screenshots; GitHub Pages CI green on 3 OS for the previous
+commit (a follow-up run covers this docs batch).
+
 ## 10. Known limitations
 
-- **`aio ask` rerank needs local Ollama.** The BM25 pass always runs; the
-  `qwen3` rerank (default model `qwen3:4b`, override with `AIO_OLLAMA_MODEL`)
-  only runs when `OLLAMA_HOST` (default `http://localhost:11434`) responds —
-  20 s abort so a cold model load still fits. No Ollama → silent fallback to
-  BM25 keyword ranking (`aio doctor` reports it as a warning, not an issue);
-  set `AIO_NO_AI=1` to skip the network call entirely.
+- **`aio ask` rerank needs a warm local Ollama.** The BM25 + source-diversity
+  pass always runs; the `qwen3` rerank (default model `qwen3:4b`, override
+  with `AIO_OLLAMA_MODEL`) is attempted only while the run is still inside
+  the speed budget — 3.5 s abort, and skipped entirely once elapsed time
+  passes 2.5 s. No Ollama → silent fallback to the merged BM25 order
+  (`aio doctor` reports it as a warning, not an issue); set `AIO_NO_AI=1` to
+  skip the network call entirely.
+- **Live sources need network and can rate-limit.** Each source (GitHub, npm,
+  crates) has a 4 s timeout and is skipped silently when it fails; GitHub
+  code search needs an authenticated `gh` (absent → skills lane returns `[]`),
+  `AIO_NO_GH=1` disables the `gh` subprocess, `AIO_OFFLINE=1` turns `aio ask`
+  into an explicit offline message instead of a silent empty result.
 - **`aio borrow` needs network, `git`, and disk.** Live GitHub search
   rate-limits unauthenticated callers (403 → clear "rate limited" error;
   `gh auth token` / `GITHUB_TOKEN` raises the quota); `--get` refuses to clone
   with less than 1 GB free (guard message tells you to `--clean` first).
-  Temp clones live only in `%TEMP%\aio-borrow` — nothing is written to the
-  catalog directory.
+  Temp clones live only in `%TEMP%\aio-borrow` — nothing is written to disk
+  beyond that temp dir.
 - **`aio doctor --fix` only re-runs setup.** Fixes are limited to the
   idempotent pipeline (regenerate manifest + reinject blocks); it never edits
   agent files by hand, never touches MCP ledgers, and `aio evolve` never
@@ -339,3 +402,4 @@ healthy (0 dirs); repo renamed to `all-in-one`; `aio-connect@1.2.0` published.
 | 2026-09-29 | v1.3 — `aio-connect@1.1.1` published to npm (2FA web-auth): cross-platform CI workflow, portable default repos dir, `src/catalog.js` fine-grained categories + install columns in ai-tools.db, `aio status` command, install-tools script, FR6 support-matrix/privacy/troubleshooting docs, landing-page qualifiers |
 | 2026-09-29 | v1.4 — `aio-connect@1.1.2`: bundled `ai-tools.db` + first-run fallback (resolveDataDir), CI actions v5, catalog 231 repos (+30 gems & discovery), screenshots 231/231 |
 | 2026-09-30 | v1.5 - aio 1.2.0: aio ask (BM25 + local-Ollama rerank, link+function output), aio borrow (ephemeral GitHub clones, 24h TTL), aio doctor/evolve (self-diagnosis/self-upgrade), ## SITES (45) + disclosure site, db-first catalog (clones optional), animated README/flow assets, screenshots artifacts removed, repo renamed all-in-one |
+| 2026-09-30 | v1.6 — aio 1.3.0: 100% live architecture — ai-tools.db + catalog.js + build-db deleted, aio ask = parallel GitHub/npm/crates search (BM25 + source diversity + warm qwen3 rerank), web = agent's own search, zero storage (0 bytes), assets v2 live pipeline redesign, 34/34 tests, doctor live check |

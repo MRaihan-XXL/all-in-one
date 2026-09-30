@@ -8,44 +8,52 @@ verified.
 
 ## What the flow shows
 
-Six steps plus one branch — as drawn in `assets/flow.svg`:
+Six steps, one loop — as drawn in `assets/flow.svg` (the live pipeline; there
+is no catalog-miss branch since v1.3.0):
 
 | # | Step | Meaning |
 |---|---|---|
-| 1 | **Your prompt** | plain-language input; no `/slash-command` needed |
-| 2 | **`aio ask "<what you need>"`** | catalog search over repos · tools · sites · skills: BM25, reranked by local Ollama `qwen3` when it is up; **every hit prints URL + one-line function** (catalog: 231 repos · 23 tools · 45 sites) |
-| 3a | **hit → use the entry** | take the catalog entry (link + function): a repo, tool, site or skill already known locally |
-| 3b | **miss → `aio borrow "<keywords>"`** | live GitHub search for what the catalog lacks |
-| 4 | **Use ephemerally** | `aio borrow --get owner/repo` shallow-clones into `%TEMP%\aio-borrow` (**24 h TTL**, ≥ 1 GB free-disk guard) — or run `npx`/`uvx`, or open the site; nothing installed permanently |
-| 5 | **Report** | mandatory disclosure `[aio] Using [<name>](<url>) (<type>) — <function>`: WHAT CHANGED + every repo/tool/site used, each as a markdown link + one-line function |
-| 6 | **`aio borrow --clean`** | wipe temp clones (`--list` inspects them first; expired clones are purged automatically) |
+| 1 | **Your prompt** | plain-language input ("aku butuh X yang GG"); no `/slash-command` needed |
+| 2 | **`aio ask "<what you need>"`** | **LIVE · ADAPTIVE · ≤ 4 s per source** — parallel lanes **github** (400M+ repos + `filename:SKILL.md` skill files), **npm** (3M+ packages), **crates** (150K+), plus **web → your agent's own web search**; intent routing (rust → crates, skill words → skills, URL → web hint) and generic-word stripping for GitHub |
+| 3 | **top-8 ranked** | sources merged and ranked: **BM25**, source diversity (≥ 2 rows per answering source), qwen3 rerank only when warm (≤ 3.5 s); **every hit prints URL + one-line function + `<github>`/`<npm>`/`<crates>` tag**; **0 bytes stored** |
+| 4 | **pakai sementara (use ephemerally)** | `npx` / `uvx` / copy — ephemeral, never a permanent install; or `aio borrow --get owner/repo` shallow-clones into `%TEMP%\aio-borrow` (**24 h TTL**, ≥ 1 GB free-disk guard) |
+| 5 | **laporan wajib (report)** | mandatory disclosure `[aio] Using [<name>](<url>) (<type>) — <function>`: WHAT CHANGED + every repo/tool/site used, each as a markdown link + one-line function |
+| 6 | **`aio borrow --clean`** | wipe temp clones (`--list` inspects them first; expired clones are purged automatically) — then the loop continues with the next prompt |
+
+Environment gates: `AIO_OFFLINE=1` makes `aio ask` fail loudly offline (by
+design there is no local catalog to fall back to); `AIO_NO_GH=1` skips the
+`gh` subprocess (used in tests).
 
 `docs/flow.svg` tells the same story in three hops: **Your prompt → AI agent**
 (no slash-command), **aio manifest → AI agent** (dashed, vermilion — the
-aio-owned edge feeding `REPOS · TOOLS · SITES · SKILLS`), **AI agent → Your
+aio-owned edge feeding `REPOS · TOOLS · SKILLS`), **AI agent → Your
 answer** (the reply carries the disclosure line, name linked to the manifest
 URL). Its manifest box is drawn **dashed** on purpose: it is not a step the
 user triggers — it is background context that feeds the agent continuously.
+That file predates v1.3.0 and is kept as-is: today's manifest is slim (live
+rules + disclosure + agents — no catalog tables), so `assets/flow.svg` above
+is the authoritative diagram.
 
 ## Commands in the flow
 
 | Command | Role |
 |---|---|
-| `aio` | one-time setup: scan → manifest → inject agent blocks (idempotent) |
+| `aio` | one-time setup: scan → slim manifest → inject agent blocks (idempotent) |
 | `aio status` | read-only health report |
-| `aio ask "<prompt>"` | step 2 — catalog search, link + function per hit; `--json` for machine-readable output |
-| `aio borrow "<kw>"` | step 3b — live GitHub search for what the catalog lacks |
+| `aio ask "<prompt>"` | step 2 — **live** search across GitHub (repos + skill files), npm and crates in parallel; link + function + source tag per hit; `--json` for machine-readable output (`stored: 0`) |
+| `aio borrow "<kw>"` | optional live GitHub search for what you want to **clone** — discovery itself is `ask`'s job, not a catalog-miss fallback |
 | `aio borrow --get <owner/repo>` | step 4 — shallow clone to temp, 24 h TTL |
 | `aio borrow --list` / `--clean` | step 6 — inspect / wipe temp clones |
-| `aio doctor [--check\|--fix]` | self-diagnosis: node · state · db · manifest-sync · agent blocks · Ollama; `--check` = CI gate |
-| `aio evolve` | self-upgrade pipeline: scan → `build-db --enrich` → setup → doctor → `npm test`; never commits |
+| `aio doctor [--check\|--fix]` | self-diagnosis: node · state · live sources · manifest-sync · agent blocks · Ollama; `--check` = CI gate |
+| `aio evolve` | self-upgrade pipeline: install-plan scan → setup → doctor → `npm test`; never commits |
 | `aio update` / `aio rollback` | reinstall from npm / remove everything aio injected |
 
 ## How the animation works
 
-The motion is pure SVG **SMIL**: each arrow has a `<circle>` with an
-`animateMotion` that travels along *the exact same path data* as the arrow it
-rides — so a pulse can never drift off its track.
+The motion is pure SVG — no JavaScript in either diagram. The original
+`docs/flow.svg` uses **SMIL `animateMotion`**: each arrow has a `<circle>`
+that travels along *the exact same path data* as the arrow it rides — so a
+pulse can never drift off its track.
 
 ```xml
 <path id="p1" d="M250,198 H285 V98 H316" marker-end="url(#ah)"/>
@@ -55,8 +63,7 @@ rides — so a pulse can never drift off its track.
 </circle>
 ```
 
-Design decisions (`docs/flow.svg`; `assets/flow.svg` follows the same rules with
-seven pulses bound via `<mpath href="#f1"/>`, staggered over 1.4–2.6 s):
+Design decisions (`docs/flow.svg`):
 
 - **2.4 s loop, three phases (`begin` 0 s / 0.8 s / 1.6 s)** — the stagger
   reads as causality: prompt leaves first, context follows, result arrives
@@ -67,6 +74,18 @@ seven pulses bound via `<mpath href="#f1"/>`, staggered over 1.4–2.6 s):
   edge aio owns; the two solid edges belong to the user↔agent exchange.
 - **`repeatCount="indefinite"`, no JavaScript** — works inside `<img>` embeds,
   on GitHub README rendering, and offline.
+
+The README diagram `assets/flow.svg` (v1.3.0 live pipeline) keeps the same
+rules but a different mechanism, because the six-step layout is card-based:
+
+- **Connectors draw themselves** — `<animate attributeName="stroke-dashoffset"
+  values="100;0">` on each hairline, staggered `begin` 1.4 s → 4.0 s so the
+  pipeline builds in reading order.
+- **Cards fade/rise in via CSS `@keyframes`** (`draw`, `fadeIn`, `rise`,
+  `hl`) with per-card `animation-delay`; no JS, no layout shift.
+- **Lane and loop-back accents blink with SMIL `opacity`**
+  (`repeatCount="indefinite"`), so the parallel github/npm/crates lanes read
+  as live even in a frozen frame.
 
 ## Accessibility & graceful degradation
 
@@ -111,11 +130,15 @@ Recorded result (2026-09-28): frame A `FFDE6A1CF6E8…`, frame B
 `21CB7403F90A…` — pulses visibly moved along all three edges; palette and the
 8-agent list re-skin to the v1.1.0 identity in the same pass.
 
+The v1.3.0 rewrite of `assets/flow.svg` (the six-step live pipeline above) was
+re-verified the same way on 2026-09-30: headless Edge screenshots of hero,
+flow and stats, all visually checked.
+
 ## Embedding
 
 ```html
 <img src="./assets/flow.svg" width="100%"
-     alt="How aio works: prompt → aio ask → aio borrow (temp clone) → use ephemerally → report with links → clean">
+     alt="How aio works: prompt → aio ask (live github ∥ npm ∥ crates) → top-8 ranked → use ephemerally → report with links → clean">
 ```
 
 `docs/flow.svg` embeds the same way (substitute the path); both were verified
