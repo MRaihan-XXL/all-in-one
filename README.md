@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/aio-hero.svg" width="92%" alt="aio — the everything connector for AI agents: 100% live search across github, npm and crates — 0 bytes stored">
+  <img src="./assets/aio-hero.svg" width="92%" alt="aio — the everything connector for AI agents: 100% live search across github, npm and crates — no search storage — results printed, never saved">
 </p>
 
 <h1 align="center">aio — all-in-one</h1>
@@ -32,7 +32,11 @@
 </p>
 
 <p align="center">
-  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · 0 bytes stored · 34/34 tests">
+  <img src="./assets/aio-demo.svg" width="98%" alt="60-second terminal demo: aio setup wires every agent, aio ask searches github npm and crates live, results ranked with a verify note, reply opens with the disclosure line">
+</p>
+
+<p align="center">
+  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 45/45 tests">
 </p>
 
 ## ✨ What it does
@@ -42,8 +46,12 @@ your machine to **search live on each prompt**: GitHub (**630M+ repos** plus
 `filename:SKILL.md` public skills — **6.8M+ skill files**), npm (**3M+
 packages**) and crates (**340K+ crates**), queried in parallel — all counts are
 **verified floors, measured 2026-09-30**; websites go through your agent's
-own built-in web search. Results are printed, ranked and used — **0 bytes are
-ever stored**:
+own built-in web search. Results are printed, ranked and discarded — **no
+search history is stored** (aio's own files are the manifest, one block per
+agent file, timestamped backups and `config.json`, all listed in
+[docs/CONFIG.md](./docs/CONFIG.md)). The counts above are **the corpora aio
+can reach — the searchable universe, not aio's own size; ranking is not
+capped by them**:
 
 ```text
 prompt → aio ask (live: github ∥ npm ∥ crates) → top-8 ranked (BM25 + diversity)
@@ -51,10 +59,14 @@ prompt → aio ask (live: github ∥ npm ∥ crates) → top-8 ranked (BM25 + di
        → aio borrow --clean
 ```
 
+> **Auth:** GitHub works unauthenticated at low rate; `gh auth login` (or `GH_TOKEN`)
+> unlocks the skills lane (code search requires auth — otherwise it returns `[]`) and
+> raises the rate limit. Details: [docs/CONFIG.md](./docs/CONFIG.md).
+
 | Command | What you get |
 |---|---|
-| `aio` | scan → slim manifest → inject the auto-use block into every agent |
-| `aio ask "csv ke chart"` | **live search** across GitHub (630M+ repos + public skills), npm (3M+ pkgs) and crates (340K+) in parallel (4 s per source), merge-ranked with BM25 + source diversity; every hit prints **link + one-line function + `<github>`/`<npm>`/`<crates>` tag**; reranked by your local Ollama (qwen3) only when it is warm and fast; `--json` → `{…, stored: 0, hits}` |
+| `aio` | scan → slim manifest → inject the auto-use block into every agent — add `--dry-run` to preview every change, write nothing |
+| `aio ask "csv ke chart"` | **live search** across GitHub (630M+ repos + public skills), npm (3M+ pkgs) and crates (340K+) in parallel (4 s per source), merge-ranked with BM25 + source diversity, blended 65% keyword relevance + 35% source popularity (stars/downloads/npm score); every hit prints **link + one-line function + `<github>`/`<npm>`/`<crates>` tag**; reranked by your local Ollama (qwen3) only when it is warm and fast; `--json` → `{…, stored: 0, hits}` (`stored: 0` = search results stored) |
 | `aio borrow "etl tool"` | **optional ephemeral fetch** — `--get owner/repo` shallow-clones to temp (**24 h TTL**, auto-purged), `--list` inspects, `--clean` wipes it. Not a fallback for `ask`: use it when you actually need the files locally |
 | `aio doctor` | self-diagnosis: node · state · live sources · manifest ↔ agent blocks ↔ Ollama; `--fix` repairs, `--check` = CI gate |
 | `aio evolve` | the whole self-upgrade pipeline in one run: install-plan scan → setup → doctor → tests (never commits) |
@@ -66,14 +78,17 @@ Example — real `aio ask` output, abridged (links + functions always included):
 ```text
 aio ask — "awesome animated chart library" (live: github+npm · 8 hasil · 5.0s)
 
+note: ranked by keyword match + source popularity — public results are unvetted;
+      verify before running npx/uvx or cloning (docs/THREATS.md).
+
+1. lightweight-charts [tool] <npm> — Performant financial charts built with HTML5 canvas
+   v5.2.1 · financial-charting-library · charting-library · html5-charts
+   https://www.npmjs.com/package/lightweight-charts
+   why: BM25 keyword match (#1) + trust high
 2. vizzuhq/vizzu-lib [repo] <github> — Library for animated data visualizations and data stories.
    ★2037 · JavaScript
    https://github.com/vizzuhq/vizzu-lib
-   why: BM25 keyword match (#2)
-5. lightweight-charts [tool] <npm> — Performant financial charts built with HTML5 canvas
-   v5.2.1 · financial-charting-library · charting-library · html5-charts
-   https://www.npmjs.com/package/lightweight-charts
-   why: BM25 keyword match (#5)
+   why: BM25 keyword match (#2) + trust high
 ```
 
 ## 📦 Install
@@ -82,13 +97,18 @@ aio ask — "awesome animated chart library" (live: github+npm · 8 hasil · 5.0
 npm install -g aio-connect
 ```
 
-> The npm name `aio` was taken — the package is **`aio-connect`**, the binary
-> stays `aio`. Requires **Node.js ≥ 22** (zero runtime dependencies).
+> The npm name `aio` was taken — the package is **`aio-connect`**, and it ships
+> two binaries: **`aio` and `aioc`** (`aioc` is an alias). Adobe's App Builder
+> CLI (`@adobe/aio`) also owns the binary name `aio` on PATH — if both are
+> installed globally, use `aioc` for this tool, or run via `npx aio-connect`.
+> Requires **Node.js ≥ 22** (zero runtime dependencies).
 
 ## 🤖 Honesty is the product
 
 Every agent that reads the manifest **must disclose what it used**, as the
-first line of its reply:
+first line of its reply. Enforcement is **instruction-level**: aio injects
+that rule into every agent file; compliance is model-dependent (see the
+FR6/kimi note below). The required line:
 
 ```text
 [aio] Using [<name>](<url>) (<type>) — <function>
@@ -108,11 +128,15 @@ Perubahan: added chart.js, wired the data feed.
   <img src="./assets/aio-disclosure.svg" width="98%" alt="Disclosure card: every agent reply begins with the [aio] Using name-url-type-function line — linked, attributed, auditable; first line, every time">
 </p>
 
-## 🔁 Nothing is stored permanently
+## 🔁 No search storage
 
-- **Zero storage by design**: no `ai-tools.db`, no local catalog, no search
-  history — `aio ask` results are printed and discarded (**0 bytes stored**),
-  and the npm package ships no database (`files` = bin, src, assets, docs).
+- **No search history by design**: no `ai-tools.db`, no local catalog, no search
+  history — `aio ask` results are printed and discarded (**zero search
+  storage — results printed, never saved**), and the npm package ships no
+  database (`files` = bin, src, assets, docs). What aio *does* write: the
+  manifest `~/.aio/aio-context.md`, one `AIO AUTO-CONTEXT` block per agent
+  file, timestamped backups under `~/.aio/backups/`, and `~/.aio/config.json`
+  — all listed in [docs/CONFIG.md](./docs/CONFIG.md).
 - `aio borrow --get` clones into `%TEMP%/aio-borrow` with a **24-hour TTL** —
   the next run purges it, `--clean` wipes everything now.
 - CLI tools are consumed via `npx` / `uvx` — never installed permanently.
@@ -153,13 +177,37 @@ No telemetry; the only network calls are your explicit `ask`/`borrow`,
 > manifest's disclosure line. kimi quotes the rule but does not apply it
 > after 9 attempts — model/harness-dependent, not a packaging bug.
 
+## 🛡 Security
+
+- Threat model: **[docs/THREATS.md](./docs/THREATS.md)** — assets, trust
+  boundaries, the T1–T7 threat table, known gaps, reporting.
+- **Trust-weighted ranking** — final order = 65% BM25 keyword relevance
+  (keyword overlap is the gate) + 35% source popularity prior (`trust01`:
+  GitHub stars, npm score, crates downloads; skills neutral), and every
+  `aio ask` output ends with:
+  `note: ranked by keyword match + source popularity — public results are unvetted; verify before running npx/uvx or cloning (docs/THREATS.md).`
+- **`aio --dry-run`** — plan-only setup: prints exactly what would change
+  (block inject/update, MCP would-add, path repairs, manifest would-write)
+  and writes nothing. No backup, no state write.
+- **Writes are guarded** — timestamped backup of every touched file before
+  modification, malformed target configs reported as `parse error` and never
+  overwritten, rollback ledger for MCP entries (`aio rollback` reverses
+  exactly what aio added).
+- **`gh` token** — read at call time into memory only, never logged or
+  persisted; authenticated requests also raise the GitHub rate limit.
+- **Packaging** — zero runtime dependencies, no install/postinstall scripts,
+  npm publish behind 2FA/EOTP.
+- Known gaps, stated plainly: releases are not signed, and disclosure is
+  instruction-level (model-dependent), not technically enforced.
+
 ## 🛠 Development
 
 ```bash
-npm test             # node --test — 34 checks (live search, injection, borrow, doctor, …)
+npm test             # node --test — 45 checks (live search, injection, borrow, doctor, …)
 node bin/aio.js      # run from a checkout without installing
 node bin/aio.js ask "pdf ke word"
 node bin/aio.js doctor --check
+node scripts/eval-relevance.mjs   # live 20-query golden set → hit@8 = 20/20 (100%), measured 2026-09-30
 ```
 
 ## 🎨 Brand kit
