@@ -47,7 +47,7 @@ test('runStatus: healthy — fresh slim live manifest in STATE_DIR + repos dir',
   const out = r.lines.join('\n');
   const manifestLine = r.lines.find((l) => l.startsWith('manifest'));
   assert.ok(manifestLine && manifestLine.includes(MANIFEST), `manifest line points at ${MANIFEST}`);
-  assert.match(out, /live architecture \(0 bytes stored\)/, 'slim manifest → live architecture line');
+  assert.match(out, /live architecture \(no search storage\)/, 'slim manifest → live architecture line');
   assert.match(out, /\(2 dirs\)/, 'non-dot dirs counted, .git skipped');
   assert.ok(!r.issues.some((i) => i.includes('manifest')), r.issues.join('; '));
   assert.equal(r.ok, true, r.issues.join('; '));
@@ -63,7 +63,7 @@ test('runStatus: manifest missing → issue reported', (t) => {
   assert.equal(r.ok, false);
 });
 
-test('runStatus: legacy manifest (no "zero storage") → issue reported', (t) => {
+test('runStatus: legacy manifest (no live marker) → issue reported', (t) => {
   t.mock.method(console, 'log', () => {});
   fs.writeFileSync(MANIFEST, '# ctx\n## REPOS (3)\n');
   t.after(() => fs.rmSync(MANIFEST, { force: true }));

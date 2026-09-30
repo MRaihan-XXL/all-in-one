@@ -59,7 +59,7 @@ test('runChecks: fixture state (no manifest) → manifest bad + ok=false', async
   const r = await runChecks({});
   assert.ok(r.issues >= 1);
   assert.ok(r.checks.some((c) => c.id === 'manifest' && c.level === 'bad'));
-  assert.ok(!r.checks.some((c) => c.id === 'catalog db'), 'catalog db check dropped (zero storage)');
+  assert.ok(!r.checks.some((c) => c.id === 'catalog db'), 'catalog db check dropped (no local catalog)');
   assert.equal(r.ok, false, 'missing manifest must fail');
 });
 
@@ -90,7 +90,7 @@ test('runChecks: AIO_OFFLINE=1 + fresh slim manifest → ok=true (deterministic,
   assert.match(live.text, /AIO_OFFLINE=1/, 'offline is a deterministic ok');
   const manifest = r.checks.find((c) => c.id === 'manifest');
   assert.equal(manifest.level, 'ok');
-  assert.match(manifest.text, /live architecture \(0 bytes stored\)/);
+  assert.match(manifest.text, /live architecture \(no search storage\)/);
   assert.equal(r.issues, 0, r.checks.filter((c) => c.level === 'bad').map((c) => c.text).join('; '));
   assert.equal(r.ok, true);
 });
