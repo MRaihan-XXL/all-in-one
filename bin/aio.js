@@ -15,7 +15,8 @@ const HELP = `
     aio ask "<what you need>"    LIVE search across GitHub (630M+ repos, public
                                  skills), npm (3M+ pkgs) + crates — adaptive
                                  sources, every hit prints link + function,
-                                 ZERO storage (nothing ever saved)
+                                 ranked by keyword + popularity, then discarded
+                                 (no search storage — results never saved)
     aio borrow "<keywords>"      Live GitHub search for what you need cloned
       aio borrow --get <owner/repo>   shallow-clone to temp (24h TTL, then purged)
       aio borrow --list | --clean     inspect / wipe temp clones
@@ -28,14 +29,20 @@ const HELP = `
 
   Options
     --repos <dir>                Directory of cloned git repositories (optional,
-                                 used for the local install plan only)
+                                  used for the local install plan only)
+    --dry-run                    setup: print exactly what would change,
+                                  write nothing (diff-first review)
     --json                       Machine-readable output (ask / borrow)
     -h, --help                   This help
     -v, --version                Version
 
   Environment
-    AIO_REPOS_DIR, AIO_OFFLINE=1, AIO_NO_GH=1, OLLAMA_HOST,
+    AIO_REPOS_DIR, AIO_OFFLINE=1, AIO_NO_GH=1, GH_TOKEN, OLLAMA_HOST,
     AIO_OLLAMA_MODEL, AIO_NO_AI=1
+
+  Note
+    aioc is an alias of the same binary — Adobe's App Builder CLI (@adobe/aio)
+    also owns the name aio on PATH; use aioc when both are installed.
 
   What it does
     1. Scans installed agents (opencode, claude, kimi, jcode, …).
@@ -46,7 +53,7 @@ const HELP = `
     4. Teaches every agent the prompt flow:
        prompt → aio ask (live) → use ephemerally → report → clean.
 
-  Disclosure (mandatory, every reply that touches the manifest):
+  Disclosure (injected rule — first line of every reply touching the manifest):
     [aio] Using [<name>](<url>) (<type>) — <function>
     <type> = repo | cli | service | skill | site
 `;
@@ -63,6 +70,7 @@ function parseArgs(argv) {
     else if (a === '--list') opts.flags.list = true;
     else if (a === '--check') opts.flags.check = true;
     else if (a === '--fix') opts.flags.fix = true;
+    else if (a === '--dry-run') opts.flags.dry = true;
     else rest.push(a);
   }
   const cmd = rest[0];
@@ -145,7 +153,7 @@ switch (opts.command) {
     console.log(banner());
     const { runSetup } = await import('../src/setup.js');
     try {
-      await runSetup(opts);
+      await runSetup({ ...opts, dryRun: !!opts.flags.dry });
     } catch (e) {
       console.error(`[aio] setup failed: ${e.message}`);
       if (e.stack) console.error(e.stack.split('\n').slice(1, 4).join('\n'));

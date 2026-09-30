@@ -12,7 +12,7 @@ export function backup(file, label) {
   if (!fs.existsSync(file)) return null;
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
   const ts = new Date().toISOString().replace(/[:.]/g, '-');
-  const safe = String(label).replace(/[^a-z09_-]/gi, '_');
+  const safe = String(label).replace(/[^a-z0-9_-]/gi, '_');
   const dest = path.join(BACKUP_DIR, `${safe}__${ts}__${path.basename(file)}`);
   fs.copyFileSync(file, dest);
   return dest;
@@ -44,8 +44,9 @@ export function buildBlock({ version, manifestPath, dataDir }) {
   return lines.join('\n');
 }
 
-/** Idempotent marker injection: first run appends, later runs replace in place. */
-export function injectBlock(file, body, label) {
+/** Idempotent marker injection: first run appends, later runs replace in place.
+ *  opts.dry → compute the planned status only; no backup, no write (FR12 dry-run). */
+export function injectBlock(file, body, label, { dry = false } = {}) {
   const existed = fs.existsSync(file);
   const current = existed ? fs.readFileSync(file, 'utf8') : '';
   const had = BLOCK_RE.test(current);
@@ -54,6 +55,7 @@ export function injectBlock(file, body, label) {
     ? current.replace(BLOCK_RE, block)
     : (current ? current.replace(/\s*$/, '\n\n') : '') + block + '\n';
   if (next === current) return { status: 'unchanged', file };
+  if (dry) return { status: had ? 'would update (dry-run)' : 'would inject (dry-run)', file };
   if (existed) backup(file, label);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, next);
@@ -79,7 +81,7 @@ export function genContext({ version, agents }, outPath) {
     '',
     '# AIO Context Manifest',
     '',
-    '> **Live architecture — zero storage.** There is no catalog database: `aio ask` searches GitHub (630M+ repos + public skills), npm (3M+ packages) and crates (340K+) in real time, adaptively. Websites are covered by your own web search. Nothing is ever written to disk — stored: 0 bytes.',
+    '> **Live architecture — zero search storage.** There is no catalog database: `aio ask` searches GitHub (630M+ repos + public skills), npm (3M+ packages) and crates (340K+) in real time, adaptively. Websites are covered by your own web search. Search results are printed and discarded — **no search history is kept**. (aio does write its own files: this manifest, one block per agent, timestamped backups under `~/.aio/backups/`.)',
     '>',
     '> **MANDATORY disclosure** — the moment your answer uses ANY entry surfaced through aio (read, listed, cited, or recommended), START your reply with this exact line:',
     '>',
@@ -123,7 +125,7 @@ export function ledgerList() {
   return ledgerRead();
 }
 
-export function ensureJsonEntry(file, key, entry, label, rootKey, create = false) {
+export function ensureJsonEntry(file, key, entry, label, rootKey, create = false, { dry = false } = {}) {
   let obj = {};
   if (fs.existsSync(file)) {
     try {
@@ -138,6 +140,7 @@ export function ensureJsonEntry(file, key, entry, label, rootKey, create = false
   }
   const holder = rootKey ? (obj[rootKey] ||= {}) : obj;
   if (holder[key]) return { target: path.basename(file), status: 'present' };
+  if (dry) return { target: path.basename(file), status: 'would add (dry-run)' };
   backup(file, label);
   holder[key] = entry;
   const text = JSON.stringify(obj, null, 2) + '\n';
@@ -148,13 +151,14 @@ export function ensureJsonEntry(file, key, entry, label, rootKey, create = false
 }
 
 /** codex config.toml: append [mcp_servers.<key>] only when absent. */
-export function ensureTomlEntry(file, key, entry, label) {
+export function ensureTomlEntry(file, key, entry, label, { dry = false } = {}) {
   if (!fs.existsSync(file)) return { target: path.basename(file), status: 'file not found — skipped' };
   const txt = fs.readFileSync(file, 'utf8');
   const header = `[mcp_servers.${key}]`;
   if (txt.includes(header) || txt.includes(`[mcp_servers."${key}"]`)) {
     return { target: path.basename(file), status: 'present' };
   }
+  if (dry) return { target: path.basename(file), status: 'would add (dry-run)' };
   backup(file, label);
   const body = Object.entries(entry)
     .map(([k, v]) => `${k} = ${JSON.stringify(v)}`)
@@ -165,7 +169,7 @@ export function ensureTomlEntry(file, key, entry, label) {
 }
 
 /** opencode.jsonc is JSONC (comments must survive) → textual insert. */
-function ensureOpencodeJsonc(key, entry) {
+function ensureOpencodeJsonc(key, entry, { dry = false } = {}) {
   const file = path.join(os.homedir(), '.config', 'opencode', 'opencode.jsonc');
   if (!fs.existsSync(file)) return { target: 'opencode.jsonc', status: 'file not found — skipped' };
   const txt = fs.readFileSync(file, 'utf8');
@@ -173,6 +177,7 @@ function ensureOpencodeJsonc(key, entry) {
   const marker = '"mcp": {';
   const idx = txt.indexOf(marker);
   if (idx === -1) return { target: 'opencode.jsonc', status: 'no "mcp" block — skipped' };
+  if (dry) return { target: 'opencode.jsonc', status: 'would add (dry-run)' };
   backup(file, 'opencode-jsonc');
   const after = txt.slice(idx + marker.length);
   const empty = /^\s*\}/.test(after);
@@ -184,24 +189,24 @@ function ensureOpencodeJsonc(key, entry) {
 }
 
 /** Ensure codebase-memory-mcp exists in opencode / claude / kimi / jcode / codex / gemini configs. */
-export function ensureMcp(binary) {
+export function ensureMcp(binary, { dry = false } = {}) {
   const entry = { command: binary };
   const home = os.homedir();
   const results = [];
-  results.push(ensureOpencodeJsonc(MCP_KEY, { type: 'local', command: binary }));
+  results.push(ensureOpencodeJsonc(MCP_KEY, { type: 'local', command: binary }, { dry }));
   results.push(
-    ensureJsonEntry(path.join(home, '.claude.json'), MCP_KEY, entry, 'claude-json', 'mcpServers')
+    ensureJsonEntry(path.join(home, '.claude.json'), MCP_KEY, entry, 'claude-json', 'mcpServers', false, { dry })
   );
   results.push(
-    ensureJsonEntry(path.join(home, '.kimi-code', 'mcp.json'), MCP_KEY, entry, 'kimi-mcp', 'mcpServers')
+    ensureJsonEntry(path.join(home, '.kimi-code', 'mcp.json'), MCP_KEY, entry, 'kimi-mcp', 'mcpServers', false, { dry })
   );
   results.push(
-    ensureJsonEntry(path.join(home, '.jcode', 'mcp.json'), MCP_KEY, entry, 'jcode-mcp', 'servers')
+    ensureJsonEntry(path.join(home, '.jcode', 'mcp.json'), MCP_KEY, entry, 'jcode-mcp', 'servers', false, { dry })
   );
   results.push(
-    ensureJsonEntry(path.join(home, '.gemini', 'settings.json'), MCP_KEY, entry, 'gemini-settings', 'mcpServers', true)
+    ensureJsonEntry(path.join(home, '.gemini', 'settings.json'), MCP_KEY, entry, 'gemini-settings', 'mcpServers', true, { dry })
   );
-  results.push(ensureTomlEntry(path.join(home, '.codex', 'config.toml'), MCP_KEY, entry, 'codex-toml'));
+  results.push(ensureTomlEntry(path.join(home, '.codex', 'config.toml'), MCP_KEY, entry, 'codex-toml', { dry }));
   return results;
 }
 
@@ -248,8 +253,8 @@ export function removeMcpAdditions() {
 const STALE_FROM = 'AI tutorial';
 const STALE_TO = 'all-in-one';
 
-/** Repair registry pointers broken by the folder rename. Returns per-file results. */
-export function fixPaths() {
+/** Repair registry pointers broken by the folder rename. Returns per-file results. dry = report only. */
+export function fixPaths(dry = false) {
   const home = os.homedir();
   const targets = [
     path.join(home, 'AGENTS.md'),
@@ -266,6 +271,10 @@ export function fixPaths() {
     const txt = fs.readFileSync(file, 'utf8');
     if (!txt.includes(STALE_FROM)) continue;
     const count = txt.split(STALE_FROM).length - 1;
+    if (dry) {
+      results.push({ target: file, status: `would repair ${count} path reference(s) (dry-run)` });
+      continue;
+    }
     backup(file, 'pathfix');
     fs.writeFileSync(file, txt.split(STALE_FROM).join(STALE_TO));
     results.push({ target: file, status: `repaired ${count} path reference(s)` });

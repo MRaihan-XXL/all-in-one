@@ -1,6 +1,8 @@
 // live.js — real-time source layer: GitHub (repos + skills via code search),
-// npm, crates.io. Zero storage: results are printed, never written to disk/db.
+// npm, crates.io. No search storage: results are printed, never written to disk/db.
 // Every source degrades silently (timeout/missing gh/rate limit → skip).
+// Every entry carries `trust01` — a popularity prior in [0,1] (stars/downloads/
+// npm score) that `search.js` blends into the final ranking (FR12).
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -72,12 +74,13 @@ export async function ghRepos(q, n = 6) {
     func: trim(r.description, 120) || `${r.language || 'Repo'} repository (no description)`,
     meta: `★${r.stargazers_count}${r.language ? ` · ${r.language}` : ''}`,
     src: 'github',
+    trust01: Math.min(1, Math.log10(1 + (r.stargazers_count || 0)) / 5),
   }));
 }
 
 /**
- * Skills live discovery via GitHub code search (filename:SKILL.md) — 33k+ public
- * skills. Needs `gh` (authenticated); absent → [].
+ * Skills live discovery via GitHub code search (filename:SKILL.md) — 6.8M+ public
+ * skill files (measured 2026-09-30). Needs `gh` (authenticated); absent → [].
  */
 export async function ghSkills(q, n = 6) {
   if (process.env.AIO_NO_GH === '1') return [];
@@ -98,6 +101,7 @@ export async function ghSkills(q, n = 6) {
       func: `SKILL.md — ${f.path}`,
       meta: 'public skill (github code search)',
       src: 'github',
+      trust01: 0.5, // no popularity field in code search results → neutral prior
     }));
   } catch {
     return [];
@@ -119,6 +123,7 @@ export async function npmSearch(q, n = 6) {
       .filter(Boolean)
       .join(' · '),
     src: 'npm',
+    trust01: typeof o.score?.final === 'number' ? o.score.final : 0.5, // npm quality/popularity score
   }));
 }
 
@@ -135,6 +140,7 @@ export async function cratesSearch(q, n = 5) {
     func: trim(c.description, 120) || 'Rust crate (no description)',
     meta: `v${c.max_stable_version || '?'} · ★${c.stars ?? 0}`,
     src: 'crates',
+    trust01: Math.min(1, Math.log10(1 + (c.downloads || c.recent_downloads || 0)) / 7),
   }));
 }
 

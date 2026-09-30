@@ -1,6 +1,7 @@
 // search.js — `aio ask`: adaptive live search (GitHub repos/skills, npm, crates)
-// merged + ranked with BM25, optional local Ollama rerank (qwen3). Zero storage:
-// every result is printed only — nothing is written to disk or database.
+// merged + ranked with BM25 blended with source trust (stars/downloads/npm score),
+// optional local Ollama rerank (qwen3). No search storage: every result is
+// printed only — never written to disk or database.
 import { liveSearch } from './live.js';
 
 const OLLAMA = process.env.OLLAMA_HOST || 'http://localhost:11434';
@@ -9,12 +10,35 @@ const OLLAMA_MODEL = process.env.AIO_OLLAMA_MODEL || 'qwen3:4b';
 /* ---------------- BM25 (in-memory merge ranker) ---------------- */
 
 function tokenize(s) {
-  return String(s).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  return String(s)
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    // light plural stem so query "chart" matches docs "charts" (exact-token gate)
+    .map((w) => (w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w));
 }
 
-/** Standard BM25 (k1=1.2, b=0.75) over an in-memory list. Tiny corpus → build per call. */
+// Query-side intensifier stoplist — "awesome" must not fetch awesome-phonenumber.
+// (Only the query side; documents keep every token.)
+const QSTOP = new Set([
+  'awesome', 'best', 'free', 'good', 'nice', 'great', 'please', 'need', 'want',
+  'find', 'some', 'any', 'recommend', 'recommended', 'looking',
+]);
+
+function trustTier(t) {
+  if (typeof t !== 'number') return 'low';
+  return t >= 0.66 ? 'high' : t >= 0.33 ? 'mid' : 'low';
+}
+
+/** Standard BM25 (k1=1.2, b=0.75) over an in-memory list. Tiny corpus → build per call.
+ *  Entries carrying a numeric `trust01` (source popularity: stars / downloads / npm
+ *  score, mapped to [0,1]) are re-ranked 65% relevance + 35% trust — keyword overlap
+ *  stays the gate, trust only orders the matches (supply-chain signal, FR12).
+ *  Score is also scaled by query-term coverage so a single rare-term hit cannot
+ *  outrank a candidate matching most of the query. */
 export function bm25Search(query, entries, limit = 8) {
-  const q = tokenize(query);
+  const raw = tokenize(query);
+  const q = raw.filter((t) => !QSTOP.has(t));
   if (!q.length) return [];
   const docs = entries.map((e) => tokenize(`${e.name} ${e.name} ${e.func} ${e.meta || ''}`));
   const N = docs.length || 1;
@@ -28,22 +52,33 @@ export function bm25Search(query, entries, limit = 8) {
     const tf = new Map();
     for (const t of d) tf.set(t, (tf.get(t) || 0) + 1);
     let score = 0;
+    let matchedTerms = 0;
     for (const term of q) {
       const f = tf.get(term) || 0;
       if (!f) continue;
+      matchedTerms++;
       const idf = Math.log(1 + (N - (df.get(term) || 0) + 0.5) / ((df.get(term) || 0) + 0.5));
       score += idf * ((f * (k1 + 1)) / (f + k1 * (1 - b + (b * d.length) / (avgLen || 1))));
     }
+    score *= 0.4 + (0.6 * matchedTerms) / q.length; // query-term coverage
     return { entry: e, score };
   });
-  return scored
-    .filter((s) => s.score > 0)
+  const matched = scored.filter((s) => s.score > 0); // keyword gate: no overlap → no hit
+  const maxScore = matched.reduce((m, s) => Math.max(m, s.score), 0) || 1;
+  const blend = matched.some((s) => typeof s.entry.trust01 === 'number');
+  if (blend) {
+    for (const s of matched) {
+      const t = typeof s.entry.trust01 === 'number' ? Math.min(1, Math.max(0, s.entry.trust01)) : 0;
+      s.score = 0.65 * (s.score / maxScore) + 0.35 * t;
+    }
+  }
+  return matched
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
     .map((s, rank) => ({
       ...s.entry,
       score: Number(s.score.toFixed(3)),
-      why: `BM25 keyword match (#${rank + 1})`,
+      why: `BM25 keyword match (#${rank + 1})${blend ? ` + trust ${trustTier(s.entry.trust01)}` : ''}`,
     }));
 }
 
@@ -163,6 +198,8 @@ export async function runAsk({ query, json }) {
     };
   }
   const lines = [`aio ask — "${query}" (${engine} · ${hits.length} hasil · ${ms}s${web ? ' · web → your web search' : ''})`, ''];
+  lines.push('note: ranked by keyword match + source popularity — public results are unvetted;');
+  lines.push('      verify before running npx/uvx or cloning (docs/THREATS.md).');
   hits.forEach((h, i) => {
     lines.push(`${i + 1}. ${h.name} [${h.type}] ${h.src ? `<${h.src}>` : ''} — ${h.func}`);
     if (h.meta) lines.push(`   ${h.meta}`);

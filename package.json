@@ -1,10 +1,11 @@
 {
   "name": "aio-connect",
-  "version": "1.3.1",
-  "description": "aio — auto-connect your AI agents to LIVE search across GitHub (630M+ repos, public skills), npm & crates. Zero storage, no slash-commands.",
+  "version": "1.4.0",
+  "description": "aio — auto-connect your AI agents to LIVE search across GitHub (630M+ repos, public skills), npm & crates. Zero search storage (results printed, never saved), no slash-commands.",
   "type": "module",
   "bin": {
-    "aio": "bin/aio.js"
+    "aio": "bin/aio.js",
+    "aioc": "bin/aio.js"
   },
   "scripts": {
     "test": "node --test \"test/*.js\""

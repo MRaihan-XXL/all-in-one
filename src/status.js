@@ -69,8 +69,8 @@ export function runStatus(opts = {}) {
     issues.push('manifest missing');
   } else {
     const age = Math.floor((Date.now() - fs.statSync(mp).mtimeMs) / 86400000);
-    const live = fs.readFileSync(mp, 'utf8').includes('zero storage');
-    lines.push(`manifest   ${mp} — ${age}d old, ${live ? 'live architecture (0 bytes stored)' : 'legacy layout — refresh: aio'}`);
+    const live = fs.readFileSync(mp, 'utf8').includes('Live architecture');
+    lines.push(`manifest   ${mp} — ${age}d old, ${live ? 'live architecture (no search storage)' : 'legacy layout — refresh: aio'}`);
     if (!live) issues.push('manifest still has the legacy catalog layout — run `aio` to refresh');
     else if (age > 7) issues.push(`manifest is ${age} days old — run \`aio\` to refresh`);
   }

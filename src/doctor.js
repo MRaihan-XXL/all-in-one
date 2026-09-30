@@ -44,7 +44,7 @@ export async function runChecks(opts = {}) {
   const state = readState();
   checks.push(
     Object.keys(state).length
-      ? line('ok', 'state', 'config.json ok (zero-storage layout)')
+      ? line('ok', 'state', 'config.json ok (no local catalog)')
       : line('warn', 'state', 'no persisted state — run `aio` once')
   );
 
@@ -55,7 +55,7 @@ export async function runChecks(opts = {}) {
     try {
       const res = await fetch('https://api.github.com/rate_limit', { headers: { 'user-agent': 'aio-connect/1.3' }, signal: AbortSignal.timeout(3000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      checks.push(line('ok', 'live', 'github reachable — ask searches GitHub + npm + crates (0 bytes stored)'));
+      checks.push(line('ok', 'live', 'github reachable — ask searches GitHub + npm + crates (no search storage)'));
     } catch (e) {
       checks.push(line('warn', 'live', `github unreachable (${e.message}) — aio ask will still try npm/crates`));
     }
@@ -66,8 +66,8 @@ export async function runChecks(opts = {}) {
   if (fs.existsSync(manifestPath)) {
     const txt = fs.readFileSync(manifestPath, 'utf8');
     const ageDays = (Date.now() - fs.statSync(manifestPath).mtimeMs) / 86400000;
-    const live = txt.includes('zero storage');
-    const detail = `${live ? 'live architecture (0 bytes stored)' : 'LEGACY layout'} · ${ageDays.toFixed(1)}d old — ${manifestPath}`;
+    const live = txt.includes('Live architecture');
+    const detail = `${live ? 'live architecture (no search storage)' : 'LEGACY layout'} · ${ageDays.toFixed(1)}d old — ${manifestPath}`;
     if (!live) {
       checks.push(line('bad', 'manifest', `${detail} — fix: aio --fix`));
     } else if (ageDays > 7) {
