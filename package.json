@@ -1,6 +1,6 @@
 {
   "name": "aio-connect",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "aio — auto-connect your AI coding agents to your local repos, tools & skills. No slash-commands.",
   "type": "module",
   "bin": {
@@ -37,10 +37,10 @@
   "license": "GPL-3.0-only",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MRaihan-XXL/all-in-one-repo.git"
+    "url": "git+https://github.com/MRaihan-XXL/all-in-one.git"
   },
   "bugs": {
-    "url": "https://github.com/MRaihan-XXL/all-in-one-repo/issues"
+    "url": "https://github.com/MRaihan-XXL/all-in-one/issues"
   },
-  "homepage": "https://mraihan-xxl.github.io/all-in-one-repo/"
+  "homepage": "https://mraihan-xxl.github.io/all-in-one/"
 }

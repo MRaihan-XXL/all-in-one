@@ -33,7 +33,7 @@ Every write is preceded by a file backup to `~/.aio/backups/`.
 | 12 | `~/.jcode/mcp.json` | `servers["codebase-memory-mcp"]` (jcode's root key is `servers`) **only if absent** | ✅ only if aio added it (ledger) |
 | 13 | `~/.gemini/settings.json` | `mcpServers["codebase-memory-mcp"]` — file created when `~/.gemini/` exists, **only if absent** | ✅ only if aio added it (ledger) |
 | 14 | `~/.codex/config.toml` | `[mcp_servers.codebase-memory-mcp]` table appended **only if absent** | ✅ only if aio added it (ledger) |
-| 15 | instruction files with a stale `AI tutorial` path | path repaired to `all-in-one-repo` | kept (repair, not injection) |
+| 15 | instruction files with a stale `AI tutorial` path | path repaired to `all-in-one` | kept (repair, not injection) |
 | 16 | `~/.aio/config.json`, `~/.aio/mcp-ledger.json` | state (data dir, repos dir, MCP ledger) | ledger cleared; config kept |
 
 ### Idempotency
