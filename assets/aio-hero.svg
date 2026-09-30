@@ -1,9 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-label="aio — all-in-one: catalog of repos, tools, sites and skills for AI agents">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-label="aio — all-in-one: live search across github, npm and crates for AI agents, zero bytes stored">
   <defs>
     <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
       <circle cx="1" cy="1" r="1" fill="#171B21"/>
     </pattern>
     <clipPath id="wordClip"><rect x="56" y="120" width="330" height="180"/></clipPath>
+    <clipPath id="panelClip"><rect x="627" y="103" width="502" height="286" rx="12"/></clipPath>
+    <linearGradient id="askSheen2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF4A1C" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#FF4A1C" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#FF4A1C" stop-opacity="0"/>
+    </linearGradient>
     <radialGradient id="dotHalo" cx="0.5" cy="0.5" r="0.5">
       <stop offset="0.55" stop-color="#FF4A1C" stop-opacity="0.22"/>
       <stop offset="1" stop-color="#FF4A1C" stop-opacity="0"/>
@@ -47,10 +53,13 @@
   </g>
 
   <!-- top bar -->
-  <text x="64" y="46" class="mono eyebrow">ALL-IN-ONE<tspan fill="#343A43">  //  </tspan>AUTO-CONTEXT CLI</text>
+  <circle cx="48" cy="42" r="4" fill="#FF4A1C" class="fd" style="animation-delay:.5s">
+    <animate attributeName="opacity" values="1;0.2;1" dur="2.2s" repeatCount="indefinite"/>
+  </circle>
+  <text x="64" y="46" class="mono eyebrow">ALL-IN-ONE<tspan fill="#343A43">  //  </tspan>LIVE AUTO-CONTEXT CLI</text>
   <g class="fd" style="animation-delay:.7s">
     <rect x="1064" y="28" width="72" height="26" rx="13" fill="none" stroke="#FF4A1C" stroke-opacity="0.45"/>
-    <text x="1100" y="45" text-anchor="middle" class="mono" font-size="11" fill="#FF4A1C">v1.2.0</text>
+    <text x="1100" y="45" text-anchor="middle" class="mono" font-size="11" fill="#FF4A1C">v1.3.0</text>
   </g>
   <line x1="64" y1="62" x2="1136" y2="62" class="hair gw" style="animation-delay:.15s"/>
 
@@ -73,22 +82,37 @@
     </circle>
   </g>
 
-  <rect x="64" y="300" width="56" height="3" rx="1.5" fill="#FF4A1C" class="gw" style="animation-delay:.65s"/>
+  <rect x="64" y="300" width="56" height="3" rx="1.5" fill="#FF4A1C" class="gw" style="animation-delay:.65s">
+    <animate attributeName="opacity" values="1;0.45;1" dur="4s" begin="1.6s" repeatCount="indefinite"/>
+  </rect>
   <text x="64" y="340" class="sans txt r" font-size="21" font-weight="500" style="animation-delay:.6s">the everything connector for AI agents</text>
-  <text x="64" y="370" class="mono dim rs" font-size="12.5" letter-spacing="2" style="animation-delay:.72s">ask  ·  borrow  ·  doctor  ·  evolve</text>
+  <text x="64" y="370" class="mono dim rs" font-size="12.5" letter-spacing="2" style="animation-delay:.72s">live ask  ·  borrow  ·  doctor  ·  evolve</text>
 
-  <!-- ============ RIGHT: catalog panel (double bezel) ============ -->
+  <!-- ============ RIGHT: live panel (double bezel) ============ -->
   <g class="r" style="animation-delay:.45s">
     <rect x="620.5" y="96.5" width="515" height="299" rx="17" fill="none" stroke="#21252C"/>
     <rect x="627" y="103" width="502" height="286" rx="12" fill="#101318" stroke="#171B21"/>
+    <!-- live sheen sweep -->
+    <g clip-path="url(#panelClip)">
+      <rect x="627" y="96" width="502" height="42" fill="url(#askSheen2)">
+        <animate attributeName="y" values="96;394;96" dur="5.4s" begin="2s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+      </rect>
+    </g>
     <text x="647" y="136" class="mono" font-size="10.5" letter-spacing="2.4" fill="#7C828C">CATALOG</text>
-    <text x="1109" y="136" text-anchor="end" class="mono" font-size="10.5" letter-spacing="2.4" fill="#FF4A1C">DB-FIRST — 0 CLONES</text>
+    <circle cx="712" cy="132" r="3.5" fill="#FF4A1C">
+      <animate attributeName="opacity" values="1;0.2;1" dur="2.4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="712" cy="132" r="3.5" fill="none" stroke="#FF4A1C">
+      <animate attributeName="r" values="3.5;11" dur="2.4s" repeatCount="indefinite"/>
+      <animate attributeName="stroke-opacity" values="0.6;0" dur="2.4s" repeatCount="indefinite"/>
+    </circle>
+    <text x="1109" y="136" text-anchor="end" class="mono" font-size="10.5" letter-spacing="2.4" fill="#FF4A1C">LIVE — 0 BYTES STORED</text>
     <line x1="647" y1="150" x2="1109" y2="150" stroke="#1D2127"/>
 
     <!-- row 1: repositories 231 -->
     <g class="rs" style="animation-delay:.62s">
-      <text x="647" y="192" class="mono" font-size="13" fill="#9AA0A8">repositories</text>
-      <text x="1109" y="196" text-anchor="end" class="disp" font-size="34" letter-spacing="-1">231</text>
+      <text x="647" y="192" class="mono" font-size="13" fill="#9AA0A8">github repos</text>
+      <text x="1109" y="196" text-anchor="end" class="disp" font-size="34" letter-spacing="-1">400M+</text>
       <line x1="647" y1="210" x2="1109" y2="210" stroke="#1A1E24"/>
       <rect x="647" y="208.5" width="30" height="3" fill="#FF4A1C" opacity="0.85">
         <animate attributeName="x" values="647;1079;647" dur="7s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
@@ -96,8 +120,8 @@
     </g>
     <!-- row 2: tools 23 -->
     <g class="rs" style="animation-delay:.74s">
-      <text x="647" y="252" class="mono" font-size="13" fill="#9AA0A8">tools</text>
-      <text x="1109" y="256" text-anchor="end" class="disp" font-size="34" letter-spacing="-1">23</text>
+      <text x="647" y="252" class="mono" font-size="13" fill="#9AA0A8">npm packages</text>
+      <text x="1109" y="256" text-anchor="end" class="disp" font-size="34" letter-spacing="-1">3M+</text>
       <line x1="647" y1="270" x2="1109" y2="270" stroke="#1A1E24"/>
       <rect x="647" y="268.5" width="30" height="3" fill="#FF4A1C" opacity="0.85">
         <animate attributeName="x" values="647;1079;647" dur="7s" begin="1.2s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
@@ -105,8 +129,8 @@
     </g>
     <!-- row 3: sites 45 -->
     <g class="rs" style="animation-delay:.86s">
-      <text x="647" y="312" class="mono" font-size="13" fill="#9AA0A8">curated sites</text>
-      <text x="1109" y="316" text-anchor="end" class="disp" font-size="34" letter-spacing="-1">45</text>
+      <text x="647" y="312" class="mono" font-size="13" fill="#9AA0A8">crates</text>
+      <text x="1109" y="316" text-anchor="end" class="disp" font-size="34" letter-spacing="-1">150K+</text>
       <line x1="647" y1="330" x2="1109" y2="330" stroke="#1A1E24"/>
       <rect x="647" y="328.5" width="30" height="3" fill="#FF4A1C" opacity="0.85">
         <animate attributeName="x" values="647;1079;647" dur="7s" begin="2.4s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
@@ -114,8 +138,8 @@
     </g>
     <!-- row 4: skills 67 -->
     <g class="rs" style="animation-delay:.98s">
-      <text x="647" y="372" class="mono" font-size="13" fill="#9AA0A8">skills</text>
-      <text x="1109" y="376" text-anchor="end" class="disp" font-size="34" letter-spacing="-1">67</text>
+      <text x="647" y="372" class="mono" font-size="13" fill="#9AA0A8">skill files</text>
+      <text x="1109" y="376" text-anchor="end" class="disp" font-size="34" letter-spacing="-1">33K+</text>
       <line x1="647" y1="390" x2="1109" y2="390" stroke="#1A1E24"/>
       <rect x="647" y="388.5" width="30" height="3" fill="#FF4A1C" opacity="0.85">
         <animate attributeName="x" values="647;1079;647" dur="7s" begin="3.6s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
@@ -129,25 +153,24 @@
     <rect x="70" y="422" width="1060" height="56" rx="11" fill="#101318" stroke="#171B21"/>
 
     <text x="92" y="456" class="mono" font-size="13" font-weight="700" fill="#EDEBE6">$ prompt</text>
-    <text x="196" y="456" class="mono" font-size="13" fill="#3A4049">→</text>
-    <text x="232" y="456" class="mono" font-size="13" font-weight="700" fill="#EDEBE6">aio ask</text>
-    <text x="322" y="456" class="mono" font-size="13" fill="#3A4049">→</text>
-    <text x="358" y="456" class="mono" font-size="13" font-weight="700" fill="#EDEBE6">aio borrow</text>
-    <text x="486" y="456" class="mono" font-size="13" fill="#3A4049">→</text>
-    <text x="522" y="456" class="mono" font-size="13" font-weight="700" fill="#EDEBE6">use</text>
-    <text x="574" y="456" class="mono" font-size="13" fill="#3A4049">→</text>
-    <text x="610" y="456" class="mono" font-size="13" font-weight="700" fill="#EDEBE6">report ↗</text>
-    <text x="722" y="456" class="mono" font-size="13" fill="#3A4049">→</text>
-    <text x="758" y="456" class="mono" font-size="13" font-weight="700" fill="#EDEBE6">clean</text>
+    <text x="168" y="456" class="mono" font-size="13" fill="#3A4049">→</text>
+    <text x="196" y="456" class="mono" font-size="13" font-weight="700" fill="#EDEBE6">aio ask</text>
+    <text x="265" y="456" class="mono" font-size="13" fill="#3A4049">→</text>
+    <text x="293" y="456" class="mono" font-size="13" font-weight="700" fill="#EDEBE6">use</text>
+    <text x="330" y="456" class="mono" font-size="13" fill="#3A4049">→</text>
+    <text x="358" y="456" class="mono" font-size="13" font-weight="700" fill="#EDEBE6">report ↗</text>
+    <text x="434" y="456" class="mono" font-size="13" fill="#3A4049">→</text>
+    <text x="462" y="456" class="mono" font-size="13" font-weight="700" fill="#EDEBE6">clean</text>
+    <text x="566" y="456" class="mono" font-size="11" letter-spacing="1" fill="#4A505A">LIVE: github ∥ npm ∥ crates</text>
 
     <!-- sliding accent underline -->
     <rect y="466" height="2.5" width="64" rx="1.25" fill="#FF4A1C">
-      <animate attributeName="x" values="90;230;356;520;608;756;90" keyTimes="0;0.166;0.333;0.5;0.666;0.833;1" dur="11s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
-      <animate attributeName="width" values="62;56;76;30;54;42;62" keyTimes="0;0.166;0.333;0.5;0.666;0.833;1" dur="11s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
+      <animate attributeName="x" values="90;194;291;356;460;90" keyTimes="0;0.18;0.36;0.54;0.72;1" dur="11s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
+      <animate attributeName="width" values="64;59;27;66;43;64" keyTimes="0;0.18;0.36;0.54;0.72;1" dur="11s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
     </rect>
 
     <!-- cursor + promise -->
-    <rect x="836" y="444" width="9" height="17" fill="#FF4A1C">
+    <rect x="514" y="444" width="9" height="17" fill="#FF4A1C">
       <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.52;0.52;1" dur="1.4s" repeatCount="indefinite"/>
     </rect>
     <text x="1112" y="456" text-anchor="end" class="mono" font-size="11" letter-spacing="1.4" fill="#5A606A">NOTHING STORED PERMANENTLY</text>

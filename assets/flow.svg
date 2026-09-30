@@ -1,153 +1,212 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 620" role="img" aria-label="aio flow: prompt, aio ask, hit or borrow, use ephemerally, report with links, clean, repeat">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 620" role="img" aria-label="aio live pipeline: prompt, aio ask searching github, npm and crates in parallel, ranked results, ephemeral use, report with links, clean, repeat">
   <defs>
+    <clipPath id="askClip"><rect x="350" y="102" width="288" height="164" rx="10"/></clipPath>
+    <linearGradient id="askSheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF4A1C" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#FF4A1C" stop-opacity="0.13"/>
+      <stop offset="1" stop-color="#FF4A1C" stop-opacity="0"/>
+    </linearGradient>
     <style>
       .sans{font-family:ui-sans-serif,system-ui,"Segoe UI",sans-serif}
       .mono{font-family:ui-monospace,"Cascadia Mono","SF Mono",Consolas,monospace}
       .idx{font-size:10.5px;letter-spacing:1.6px;fill:#FF4A1C;font-weight:600}
       .t{font-size:15.5px;font-weight:650;fill:#EDEBE6}
       .s{font-size:11.5px;fill:#7C828C}
-      .chip{font-size:10px;letter-spacing:1.2px;fill:#9AA0A8}
+      .lane{font-size:10px;letter-spacing:1.4px;fill:#9AA0A8;font-weight:600}
+      .chip{font-size:9.5px;letter-spacing:1.1px;fill:#9AA0A8}
       .eyebrow{font-size:11px;letter-spacing:2.6px;fill:#7C828C}
       .bezel{fill:none;stroke:#2A2F37;stroke-width:1}
       .core{fill:#101318;stroke:#171B21;stroke-width:1}
       .wire{fill:none;stroke:#2E333B;stroke-width:1.5;stroke-dasharray:900;stroke-dashoffset:900;animation:draw 1.2s cubic-bezier(.32,.72,0,1) both}
-      .chev{fill:none;stroke:#5A606A;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;animation:fadeIn .5s ease both}
+      .chev{fill:none;stroke:#5A606A;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
       .pulse{fill:none;stroke:#FF4A1C;stroke-width:2.2;stroke-linecap:round;stroke-dasharray:5 95;stroke-dashoffset:100}
       @keyframes draw{to{stroke-dashoffset:0}}
       @keyframes fadeIn{from{opacity:0}to{opacity:1}}
       @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
-      @keyframes hl{0%{stroke:#2A2F37}2%{stroke:#FF4A1C}12%{stroke:#2A2F37}100%{stroke:#2A2F37}}
+      @keyframes hl{0%{stroke:#2A2F37}2%{stroke:#FF4A1C}11%{stroke:#2A2F37}100%{stroke:#2A2F37}}
       .card{transform-box:fill-box;transform-origin:0 50%;animation:rise .85s cubic-bezier(.32,.72,0,1) both}
       .cardout{animation:hl 11.2s cubic-bezier(.45,0,.55,1) infinite}
-      .ch{transform-box:fill-box;transform-origin:0 50%;animation:fadeIn .4s ease both}
+      .ch{animation:fadeIn .45s ease both}
+      .fd{animation:fadeIn .7s cubic-bezier(.32,.72,0,1) both}
+      @media (prefers-reduced-motion:reduce){.card,.ch,.fd{animation:none}.wire{stroke-dashoffset:0;animation:none}.cardout{animation:none}}
     </style>
   </defs>
 
   <rect width="1200" height="620" rx="20" fill="#0B0D10"/>
   <rect x="0.5" y="0.5" width="1199" height="619" rx="19.5" fill="none" stroke="#21252C"/>
 
-  <!-- header -->
-  <text x="64" y="46" class="mono eyebrow">01 <tspan fill="#343A43">—</tspan> PROMPT → OUTPUT PIPELINE</text>
-  <rect x="946" y="28" width="190" height="26" rx="13" fill="none" stroke="#FF4A1C" stroke-opacity="0.45"/>
-  <text x="1041" y="45" text-anchor="middle" class="mono" font-size="10" letter-spacing="1.4" fill="#FF4A1C">EPHEMERAL · NOTHING STORED</text>
-  <line x1="64" y1="62" x2="1136" y2="62" stroke="#21252C"/>
+  <!-- corner ticks -->
+  <g stroke="#343A43" stroke-width="1.5" fill="none" class="fd" style="animation-delay:1s">
+    <path d="M18 34 V18 H34"/><path d="M1166 18 H1182 V34"/>
+    <path d="M1182 486 V502 H1166"/><path d="M34 502 H18 V486"/>
+  </g>
 
-  <!-- ===== wires (drawn under cards) ===== -->
+  <!-- header -->
+  <text x="64" y="46" class="mono eyebrow">LIVE PIPELINE <tspan fill="#343A43">—</tspan> PROMPT → ASK → USE → REPORT → CLEAN</text>
+  <rect x="980" y="28" width="156" height="26" rx="13" fill="none" stroke="#FF4A1C" stroke-opacity="0.45" class="fd" style="animation-delay:.7s">
+    <animate attributeName="stroke-opacity" values="0.45;0.15;0.45" dur="3.2s" repeatCount="indefinite"/>
+  </rect>
+  <text x="1058" y="45" text-anchor="middle" class="mono fd" font-size="10" letter-spacing="1.4" fill="#FF4A1C" style="animation-delay:.7s">0 BYTES STORED</text>
+  <line x1="64" y1="62" x2="1136" y2="62" stroke="#21252C" class="fd" style="animation-delay:.15s"/>
+
+  <!-- ===== wires ===== -->
   <g>
-    <path class="wire" style="animation-delay:.55s" d="M292 156 H364"/>
-    <path class="wire" style="animation-delay:.65s" d="M636 144 C 680 144, 690 126, 728 126"/>
-    <path class="wire" style="animation-delay:.7s"  d="M636 184 C 680 184, 690 238, 728 238"/>
-    <path class="wire" style="animation-delay:.8s"  d="M942 126 H976 Q1000 126 1000 150 V330"/>
-    <path class="wire" style="animation-delay:.85s" d="M835 280 V330"/>
-    <path class="wire" style="animation-delay:.95s" d="M760 430 C 760 472, 706 524, 664 524"/>
-    <path class="wire" style="animation-delay:1.05s" d="M664 524 H728"/>
-    <path class="wire" style="animation-delay:1.15s" d="M835 564 V586 Q835 600 820 600 H116 Q100 600 100 584 V224 Q100 208 116 208 H178" stroke-dasharray="1600" stroke-dashoffset="1600"/>
+    <path class="wire" style="animation-delay:.55s" d="M284 180 H344"/>
+    <path class="wire" style="animation-delay:.68s" d="M644 184 H744"/>
+    <path class="wire" style="animation-delay:.8s"  d="M864 258 V330"/>
+    <path class="wire" style="animation-delay:.92s" d="M804 430 V444 Q804 452 796 452 H612 Q604 452 604 460 V470"/>
+    <path class="wire" style="animation-delay:1.04s" d="M644 518 H744"/>
+    <path class="wire" style="animation-delay:1.16s" d="M864 558 V586 Q864 600 848 600 H190 Q174 600 174 586 V230" stroke-dasharray="1600" stroke-dashoffset="1600"/>
   </g>
 
   <!-- energy comets -->
-  <g pathLength="100">
-    <path class="pulse" pathLength="100" d="M292 156 H364">
-      <animate attributeName="stroke-dashoffset" values="100;0" dur="2.2s" begin="1.3s" repeatCount="indefinite"/>
+  <g>
+    <path class="pulse" pathLength="100" d="M284 180 H344">
+      <animate attributeName="stroke-dashoffset" values="100;0" dur="2s" begin="1.4s" repeatCount="indefinite"/>
     </path>
-    <path class="pulse" pathLength="100" d="M636 144 C 680 144, 690 126, 728 126">
-      <animate attributeName="stroke-dashoffset" values="100;0" dur="2.6s" begin="1.7s" repeatCount="indefinite"/>
+    <path class="pulse" pathLength="100" d="M644 184 H744">
+      <animate attributeName="stroke-dashoffset" values="100;0" dur="2s" begin="1.9s" repeatCount="indefinite"/>
     </path>
-    <path class="pulse" pathLength="100" d="M636 184 C 680 184, 690 238, 728 238">
-      <animate attributeName="stroke-dashoffset" values="100;0" dur="2.6s" begin="2.1s" repeatCount="indefinite"/>
+    <path class="pulse" pathLength="100" d="M864 258 V330">
+      <animate attributeName="stroke-dashoffset" values="100;0" dur="1.8s" begin="2.4s" repeatCount="indefinite"/>
     </path>
-    <path class="pulse" pathLength="100" d="M942 126 H976 Q1000 126 1000 150 V330">
-      <animate attributeName="stroke-dashoffset" values="100;0" dur="3s" begin="2.5s" repeatCount="indefinite"/>
+    <path class="pulse" pathLength="100" d="M804 430 V444 Q804 452 796 452 H612 Q604 452 604 460 V470">
+      <animate attributeName="stroke-dashoffset" values="100;0" dur="2.6s" begin="2.9s" repeatCount="indefinite"/>
     </path>
-    <path class="pulse" pathLength="100" d="M835 280 V330">
-      <animate attributeName="stroke-dashoffset" values="100;0" dur="1.6s" begin="2.9s" repeatCount="indefinite"/>
+    <path class="pulse" pathLength="100" d="M644 518 H744">
+      <animate attributeName="stroke-dashoffset" values="100;0" dur="1.8s" begin="3.4s" repeatCount="indefinite"/>
     </path>
-    <path class="pulse" pathLength="100" d="M760 430 C 760 472, 706 524, 664 524">
-      <animate attributeName="stroke-dashoffset" values="100;0" dur="2.8s" begin="3.3s" repeatCount="indefinite"/>
-    </path>
-    <path class="pulse" pathLength="100" d="M664 524 H728">
-      <animate attributeName="stroke-dashoffset" values="100;0" dur="1.6s" begin="3.7s" repeatCount="indefinite"/>
-    </path>
-    <path class="pulse" pathLength="100" stroke-opacity="0.4" d="M835 564 V586 Q835 600 820 600 H116 Q100 600 100 584 V224 Q100 208 116 208 H178">
-      <animate attributeName="stroke-dashoffset" values="100;0" dur="6s" begin="4.2s" repeatCount="indefinite"/>
+    <path class="pulse" pathLength="100" stroke-opacity="0.4" d="M864 558 V586 Q864 600 848 600 H190 Q174 600 174 586 V230">
+      <animate attributeName="stroke-dashoffset" values="100;0" dur="6.4s" begin="4s" repeatCount="indefinite"/>
     </path>
   </g>
 
   <!-- chevrons -->
-  <g class="ch" style="animation-delay:1.2s">
-    <path class="chev" d="M350 150 L356 156 L350 162"/>
-    <path class="chev" d="M716 120 L722 126 L716 132"/>
-    <path class="chev" d="M716 232 L722 238 L716 244"/>
-    <path class="chev" d="M994 316 L1000 322 L1006 316"/>
-    <path class="chev" d="M829 316 L835 322 L841 316"/>
-    <path class="chev" d="M678 518 L672 524 L678 530"/>
-    <path class="chev" d="M714 518 L720 524 L714 530"/>
-    <path class="chev" d="M172 222 L178 216 L184 222"/>
+  <g class="ch" style="animation-delay:1.25s">
+    <path class="chev" d="M332 174 L338 180 L332 186"/>
+    <path class="chev" d="M732 178 L738 184 L732 190"/>
+    <path class="chev" d="M858 318 L864 324 L870 318"/>
+    <path class="chev" d="M598 464 L604 470 L610 464"/>
+    <path class="chev" d="M732 512 L738 518 L732 524"/>
+    <path class="chev" d="M168 242 L174 236 L180 242"/>
   </g>
-  <text x="470" y="592" text-anchor="middle" class="mono" font-size="10.5" letter-spacing="1.6" fill="#4A505A" style="animation:fadeIn .6s ease 1.6s both">THE LOOP CONTINUES — NEXT PROMPT</text>
+  <text x="470" y="592" text-anchor="middle" class="mono fd" font-size="10.5" letter-spacing="1.6" fill="#4A505A" style="animation-delay:1.7s">THE LOOP CONTINUES — NEXT PROMPT</text>
 
   <!-- ===== 01 user prompt ===== -->
   <g class="card" style="animation-delay:.15s">
-    <rect class="bezel cardout" x="64.5" y="104.5" width="227" height="103" rx="14" style="animation-delay:0s"/>
-    <rect class="core" x="70" y="110" width="216" height="92" rx="10"/>
-    <text x="86" y="134" class="mono idx">01</text>
-    <text x="86" y="162" class="sans t">User prompt</text>
-    <text x="86" y="186" class="sans s">“aku butuh X yang GG”</text>
+    <rect class="bezel cardout" x="64.5" y="130.5" width="219" height="99" rx="14" style="animation-delay:0s"/>
+    <rect class="core" x="70" y="136" width="208" height="88" rx="10"/>
+    <text x="86" y="160" class="mono idx">01</text>
+    <text x="86" y="188" class="sans t">User prompt</text>
+    <text x="86" y="212" class="sans s">“aku butuh X yang GG”</text>
+    <rect x="242" y="200" width="8" height="14" fill="#FF4A1C">
+      <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.52;0.52;1" dur="1.3s" repeatCount="indefinite"/>
+    </rect>
   </g>
 
-  <!-- ===== 02 aio ask ===== -->
+  <!-- ===== 02 aio ask — LIVE (parallel lanes) ===== -->
   <g class="card" style="animation-delay:.3s">
-    <rect class="bezel cardout" x="364.5" y="104.5" width="271" height="119" rx="14" style="animation-delay:1.4s"/>
-    <rect class="core" x="370" y="110" width="260" height="108" rx="10"/>
-    <text x="386" y="134" class="mono idx">02</text>
-    <text x="386" y="162" class="sans t">aio ask</text>
-    <text x="386" y="184" class="sans s">katalog lokal: 231 repo · 23 tool · 45 situs · 67 skill</text>
-    <rect x="386.5" y="194.5" width="151" height="19" rx="9.5" fill="none" stroke="#2A2F37"/>
-    <text x="399" y="208" class="mono chip">BM25 + qwen3 rerank</text>
+    <rect class="bezel cardout" x="344.5" y="96.5" width="299" height="175" rx="14" style="animation-delay:1.6s"/>
+    <rect class="core" x="350" y="102" width="288" height="164" rx="10"/>
+    <text x="366" y="126" class="mono idx">02</text>
+    <text x="366" y="152" class="sans t">aio ask</text>
+    <rect x="467.5" y="112.5" width="167" height="19" rx="9.5" fill="none" stroke="#FF4A1C" stroke-opacity="0.4"/>
+    <text x="478" y="126" class="mono" font-size="9.5" letter-spacing="1.1" fill="#FF4A1C">LIVE · ADAPTIVE · ≤4s</text>
+
+    <!-- sheen sweep -->
+    <g clip-path="url(#askClip)">
+      <rect x="350" y="96" width="288" height="34" fill="url(#askSheen)">
+        <animate attributeName="y" values="96;270;96" dur="4.2s" begin="1.5s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+      </rect>
+    </g>
+
+    <!-- lane: github -->
+    <g>
+      <circle cx="370" cy="172" r="3" fill="#FF4A1C">
+        <animate attributeName="opacity" values="1;0.25;1" dur="1.8s" repeatCount="indefinite"/>
+      </circle>
+      <text x="382" y="176" class="mono lane">GITHUB</text>
+      <line x1="452" y1="172" x2="626" y2="172" stroke="#1D2127" stroke-width="2"/>
+      <rect x="452" y="170.5" width="24" height="3" rx="1.5" fill="#FF4A1C">
+        <animate attributeName="x" values="452;602;452" dur="2.6s" begin="1.6s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+      </rect>
+    </g>
+    <!-- lane: npm -->
+    <g>
+      <circle cx="370" cy="196" r="3" fill="#FF4A1C">
+        <animate attributeName="opacity" values="1;0.25;1" dur="1.8s" begin="0.4s" repeatCount="indefinite"/>
+      </circle>
+      <text x="382" y="200" class="mono lane">NPM</text>
+      <line x1="452" y1="196" x2="626" y2="196" stroke="#1D2127" stroke-width="2"/>
+      <rect x="452" y="194.5" width="24" height="3" rx="1.5" fill="#FF4A1C">
+        <animate attributeName="x" values="452;602;452" dur="2.2s" begin="2.1s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+      </rect>
+    </g>
+    <!-- lane: crates -->
+    <g>
+      <circle cx="370" cy="220" r="3" fill="#FF4A1C">
+        <animate attributeName="opacity" values="1;0.25;1" dur="1.8s" begin="0.9s" repeatCount="indefinite"/>
+      </circle>
+      <text x="382" y="224" class="mono lane">CRATES</text>
+      <line x1="452" y1="220" x2="626" y2="220" stroke="#1D2127" stroke-width="2"/>
+      <rect x="452" y="218.5" width="24" height="3" rx="1.5" fill="#FF4A1C">
+        <animate attributeName="x" values="452;602;452" dur="3s" begin="2.6s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+      </rect>
+    </g>
+    <!-- lane: web → agent -->
+    <g>
+      <circle cx="370" cy="244" r="3" fill="none" stroke="#5A606A">
+        <animate attributeName="opacity" values="1;0.3;1" dur="1.8s" begin="1.4s" repeatCount="indefinite"/>
+      </circle>
+      <text x="382" y="248" class="mono lane" fill="#5A606A">WEB → AGENT</text>
+      <line x1="490" y1="244" x2="626" y2="244" stroke="#1D2127" stroke-width="2" stroke-dasharray="3 5"/>
+      <rect x="490" y="242.5" width="24" height="3" rx="1.5" fill="none" stroke="#FF4A1C" stroke-opacity="0.7">
+        <animate attributeName="x" values="490;602;490" dur="3.4s" begin="3.1s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+      </rect>
+    </g>
   </g>
 
-  <!-- ===== 03a hit ===== -->
+  <!-- ===== 03 ranked results ===== -->
   <g class="card" style="animation-delay:.45s">
-    <rect class="bezel cardout" x="728.5" y="84.5" width="213" height="83" rx="14" style="animation-delay:2.8s"/>
-    <rect class="core" x="734" y="90" width="202" height="72" rx="10"/>
-    <text x="750" y="112" class="mono idx">03·A</text>
-    <text x="750" y="136" class="sans t">cocok → pakai</text>
-    <text x="750" y="155" class="sans s">entri: link + fungsi</text>
-  </g>
-
-  <!-- ===== 03b miss ===== -->
-  <g class="card" style="animation-delay:.55s">
-    <rect class="bezel cardout" x="728.5" y="196.5" width="213" height="83" rx="14" style="animation-delay:4.2s"/>
-    <rect class="core" x="734" y="202" width="202" height="72" rx="10"/>
-    <text x="750" y="224" class="mono idx">03·B</text>
-    <text x="750" y="248" class="sans t">belum ada</text>
-    <text x="750" y="267" class="sans s">aio borrow / web search</text>
+    <rect class="bezel cardout" x="744.5" y="110.5" width="239" height="147" rx="14" style="animation-delay:3.2s"/>
+    <rect class="core" x="750" y="116" width="228" height="136" rx="10"/>
+    <text x="766" y="140" class="mono idx">03</text>
+    <text x="766" y="166" class="sans t">top-8 ranked</text>
+    <g class="fd" style="animation-delay:1.1s">
+      <circle cx="770" cy="188" r="2.5" fill="#FF4A1C"/>
+      <text x="782" y="192" class="mono" font-size="10" fill="#9AA0A8">github + npm + crates merged</text>
+      <circle cx="770" cy="210" r="2.5" fill="#FF4A1C"/>
+      <text x="782" y="214" class="mono" font-size="10" fill="#9AA0A8">BM25 rank · ≥2 rows/source</text>
+      <circle cx="770" cy="232" r="2.5" fill="#FF4A1C"/>
+      <text x="782" y="236" class="mono" font-size="10" fill="#9AA0A8">qwen3 rerank (warm, ≤3.5s)</text>
+    </g>
   </g>
 
   <!-- ===== 04 ephemeral use ===== -->
-  <g class="card" style="animation-delay:.7s">
-    <rect class="bezel cardout" x="728.5" y="330.5" width="407" height="99" rx="14" style="animation-delay:5.6s"/>
-    <rect class="core" x="734" y="336" width="396" height="88" rx="10"/>
-    <text x="750" y="360" class="mono idx">04</text>
-    <text x="750" y="388" class="sans t">pakai sementara</text>
-    <text x="750" y="410" class="sans s">temp clone TTL 24 jam · npx/uvx · situs web</text>
-    <rect x="986.5" y="374.5" width="127" height="21" rx="10.5" fill="none" stroke="#FF4A1C" stroke-opacity="0.4"/>
-    <text x="999" y="389" class="mono" font-size="10" letter-spacing="1.1" fill="#FF4A1C">GUARD DISK ≥ 1 GB</text>
+  <g class="card" style="animation-delay:.6s">
+    <rect class="bezel cardout" x="744.5" y="330.5" width="391" height="99" rx="14" style="animation-delay:4.8s"/>
+    <rect class="core" x="750" y="336" width="380" height="88" rx="10"/>
+    <text x="766" y="360" class="mono idx">04</text>
+    <text x="766" y="388" class="sans t">pakai sementara</text>
+    <text x="766" y="410" class="sans s">npx · uvx · copy — ephemeral, no permanent install</text>
+    <rect x="1002.5" y="372.5" width="112" height="21" rx="10.5" fill="none" stroke="#FF4A1C" stroke-opacity="0.55" stroke-dasharray="4 3"/>
+    <text x="1014" y="387" class="mono" font-size="9.5" letter-spacing="0.8" fill="#FF4A1C">± borrow --get</text>
   </g>
 
   <!-- ===== 05 report ===== -->
-  <g class="card" style="animation-delay:.85s">
-    <rect class="bezel cardout" x="364.5" y="476.5" width="299" height="95" rx="14" style="animation-delay:7s"/>
-    <rect class="core" x="370" y="482" width="288" height="84" rx="10"/>
-    <text x="386" y="506" class="mono idx">05</text>
-    <text x="386" y="534" class="sans t">laporan wajib</text>
-    <text x="386" y="556" class="sans s">perubahan + [[name](url)] — fungsi tiap entri</text>
+  <g class="card" style="animation-delay:.75s">
+    <rect class="bezel cardout" x="344.5" y="470.5" width="299" height="95" rx="14" style="animation-delay:6.4s"/>
+    <rect class="core" x="350" y="476" width="288" height="84" rx="10"/>
+    <text x="366" y="500" class="mono idx">05</text>
+    <text x="366" y="528" class="sans t">laporan wajib</text>
+    <text x="366" y="550" class="sans s">perubahan + [[name](url)] — fungsi tiap entri</text>
   </g>
 
   <!-- ===== 06 clean ===== -->
-  <g class="card" style="animation-delay:.95s">
-    <rect class="bezel cardout" x="728.5" y="484.5" width="213" height="79" rx="14" style="animation-delay:8.4s"/>
-    <rect class="core" x="734" y="490" width="202" height="68" rx="10"/>
-    <text x="750" y="512" class="mono idx">06</text>
-    <text x="750" y="540" class="sans t">borrow --clean</text>
+  <g class="card" style="animation-delay:.9s">
+    <rect class="bezel cardout" x="744.5" y="478.5" width="239" height="79" rx="14" style="animation-delay:8s"/>
+    <rect class="core" x="750" y="484" width="228" height="68" rx="10"/>
+    <text x="766" y="506" class="mono idx">06</text>
+    <text x="766" y="534" class="sans t">borrow --clean</text>
   </g>
 </svg>
