@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 470" role="img" aria-label="AIO prompt flow animated flowchart">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#8b949e"/>
+    </marker>
+    <style>
+      .box { fill:#161b22; stroke:#30363d; stroke-width:1.5; rx:12; }
+      .hi  { stroke:#ff6b6b; }
+      .amber { stroke:#ffa94d; }
+      .blue { stroke:#58a6ff; }
+      .green { stroke:#69db7c; }
+      .t   { font-family:'Segoe UI', sans-serif; font-size:15px; fill:#e6edf3; font-weight:600; }
+      .s   { font-family:'Segoe UI', sans-serif; font-size:12px; fill:#8b949e; }
+      .m   { font-family:'Cascadia Mono', ui-monospace, monospace; font-size:12px; fill:#8b949e; }
+      .link{ fill:none; stroke:#8b949e; stroke-width:2; stroke-dasharray:7 7; }
+    </style>
+  </defs>
+
+  <rect width="960" height="470" rx="18" fill="#0d1117"/>
+  <rect x="0.5" y="0.5" width="959" height="469" rx="17.5" fill="none" stroke="#30363d"/>
+  <text x="32" y="40" class="t" font-size="17">AIO flow — dari prompt jadi output, tanpa install permanen</text>
+
+  <!-- 1. user prompt -->
+  <g>
+    <rect x="34" y="70" width="200" height="74" rx="12" class="box blue"/>
+    <text x="52" y="100" class="t">1 · User prompt</text>
+    <text x="52" y="122" class="s">"aku butuh X yang GG"</text>
+  </g>
+
+  <!-- 2. aio ask -->
+  <g>
+    <rect x="300" y="70" width="234" height="74" rx="12" class="box hi"/>
+    <text x="318" y="100" class="t">2 · aio ask</text>
+    <text x="318" y="122" class="s">katalog lokal: 231 repo · 23 tools · 45 sites</text>
+    <text x="318" y="138" class="m">BM25 + rerank qwen3 (lokal)</text>
+  </g>
+
+  <!-- 3. hit / miss branches -->
+  <g>
+    <rect x="600" y="44" width="160" height="56" rx="12" class="box green"/>
+    <text x="618" y="70" class="t">3a · cocok</text>
+    <text x="618" y="90" class="s">pakai entri (link+fungsi)</text>
+  </g>
+  <g>
+    <rect x="600" y="128" width="160" height="56" rx="12" class="box amber"/>
+    <text x="618" y="154" class="t">3b · belum ada</text>
+    <text x="618" y="174" class="s">aio borrow / web search</text>
+  </g>
+
+  <!-- 4. ephemeral use -->
+  <g>
+    <rect x="600" y="238" width="326" height="80" rx="12" class="box"/>
+    <text x="618" y="266" class="t">4 · Pakai sementara</text>
+    <text x="618" y="288" class="s">clone temp (TTL 24 jam) · npx/uvx · situs web</text>
+    <text x="618" y="306" class="m">tanpa install permanen · guard disk ≥ 1 GB</text>
+  </g>
+
+  <!-- 5. report -->
+  <g>
+    <rect x="300" y="368" width="290" height="70" rx="12" class="box blue"/>
+    <text x="318" y="396" class="t">5 · Laporan wajib</text>
+    <text x="318" y="418" class="s">perubahan + [[name](url)] — fungsi tiap entri</text>
+  </g>
+
+  <!-- 6. clean -->
+  <g>
+    <rect x="646" y="382" width="164" height="46" rx="12" class="box green"/>
+    <text x="664" y="410" class="t">6 · clean</text>
+  </g>
+
+  <!-- links + traveling dots -->
+  <path id="f1" class="link" d="M234 107 H 300" marker-end="url(#arrow)"/>
+  <path id="f2" class="link" d="M534 96 H 600" marker-end="url(#arrow)"/>
+  <path id="f3" class="link" d="M534 132 C 566 150, 574 156, 600 156" marker-end="url(#arrow)"/>
+  <path id="f4" class="link" d="M680 184 V 238" marker-end="url(#arrow)"/>
+  <path id="f5" class="link" d="M763 318 C 763 348, 700 356, 590 396" marker-end="url(#arrow)"/>
+  <path id="f6" class="link" d="M590 404 H 646" marker-end="url(#arrow)"/>
+  <path id="f7" class="link" d="M780 100 C 780 210, 780 220, 780 238" marker-end="url(#arrow)"/>
+
+  <g fill="#58a6ff">
+    <circle r="4.5"><animateMotion dur="1.8s" repeatCount="indefinite"><mpath href="#f1"/></animateMotion></circle>
+    <circle r="4.5" fill="#69db7c"><animateMotion dur="1.8s" begin="0.5s" repeatCount="indefinite"><mpath href="#f2"/></animateMotion></circle>
+    <circle r="4.5" fill="#ffa94d"><animateMotion dur="1.8s" begin="1s" repeatCount="indefinite"><mpath href="#f3"/></animateMotion></circle>
+    <circle r="4.5" fill="#d8d9db"><animateMotion dur="2.2s" begin="1.4s" repeatCount="indefinite"><mpath href="#f4"/></animateMotion></circle>
+    <circle r="4.5" fill="#58a6ff"><animateMotion dur="2.2s" begin="2s" repeatCount="indefinite"><mpath href="#f5"/></animateMotion></circle>
+    <circle r="4.5" fill="#69db7c"><animateMotion dur="1.4s" begin="2.6s" repeatCount="indefinite"><mpath href="#f6"/></animateMotion></circle>
+    <circle r="4.5" fill="#ffa94d"><animateMotion dur="2.6s" begin="0.8s" repeatCount="indefinite"><mpath href="#f7"/></animateMotion></circle>
+  </g>
+</svg>

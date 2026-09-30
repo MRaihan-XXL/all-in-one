@@ -1,12 +1,21 @@
 <p align="center">
-  <img src="./docs/logo.svg" width="110" alt="aio logo">
+  <img src="./assets/aio-hero.svg" width="92%" alt="AIO — all-in-one: animated logo (repos · tools · sites · skills)">
 </p>
 
-<h1 align="center">aio — all-in-one-repo</h1>
+<h1 align="center">aio — all-in-one</h1>
 
 <p align="center">
-  <b>Auto-connect your AI coding agents to your local repos, tools &amp; skills.</b><br>
-  No slash-commands. No manual config. One command.
+  <b>Auto-connect every AI coding agent to your repos, tools, skills &amp; websites.</b><br>
+  No slash-commands. No manual config. One command — then it searches for you.
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/aio-connect"><img src="https://img.shields.io/npm/v/aio-connect?color=cb3837" alt="npm version"></a>
+  <a href="https://github.com/MRaihan-XXL/all-in-one/actions/workflows/ci.yml"><img src="https://github.com/MRaihan-XXL/all-in-one/actions/workflows/ci.yml/badge.svg" alt="CI 3-OS"></a>
+  <img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="license: GPL-3.0">
+  <img src="https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg" alt="node >= 22">
+  <img src="https://img.shields.io/badge/agents-8-orange.svg" alt="8 agents supported">
+  <img src="https://img.shields.io/badge/zero%20runtime%20deps-stdlib-lightgrey.svg" alt="zero runtime dependencies">
 </p>
 
 <p align="center">
@@ -16,127 +25,100 @@
   <a href="./assets/logo-gallery.html">🎨 Brand kit</a>
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="license: GPL-3.0">
-  <img src="https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg" alt="node >= 22">
-  <img src="https://img.shields.io/badge/npm-aio--connect-orange.svg" alt="npm: aio-connect">
-  <img src="https://img.shields.io/badge/agents-8-orange.svg" alt="8 agents supported">
-  <img src="https://img.shields.io/badge/zero%20runtime%20deps-stdlib-lightgrey.svg" alt="zero runtime dependencies">
-</p>
-
-<p align="center">
-  <img src="./docs/flow.svg" width="100%" alt="How aio works: your prompt → AI agent (fed by the aio manifest) → answer with disclosed usage">
-</p>
-
 ---
 
-## Highlights
+<p align="center">
+  <img src="./assets/flow.svg" width="98%" alt="Animated flowchart: prompt → aio ask → aio borrow → use ephemerally → report with links → clean">
+</p>
 
-- **Zero runtime dependencies** — plain Node.js ≥ 22 standard library only
-- **Idempotent** — the auto-use block exists exactly once per file, ever
-- **One command** — `aio` scans, generates and injects in a single run
-- **8 agents covered** — opencode · claude · kimi · jcode · codex · gemini · freebuff · hermes
-- **Honest agents** — usage of any repo/tool/skill is disclosed as a link:
-  `[aio] Using [<name>](<url>) (<type>) — <function>`
-- **Fully reversible** — `aio rollback` restores every touched file from backups
+## ✨ What it does
 
-## Why
-
-Local AI agents (opencode, claude, kimi, …) know nothing about your machine:
-which repositories you cloned, which tools you installed, which skills you
-collected. You end up explaining it every session — or wiring MCP servers and
-instruction files by hand.
-
-`aio` does the wiring once, then keeps it fresh:
-
-1. **Scan** — detects installed agents, your repos directory, your tools
-   catalog, and your global skills.
-2. **Generate** — writes a context manifest (`aio-context.md`) listing
-   `REPOS · TOOLS · SKILLS`.
-3. **Inject** — appends a marker-delimited *auto-use block* to each agent's
-   instruction file (idempotent — always exactly one copy).
-4. **Ensure** — adds `codebase-memory-mcp` to opencode / claude / kimi /
-   jcode / codex / gemini configs when the binary exists and the entry is
-   missing.
-5. **Repair** — fixes stale path references after folder renames.
-
-Then you just open an agent and write normal, plain-language prompts. The agent
-routes itself through the manifest and **must disclose what it used**:
+`aio` builds a **catalog** of everything you have — 231 repos, 23 tools,
+45 curated sites, 67 skills — and teaches every AI agent on your machine to
+**search it automatically** on each prompt:
 
 ```text
-[aio] Using [<name>](<url>) (<type>) — <function>
+prompt → aio ask (catalog + local-AI rerank) → aio borrow (live GitHub, temp)
+       → use it ephemerally → report WHAT changed + EVERY link used + function
+       → aio borrow --clean
 ```
 
-Example (real output from a running agent):
+| Command | What you get |
+|---|---|
+| `aio` | scan → manifest → inject the auto-use block into every agent |
+| `aio ask "csv ke chart"` | search the catalog — every hit prints **link + one-line function**; reranked by your local Ollama (qwen3) when it is up, silent BM25 fallback when not |
+| `aio borrow "etl tool"` | **live GitHub search** for what the catalog lacks → `--get owner/repo` shallow-clones to temp (**24 h TTL**, auto-purged), `--clean` wipes it |
+| `aio doctor` | self-diagnosis: db ↔ manifest ↔ agent blocks ↔ Ollama; `--fix` repairs, `--check` = CI gate |
+| `aio evolve` | the whole self-upgrade pipeline in one run: scan → build-db → manifest → doctor → tests (never commits) |
+| `aio status` | read-only health report |
+| `aio update` / `aio rollback` | update from npm / remove everything aio injected |
+
+Example — real `aio ask` output (links + functions always included):
 
 ```text
-[aio] Using [nano-pdf](https://github.com/nano-micro/nano-pdf) (skill) — Extract text from PDFs/scans (pymupdf, marker-pdf).
+aio ask — "csv ke chart interaktif" (engine: ollama:qwen3:4b · 4 hasil)
+
+1. d3 [repo] — Bring data to life with SVG, Canvas and HTML.
+   Charts / DataViz · ★113779
+   https://github.com/d3/d3
+   why: d3 is a leading library for interactive SVG/HTML charts, fits CSV data visualization
 ```
 
-## Install
+## 📦 Install
 
 ```bash
 npm install -g aio-connect
 ```
 
-> The npm name `aio` was already taken — the package is published as
-> **`aio-connect`**, the binary stays `aio`. (Installing straight from GitHub
-> with `npm install -g github:MRaihan-XXL/all-in-one-repo` also works.)
+> The npm name `aio` was taken — the package is **`aio-connect`**, the binary
+> stays `aio`. Requires **Node.js ≥ 22** (`node:sqlite` built in).
 
-Requires **Node.js ≥ 22** (uses the built-in `node:sqlite`, optional).
+## 🤖 Honesty is the product
 
-## Usage
+Every agent that reads the manifest **must disclose what it used**, as the
+first line of its reply:
 
-```bash
-aio                # scan + generate + inject (default command)
-aio update         # update from npm, then re-run setup
-aio rollback       # surgically remove everything aio injected
-aio --help         # full help
+```text
+[aio] Using [<name>](<url>) (<type>) — <function>
 ```
 
-Options:
+and every final report lists the work done **plus each repo/tool/site as a
+markdown link with a one-line function**:
 
-| Option | Env | Default |
-|---|---|---|
-| `--repos <dir>` | `AIO_REPOS_DIR` | `D:\Tools\github` (if it exists) |
-| `--home <dir>` | `AIO_HOME` | persisted state → walk up from cwd |
+```text
+- [[d3](https://github.com/d3/d3)] — chart library, rendered the bar chart
+Perubahan: added chart.js, wired the data feed.
+```
 
-## What changes on your machine
+`<type>` = `repo | cli | service | skill | site`.
+
+## 🔁 Nothing is stored permanently
+
+- `aio borrow --get` clones into `%TEMP%/aio-borrow` with a **24-hour TTL** —
+  the next run purges it, `--clean` wipes everything now.
+- CLI tools are consumed via `npx` / `uvx` — never installed permanently.
+- The catalog (metadata, not files) lives in the shipped `ai-tools.db` —
+  you can delete every local clone and `aio ask` still works.
+
+## ⚙️ What changes on your machine
 
 Everything aio writes is documented in **[docs/CONFIG.md](./docs/CONFIG.md)**.
-Short version:
+Short version: one `AIO AUTO-CONTEXT` block per agent instruction file, the
+generated `aio-context.md`, MCP entries *only if missing*, and a timestamped
+backup of every touched file under `~/.aio/backups/` first. `aio rollback`
+reverses exactly what aio added — your own config is never touched.
+No telemetry; the only network calls are your explicit `ask`/`borrow` and
+the agent's own.
 
-- `aio-context.md` — generated manifest (yours to delete anytime)
-- one `AIO AUTO-CONTEXT` block in each agent's instruction file
-  (`~/.config/opencode/AGENTS.md`, `~/.claude/CLAUDE.md`,
-  `~/.kimi-code/AGENTS.md`, `~/.jcode/AGENTS.md`, `~/.codex/AGENTS.md`,
-  `~/.gemini/GEMINI.md`, `~/AGENTS.md`)
-- MCP entry for `codebase-memory-mcp` — only if missing, only if detected
-- a file backup of every file before it is modified → `~/.aio/backups/`
+## 🕵️ Keeping it fresh
 
-Nothing else is touched. Local data (`ai-tools.db`, `TOOLS-INDEX.md`,
-`TRACKING.md`, screenshots) is **git-ignored** and never uploaded.
+- **New repo cloned?** Run `aio` — the manifest rebuilds from the catalog db.
+- **Something drifted?** `aio doctor --fix` (or `--check` in CI).
+- **Full self-upgrade?** `aio evolve` runs scan → build-db → manifest →
+  doctor → tests and prints the diff; committing stays your call.
+- **Want your machine back?** `aio rollback`.
 
-## Privacy & control
-
-aio only writes to files you can see — the agent instruction files listed in
-`aio status`, plus the manifest and state under `~/.aio/`. Every file is
-backed up first to `~/.aio/backups/` with timestamps. Injection is
-idempotent: a marker-delimited block, always exactly one copy. `aio rollback`
-removes every injection and MCP addition while keeping those backups. No
-telemetry, no network calls beyond your own agent's.
-
-## Keeping it fresh
-
-- **Clone a new repo?** Run `aio` again — it rescans on every run, so new
-  repositories and tools appear in the manifest automatically.
-- **Agent updated its config format?** `aio update` pulls the latest rules
-  from npm and re-runs setup.
-- **Want your machine back?** `aio rollback` removes the injected block and
-  any MCP entry that *aio itself* added (your own entries are never touched;
-  file backups are kept as a safety net).
-
-## Supported agents
+## 🧩 Supported agents
 
 | Agent | Where the auto-use block lands | MCP ensured | FR6 (disclosure) |
 |---|---|---|---|
@@ -149,27 +131,25 @@ telemetry, no network calls beyond your own agent's.
 | `freebuff` | `~/AGENTS.md` (fallback) | — | PASS |
 | `hermes` | `~/AGENTS.md` | — | PASS |
 
-> **FR6 = a free-form prompt compliance probe:** the agent must output the
-> manifest's usage-disclosure line `[aio] Using [<name>](<url>) (<type>) — <function>`
-> as the FIRST line of its reply. kimi quotes the rule verbatim but does not
-> apply it after 9 attempts — model/harness-dependent, not a packaging bug.
+> **FR6** = free-form prompt probe: the agent must open its reply with the
+> manifest's disclosure line. kimi quotes the rule but does not apply it
+> after 9 attempts — model/harness-dependent, not a packaging bug.
 
-Detection is by `PATH` binary **or** the agent's config directory — codex and
-gemini are wired even without a shell wrapper.
-
-## Brand kit
-
-The identity ("three streams, one node"), palette, favicon sizes, CLI banner
-grid and usage rules live in
-**[assets/logo-gallery.html](./assets/logo-gallery.html)** (open it in a
-browser); source SVGs are in [`assets/`](./assets/).
-
-## Development
+## 🛠 Development
 
 ```bash
-npm test          # node --test — self-checks for injection/rollback/scan
-node bin/aio.js   # run from a checkout without installing
+npm test             # node --test — 30 checks (injection, search, borrow, doctor, …)
+node bin/aio.js      # run from a checkout without installing
+node bin/aio.js ask "pdf ke word"
+node bin/aio.js doctor --check
 ```
+
+## 🎨 Brand kit
+
+Identity ("three streams, one node"), palette, favicon sizes, CLI banner grid
+and usage rules live in **[assets/logo-gallery.html](./assets/logo-gallery.html)**;
+source SVGs (including the animated hero + flowchart) are in
+[`assets/`](./assets/).
 
 ## License
 

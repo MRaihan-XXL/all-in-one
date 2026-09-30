@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 320" role="img" aria-label="AIO — all-in-one animated logo">
+  <defs>
+    <linearGradient id="aioGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff6b6b">
+        <animate attributeName="stop-color" values="#ff6b6b;#ffa94d;#ffd43b;#ff6b6b" dur="6s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="1" stop-color="#ffa94d">
+        <animate attributeName="stop-color" values="#ffa94d;#ffd43b;#ff6b6b;#ffa94d" dur="6s" repeatCount="indefinite"/>
+      </stop>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ff6b6b" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ff6b6b" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="960" height="320" rx="18" fill="#0d1117"/>
+  <rect x="0.5" y="0.5" width="959" height="319" rx="17.5" fill="none" stroke="#30363d"/>
+
+  <!-- pulsing glow behind the wordmark -->
+  <circle cx="300" cy="150" r="130" fill="url(#glow)">
+    <animate attributeName="r" values="110;145;110" dur="3.2s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.7;1;0.7" dur="3.2s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- orbit ring -->
+  <ellipse cx="300" cy="150" rx="176" ry="92" fill="none" stroke="#30363d" stroke-width="1.5" stroke-dasharray="6 10">
+    <animateTransform attributeName="transform" type="rotate" from="0 300 150" to="360 300 150" dur="24s" repeatCount="indefinite"/>
+  </ellipse>
+
+  <!-- wordmark -->
+  <g filter="url(#soft)" font-family="'Segoe UI', 'Cascadia Mono', ui-monospace, monospace" font-weight="800" font-size="132" letter-spacing="6">
+    <text x="176" y="196" fill="url(#aioGrad)">AIO</text>
+  </g>
+  <text x="178" y="236" font-family="'Segoe UI', sans-serif" font-size="20" fill="#8b949e">all-in-one — zero-dep AI agent connector</text>
+
+  <!-- node cluster: four catalog types -->
+  <g font-family="'Segoe UI', sans-serif" font-size="15" font-weight="600">
+    <g>
+      <path id="p1" d="M470 96 C 560 60, 640 58, 716 74" fill="none" stroke="#30363d" stroke-width="2" stroke-dasharray="4 6"/>
+      <rect x="716" y="56" width="196" height="38" rx="19" fill="#161b22" stroke="#ff6b6b"/>
+      <text x="740" y="81" fill="#ff8787">231 repos</text>
+      <circle r="5" fill="#ff6b6b">
+        <animateMotion dur="2.4s" repeatCount="indefinite"><mpath href="#p1"/></animateMotion>
+      </circle>
+    </g>
+    <g>
+      <path id="p2" d="M470 128 C 560 116, 640 122, 716 134" fill="none" stroke="#30363d" stroke-width="2" stroke-dasharray="4 6"/>
+      <rect x="716" y="116" width="196" height="38" rx="19" fill="#161b22" stroke="#ffa94d"/>
+      <text x="744" y="141" fill="#ffc078">23 tools</text>
+      <circle r="5" fill="#ffa94d">
+        <animateMotion dur="2.4s" begin="0.6s" repeatCount="indefinite"><mpath href="#p2"/></animateMotion>
+      </circle>
+    </g>
+    <g>
+      <path id="p3" d="M470 168 C 560 180, 640 178, 716 194" fill="none" stroke="#30363d" stroke-width="2" stroke-dasharray="4 6"/>
+      <rect x="716" y="176" width="196" height="38" rx="19" fill="#161b22" stroke="#ffd43b"/>
+      <text x="740" y="201" fill="#ffe066">45 sites</text>
+      <circle r="5" fill="#ffd43b">
+        <animateMotion dur="2.4s" begin="1.2s" repeatCount="indefinite"><mpath href="#p3"/></animateMotion>
+      </circle>
+    </g>
+    <g>
+      <path id="p4" d="M470 204 C 560 236, 640 244, 716 254" fill="none" stroke="#30363d" stroke-width="2" stroke-dasharray="4 6"/>
+      <rect x="716" y="236" width="196" height="38" rx="19" fill="#161b22" stroke="#69db7c"/>
+      <text x="740" y="261" fill="#8ce99a">67 skills</text>
+      <circle r="5" fill="#69db7c">
+        <animateMotion dur="2.4s" begin="1.8s" repeatCount="indefinite"><mpath href="#p4"/></animateMotion>
+      </circle>
+    </g>
+  </g>
+
+  <!-- flow ribbon -->
+  <g font-family="'Cascadia Mono', ui-monospace, monospace" font-size="14">
+    <rect x="64" y="276" width="608" height="30" rx="15" fill="#161b22" stroke="#30363d"/>
+    <text x="86" y="296" fill="#8b949e">prompt → <tspan fill="#ff8787">aio ask</tspan> → <tspan fill="#ffc078">aio borrow</tspan> → use → report(link+fungsi) → <tspan fill="#8ce99a">clean</tspan></text>
+    <circle r="4" fill="#58a6ff">
+      <animateMotion dur="4s" repeatCount="indefinite" path="M66 291 H 670"/>
+    </circle>
+  </g>
+</svg>
