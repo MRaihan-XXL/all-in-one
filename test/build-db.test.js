@@ -30,6 +30,27 @@ test('parseReposTable: missing section → empty list (no throw)', () => {
   assert.deepEqual(parseReposTable('# nothing here'), []);
 });
 
+const RICH = [
+  '## REPOS (2)',
+  '',
+  '| # | Repository | URL | Function (description) | Category | Stars | Local path |',
+  '|---|---|---|---|---|---|---|',
+  '| 1 | zeta-etl | https://github.com/demo/zeta-etl | ETL csv ke chart | Data / ETL | \u2605999 | \u2014 (not cloned \u2014 `aio borrow --get`) |',
+  '| 2 | already-here | https://github.com/x/y | thing | Dev | \u2014 | `D:/repos/already-here` |',
+  '',
+  '## TOOLS (0)',
+].join('\n');
+
+test('parseReposTable: rich 7-column layout parses; path cell optional', () => {
+  const rows = parseReposTable(RICH);
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].folder, 'zeta-etl');
+  assert.equal(rows[0].owner, 'demo');
+  assert.equal(rows[0].repo, 'zeta-etl');
+  assert.equal(rows[0].dirPath, '', 'not-cloned row carries no local path');
+  assert.equal(rows[1].dirPath, 'D:/repos/already-here', 'cloned row keeps its path');
+});
+
 test('categorize: known inputs land in the right fine label', () => {
   assert.equal(categorize('Stirling-PDF', 'HTML/CSS/JS to PDF converter'), 'Document / Conversion');
   assert.equal(categorize('mcp-demo', ''), 'MCP / Server');

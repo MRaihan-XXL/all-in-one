@@ -69,11 +69,10 @@ export function runStatus(opts = {}) {
   const reposDir = resolveReposDir(opts.repos);
   if (reposDir && fs.existsSync(reposDir)) {
     const n = countRepoDirs(reposDir);
-    lines.push(`repos      ${reposDir} (${n} dirs)`);
-    if (n === 0) issues.push('repos dir is empty');
+    // Clones are optional since the catalog lives in ai-tools.db (`aio borrow` on demand).
+    lines.push(n ? `repos      ${reposDir} (${n} dirs)` : `repos      ${reposDir} (0 dirs — catalog is db-driven, clones optional)`);
   } else {
-    lines.push('repos      MISSING — pass --repos <dir> or set AIO_REPOS_DIR');
-    issues.push('repos dir not found');
+    lines.push('repos      not configured (optional — catalog is db-driven; pass --repos to scan a clone dir)');
   }
 
   const mp = dataDir && path.join(dataDir, 'aio-context.md');
@@ -84,7 +83,8 @@ export function runStatus(opts = {}) {
     const txt = fs.readFileSync(mp, 'utf8');
     const age = Math.floor((Date.now() - fs.statSync(mp).mtimeMs) / 86400000);
     const rows = txt.match(/## REPOS \((\d+)\)/);
-    lines.push(`manifest   ${mp} — ${age}d old, REPOS ${rows ? rows[1] : '?'}`);
+    const sites = txt.match(/## SITES \((\d+)\)/);
+    lines.push(`manifest   ${mp} — ${age}d old, REPOS ${rows ? rows[1] : '?'}${sites ? ` · SITES ${sites[1]}` : ''}`);
     if (age > 7) issues.push(`manifest is ${age} days old — run \`aio\` to refresh`);
   }
 

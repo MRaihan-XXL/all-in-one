@@ -147,6 +147,90 @@ export async function loadTools(dataDir) {
   return [];
 }
 
+/** Open ai-tools.db read-only (optional dependency; null when absent/broken). */
+async function openDb(dataDir) {
+  if (!dataDir) return null;
+  const dbPath = path.join(dataDir, 'ai-tools.db');
+  if (!fs.existsSync(dbPath)) return null;
+  try {
+    const { DatabaseSync } = await import('node:sqlite');
+    return new DatabaseSync(dbPath, { readOnly: true });
+  } catch (e) {
+    console.error(`[aio] note: could not read ai-tools.db (${e.message})`);
+    return null;
+  }
+}
+
+/**
+ * Repository catalog — db-first (survives with zero local clones), merged with
+ * whatever actually exists on disk (local path + clones not yet in the db).
+ */
+export async function loadRepos(dataDir, reposDir) {
+  const db = await openDb(dataDir);
+  const byFolder = new Map();
+  if (db) {
+    try {
+      const rows = db
+        .prepare(
+          'SELECT folder, url, category, description, language, stars FROM repos ORDER BY folder'
+        )
+        .all();
+      for (const r of rows) {
+        byFolder.set(r.folder, {
+          name: r.folder,
+          url: r.url || '',
+          description: r.description || '',
+          category: r.category || '',
+          language: r.language || '',
+          stars: r.stars || 0,
+          path: reposDir ? path.join(reposDir, r.folder) : null,
+          cloned: Boolean(reposDir && fs.existsSync(path.join(reposDir, r.folder))),
+        });
+      }
+    } catch (e) {
+      console.error(`[aio] note: repos table unreadable (${e.message}) — falling back to scan`);
+    }
+    try {
+      db.close();
+    } catch { /* already closed */ }
+  }
+  // Directory scan stays as the fallback / merge source (fresh clones win).
+  for (const r of scanRepos(reposDir)) {
+    const hit = byFolder.get(r.name);
+    if (hit) {
+      if (!hit.url && r.url) hit.url = r.url;
+      hit.cloned = true;
+      hit.path = r.path;
+    } else {
+      byFolder.set(r.name, { ...r, description: '', category: '', language: '', stars: 0, cloned: true });
+    }
+  }
+  return [...byFolder.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Curated website catalog (## SITES block). Empty when the table is absent. */
+export async function loadSites(dataDir) {
+  const db = await openDb(dataDir);
+  if (!db) return [];
+  try {
+    const has = db
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='sites'")
+      .get();
+    if (!has) return [];
+    return db
+      .prepare('SELECT name, url, category, why, used_by FROM sites ORDER BY category, name')
+      .all()
+      .map((r) => ({ ...r, url: r.url || '', why: r.why || '', used_by: r.used_by || '' }));
+  } catch (e) {
+    console.error(`[aio] note: sites table unreadable (${e.message})`);
+    return [];
+  } finally {
+    try {
+      db.close();
+    } catch { /* already closed */ }
+  }
+}
+
 /** Count/list global agent skill directories (follows symlinked skills). */
 export function scanSkills() {
   const home = os.homedir();

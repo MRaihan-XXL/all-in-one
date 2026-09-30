@@ -125,6 +125,27 @@ updMeta('fine_labels', String(Object.keys(fineDist).length));
 updMeta('sources', 'aio-context.md (REPOS), GitHub API (deskripsi/stars), install plan + install-log.jsonl (kind/status), baris curated dipertahankan');
 db.exec('COMMIT');
 
+/* curated SITES catalog (websites the agents may borrow knowledge from) */
+db.exec(`CREATE TABLE IF NOT EXISTS sites (
+  name TEXT PRIMARY KEY, url TEXT NOT NULL, category TEXT, why TEXT, used_by TEXT)`);
+const siteUp = db.prepare(`
+  INSERT INTO sites (name, url, category, why, used_by) VALUES (@name, @url, @category, @why, @used_by)
+  ON CONFLICT(name) DO UPDATE SET url=@url, category=@category, why=@why, used_by=@used_by`);
+const sitesSeedPath = path.join(ROOT, 'scripts', 'sites-seed.json');
+let sitesSeeded = 0;
+if (existsSync(sitesSeedPath)) {
+  const seed = JSON.parse(readFileSync(sitesSeedPath, 'utf8'));
+  db.exec('BEGIN');
+  for (const s of seed) {
+    siteUp.run({ name: s.name, url: s.url, category: s.category ?? '', why: s.why ?? '', used_by: s.used_by ?? '' });
+    sitesSeeded++;
+  }
+  db.exec('COMMIT');
+}
+const sitesTotal = db.prepare('SELECT COUNT(*) c FROM sites').get().c;
+updMeta('sites_count', String(sitesTotal));
+console.log(`sites = ${sitesSeeded} seeded → ${sitesTotal} total`);
+
 const total = db.prepare('SELECT COUNT(*) c FROM repos').get().c;
 console.log(`repos = ${total}/${repos.length} · installed=${installed} failed=${failed}`);
 console.log(`\n-- category_group --`);

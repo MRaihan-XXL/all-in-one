@@ -87,17 +87,25 @@ export function groupOf(label) {
   return LABEL_GROUP[label] ?? 'Aplikasi / Lainnya';
 }
 
-/** Parse the `## REPOS (n)` table of aio-context.md → [{folder,url,owner,repo,dirPath}]. */
+/**
+ * Parse the `## REPOS (n)` table of aio-context.md → [{folder,url,owner,repo,dirPath}].
+ * Tolerates both layouts: legacy `| # | name | url | \`path\` |` and the rich
+ * `| # | name | url | function | category | stars | path |` (path optional /
+ * "not cloned" cells are skipped; a backtick is only taken as a path when it
+ * looks like one).
+ */
 export function parseReposTable(md) {
   const section = md.split(/^## REPOS \(\d+\)$/m)[1]?.split(/^## /m)[0] ?? '';
   const repos = [];
   for (const line of section.split('\n')) {
-    const m = line.match(/^\|\s*\d+\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*`([^`]+)`\s*\|/);
+    const m = line.match(/^\|\s*\d+\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|/);
     if (!m) continue;
-    const [, folder, urlRaw, dirPath] = m;
+    const [, folder, urlRaw] = m;
+    if (/^:?-{3,}:?$/.test(folder.trim())) continue;
     const url = /github\.com/i.test(urlRaw) ? urlRaw.trim() : '';
     const um = url.match(/github\.com\/([^/]+)\/([^/\s]+)/);
-    repos.push({ folder: folder.trim(), url, owner: um?.[1] ?? '', repo: um?.[2] ?? '', dirPath });
+    const pathCell = line.match(/`([^`]*[\\/][^`]*)`/);
+    repos.push({ folder: folder.trim(), url, owner: um?.[1] ?? '', repo: um?.[2] ?? '', dirPath: pathCell ? pathCell[1] : '' });
   }
   return repos;
 }

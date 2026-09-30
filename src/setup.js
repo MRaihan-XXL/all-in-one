@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { resolveDataDir, resolveReposDir, writeState, BACKUP_DIR, STATE_DIR } from './paths.js';
-import { detectAgents, detectBinary, scanRepos, loadTools, scanSkills } from './scan.js';
+import { detectAgents, detectBinary, loadRepos, loadSites, loadTools, scanSkills } from './scan.js';
 import { buildBlock, injectBlock, genContext, ensureMcp, fixPaths, backup } from './write.js';
 import { getVersion } from './banner.js';
 
@@ -42,7 +42,8 @@ export async function runSetup(opts = {}) {
   }
 
   const agents = detectAgents();
-  const repos = scanRepos(reposDir);
+  const repos = await loadRepos(dataDir, reposDir);
+  const sites = await loadSites(dataDir);
   const tools = await loadTools(dataDir);
   const skills = scanSkills();
   const mcpBin = detectBinary('codebase-memory-mcp');
@@ -50,7 +51,7 @@ export async function runSetup(opts = {}) {
   const manifestPath = dataDir
     ? path.join(dataDir, 'aio-context.md')
     : path.join(STATE_DIR, 'aio-context.md');
-  genContext({ version, dataDir, reposDir, repos, tools, skills, agents }, manifestPath);
+  genContext({ version, dataDir, reposDir, repos, tools, sites, skills, agents }, manifestPath);
 
   const body = buildBlock({ version, manifestPath, dataDir });
   const targets = targetFiles(home);
@@ -107,13 +108,14 @@ export async function runSetup(opts = {}) {
   for (const r of pathResults) row('x', path.basename(r.target), r.status);
 
   const skillTotal = skills.reduce((n, s) => n + s.count, 0);
+  const cloned = repos.filter((r) => r.cloned).length;
   console.log('\nManifest');
-  row('x', 'aio-context.md', `REPOS ${repos.length} · TOOLS ${tools.length} · SKILLS ${skillTotal}`);
+  row('x', 'aio-context.md', `REPOS ${repos.length} (${cloned} cloned) · TOOLS ${tools.length} · SITES ${sites.length} · SKILLS ${skillTotal}`);
   console.log(`  ${manifestPath}`);
   console.log('');
   console.log(`Backups: ${BACKUP_DIR}`);
-  console.log('Done. Open any agent directly (opencode / claude / kimi / ...) — it now knows');
-  console.log('your repos, tools & skills. No slash-commands needed. Usage is disclosed as:');
+  console.log('Done. Every agent now knows your repos, tools, skills & sites — no slash-commands.');
+  console.log('Prompt flow: aio ask → aio borrow (temp) → use → report (link + function) → clean.');
   console.log('  [aio] Using [<name>](<url>) (<type>) — <function>');
   console.log('');
 }
