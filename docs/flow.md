@@ -13,11 +13,11 @@ is no catalog-miss branch since v1.3.0):
 
 | # | Step | Meaning |
 |---|---|---|
-| 1 | **Your prompt** | plain-language input ("aku butuh X yang GG"); no `/slash-command` needed |
-| 2 | **`aio ask "<what you need>"`** | **LIVE · ADAPTIVE · ≤ 4 s per source** — parallel lanes **github** (400M+ repos + `filename:SKILL.md` skill files), **npm** (3M+ packages), **crates** (150K+), plus **web → your agent's own web search**; intent routing (rust → crates, skill words → skills, URL → web hint) and generic-word stripping for GitHub |
+| 1 | **Your prompt** | plain-language input ("I need an awesome X"); no `/slash-command` needed |
+| 2 | **`aio ask "<what you need>"`** | **LIVE · ADAPTIVE · ≤ 4 s per source** — parallel lanes **github** (630M+ repos + `filename:SKILL.md` skill files, 6.8M+), **npm** (3M+ packages), **crates** (340K+), plus **web → your agent's own web search**; intent routing (rust → crates, skill words → skills, URL → web hint) and generic-word stripping for GitHub |
 | 3 | **top-8 ranked** | sources merged and ranked: **BM25**, source diversity (≥ 2 rows per answering source), qwen3 rerank only when warm (≤ 3.5 s); **every hit prints URL + one-line function + `<github>`/`<npm>`/`<crates>` tag**; **0 bytes stored** |
-| 4 | **pakai sementara (use ephemerally)** | `npx` / `uvx` / copy — ephemeral, never a permanent install; or `aio borrow --get owner/repo` shallow-clones into `%TEMP%\aio-borrow` (**24 h TTL**, ≥ 1 GB free-disk guard) |
-| 5 | **laporan wajib (report)** | mandatory disclosure `[aio] Using [<name>](<url>) (<type>) — <function>`: WHAT CHANGED + every repo/tool/site used, each as a markdown link + one-line function |
+| 4 | **use ephemerally** | `npx` / `uvx` / copy — ephemeral, never a permanent install; or `aio borrow --get owner/repo` shallow-clones into `%TEMP%\aio-borrow` (**24 h TTL**, ≥ 1 GB free-disk guard) |
+| 5 | **mandatory report** | mandatory disclosure `[aio] Using [<name>](<url>) (<type>) — <function>`: WHAT CHANGED + every repo/tool/site used, each as a markdown link + one-line function |
 | 6 | **`aio borrow --clean`** | wipe temp clones (`--list` inspects them first; expired clones are purged automatically) — then the loop continues with the next prompt |
 
 Environment gates: `AIO_OFFLINE=1` makes `aio ask` fail loudly offline (by
@@ -132,7 +132,11 @@ Recorded result (2026-09-28): frame A `FFDE6A1CF6E8…`, frame B
 
 The v1.3.0 rewrite of `assets/flow.svg` (the six-step live pipeline above) was
 re-verified the same way on 2026-09-30: headless Edge screenshots of hero,
-flow and stats, all visually checked.
+flow and stats, all visually checked. A second pass the same day switched the
+diagram to **full-English labels** ("use ephemerally", "mandatory report",
+"I need an awesome X") and fixed the loop-back wire's `stroke-dasharray`
+(inline 1600 → shared `.wireL` class at 1400, also honored under
+`prefers-reduced-motion`).
 
 ## Embedding
 

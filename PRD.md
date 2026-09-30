@@ -4,7 +4,7 @@
 |---|---|
 | **Product** | `aio` — All-In-One auto-connect layer for AI coding agents |
 | **Package** | `aio-connect` (npm registry; GitHub repo `MRaihan-XXL/all-in-one`) |
-| **Version** | 1.3.0 |
+| **Version** | 1.3.1 |
 | **Status** | Approved for implementation |
 | **License** | GPL-3.0 |
 | **Docs language** | English (international) |
@@ -49,7 +49,7 @@ prompts in plain language — no slash commands.
 ## 3. Users
 
 1. **Primary** — the owner: power user running 8 agents on one Windows
-   machine; the catalog is **live** (GitHub 400M+ repos · npm · crates —
+   machine; the catalog is **live** (GitHub 630M+ repos · npm · crates —
    zero storage), local clones optional (install plan only).
 2. **Secondary** — public GitHub users: anyone installing
    `npm install -g aio-connect` on their own machine with
@@ -80,10 +80,10 @@ a slash-command" rule **and** the `aio ask` → use → report → clean mandate
 ### FR3 — Manifest = slim live-architecture rules (no catalog data)
 Generated file `aio-context.md` carries no catalog tables — the catalog is
 live, so there is nothing to store:
-- **Header** — live-architecture statement (GitHub 400M+ repos + public
-  skills, npm 3M+ packages, crates; websites → the agent's own web search;
-  **0 bytes stored**) + the mandatory disclosure rule + the prompt flow
-  (`aio ask` → ephemeral use → report → `borrow --clean`).
+- **Header** — live-architecture statement (GitHub 630M+ repos + public
+  skills, npm 3M+ packages, crates 340K+; websites → the agent's own web
+  search; **0 bytes stored**) + the mandatory disclosure rule + the prompt
+  flow (`aio ask` → ephemeral use → report → `borrow --clean`).
 - **AGENTS DETECTED** — per-agent found/not-installed list.
 
 Repositories/tools/sites/skills are no longer enumerated: `aio ask` resolves
@@ -154,12 +154,13 @@ scan (tokens/passwords/usernames) on tracked files passes.
 
 ### FR9 — Live search & ephemeral borrow (`ask` / `borrow`)
 - `aio ask "<prompt>"` is a **live search router**: GitHub repo search
-  (`api.github.com`, 400M+ repos) plus `filename:SKILL.md` code search,
-  npm (`registry.npmjs.org`, 3M+ packages) and crates.io (150K+ crates)
-  queried **in parallel** with a 4 s per-source timeout; intent routing
-  (rust → crates, skill words → skills, URL → web hint) and generic-word
-  stripping for GitHub. Results are merge-ranked with **BM25**, a **source
-  diversity** guarantee (≥ 2 rows per answering source), and an optional
+  (`api.github.com`, 630M+ repos) plus `filename:SKILL.md` code search
+  (6.8M+ skill files), npm (`registry.npmjs.org`, 3M+ packages) and
+  crates.io (340K+ crates) queried **in parallel** with a 4 s per-source
+  timeout; intent routing (rust → crates, skill words → skills, URL → web
+  hint) and generic-word stripping for GitHub. Results are merge-ranked with
+  **BM25**, a **source diversity** guarantee (≥ 2 rows per answering source),
+  and an optional
   qwen3 Ollama rerank only when warm and fast (≤ 3.5 s; skipped once elapsed
   > 2.5 s). Every hit prints **URL + one-line function + source tag**;
   `--json` emits `{query, engine, sources, count, stored: 0, hits}`.
@@ -192,13 +193,20 @@ hit, `--json` (`stored: 0`), and the borrow lifecycle (24 h TTL purge,
 step green on the owner machine (verified 2026-09-30).
 
 ### FR11 — Real-time unlimited search, zero storage
-The catalog is **the network, queried at prompt time** — unlimited (400M+
-GitHub repos, 3M+ npm packages, 150K+ crates, 33K+ public skill files), always
+The catalog is **the network, queried at prompt time** — unlimited (630M+
+GitHub repos, 3M+ npm packages, 340K+ crates, 6.8M+ public skill files), always
 current, and never persisted: no SQLite file, no `catalog.js`, no build step,
 no search history. Every answering source degrades silently (4 s timeout,
 missing `gh`, rate limit → skip), so a partial answer still returns; the only
 bytes aio writes are the manifest, the agent blocks, backups and MCP state
 (see docs/CONFIG.md).
+
+**Sources for the figures** (all floors, re-verified 2026-09-30 after a user
+evaluation found the previous numbers understated): GitHub repositories
+**630M+** — GitHub Octoverse 2025; crates.io **340K+** — live API
+`meta.total` = 342,787; `filename:SKILL.md` files **6.8M+** — live GitHub
+code search `total_count` = 6,832,128; npm packages **3M+** — npm's official
+figure (unchanged).
 
 **Acceptance:** `aio ask --json` reports `stored: 0` (asserted in the test
 suite) and there is no catalog file to write — `npm test` **34/34** as of
@@ -237,7 +245,7 @@ suite) and there is no catalog file to write — `npm test` **34/34** as of
 |---|---|
 | `aio` | Full setup: scan → manifest → inject → MCP ensure → path fix → status table |
 | `aio status` | Read-only health report (state, manifest, repo/install counts, agent blocks) |
-| `aio ask "<prompt>"` | **Live search router**: GitHub (400M+ repos + `filename:SKILL.md` skills) + npm (3M+) + crates (150K+) in parallel, 4 s/source; BM25 merge + source diversity + optional warm-Ollama rerank; every hit prints link + one-line function + `<src>` tag; `--json` (`stored: 0`) |
+| `aio ask "<prompt>"` | **Live search router**: GitHub (630M+ repos + `filename:SKILL.md` skills, 6.8M+ files) + npm (3M+) + crates (340K+) in parallel, 4 s/source; BM25 merge + source diversity + optional warm-Ollama rerank; every hit prints link + one-line function + `<src>` tag; `--json` (`stored: 0`) |
 | `aio borrow "<kw>"` | Optional live GitHub search for what you want cloned; `--get <owner/repo>` shallow-clone to `%TEMP%\aio-borrow` (24 h TTL, 1 GB disk guard); `--list` / `--clean` |
 | `aio doctor [--check\|--fix]` | Self-diagnosis: node / state / live sources / manifest-sync / agent blocks / Ollama; `--check` = CI gate, `--fix` = safe repair |
 | `aio evolve` | Pipeline: install-plan scan (skipped without clones) → setup → doctor → `npm test`; never commits |
@@ -270,16 +278,25 @@ overrides: `AIO_REPOS_DIR`, `AIO_STATE_DIR` (state dir, default `~/.aio`),
   logo, hairline rules, high-contrast type — no rainbow/glow. Animation is
   SMIL/CSS only inside the SVG (no JavaScript, no runtime dependency); the hero
   and stats strips are embedded in `index.html` as well as the README.
-- **UI assets v2 — live pipeline** (2026-09-30, v1.3.0) — same three SVGs
-  re-rendered for the 100% live architecture, each verified via headless Edge
-  screenshots: `assets/aio-hero.svg` (v1.3.0 chip, "LIVE — 0 BYTES STORED"
-  panel, rows github 400M+ / npm 3M+ / crates 150K+ / skill files 33K+, ticker
-  `$ prompt → aio ask → use → report ↗ → clean`), `assets/flow.svg` (six-step
-  live pipeline: parallel github/npm/crates/web lanes, top-8 ranked, no
-  catalog-miss branch), `assets/aio-stats.svg` (400M+ · 3M+ · 150K+ · 33K+ ·
-  0 BYTES STORED · 34/34 TESTS, eyebrow "VERIFIED — LIVE CORPUS, MEASURED
-  2026-09-30", chip "100% LIVE"). The v1.2 counts strip above is superseded
-  but kept as history.
+- **UI assets v2 — live pipeline** (2026-09-30, v1.3.0, finalised in 1.3.1) —
+  same three SVGs re-rendered for the 100% live architecture, each verified via
+  headless Edge screenshots: `assets/aio-hero.svg` (version chip now `v1.3.1`,
+  "LIVE — 0 BYTES STORED" panel, rows github 630M+ / npm 3M+ / crates 340K+ /
+  skill files 6.8M+, ticker `$ prompt → aio ask → use → report ↗ → clean`;
+  wordmark redrawn as constructed vector letterforms, no system fonts),
+  `assets/flow.svg` (six-step live pipeline: parallel github/npm/crates/web
+  lanes, top-8 ranked, no catalog-miss branch; full-English labels + loop-wire
+  `stroke-dasharray` fixed), `assets/aio-stats.svg` (630M+ · 3M+ · 340K+ ·
+  6.8M+ · 0 BYTES STORED · 34/34 TESTS, eyebrow "VERIFIED — LIVE CORPUS,
+  FLOORS MEASURED 2026-09-30", chip "100% LIVE"), plus the new disclosure-card
+  asset `assets/aio-disclosure.svg` (details in the next bullet). Figures are
+  **verified floors, measured 2026-09-30** (sources in §4 FR11); the v1.2
+  counts strip above is superseded but kept as history.
+- **Disclosure card** `assets/aio-disclosure.svg` (added 2026-09-30 after a
+  user evaluation) — FR6 disclosure card: terminal-style typewriter reveal of
+  the usage line `[aio] Using [<name>](<url>) (<type>) — <function>`, link
+  underline sweep, MANDATORY chip; embedded at the end of the README
+  disclosure section and under the landing page's disclosure example.
 - **Token economy in generated docs** — `buildBlock` (src/write.js) output cut
   from 3258 → 2119 bytes per agent block (−35% ≈ −285 tokens × 7 agent files ≈
   −2000 tokens per session; every mandate and test string preserved verbatim);
@@ -403,3 +420,5 @@ commit (a follow-up run covers this docs batch).
 | 2026-09-29 | v1.4 — `aio-connect@1.1.2`: bundled `ai-tools.db` + first-run fallback (resolveDataDir), CI actions v5, catalog 231 repos (+30 gems & discovery), screenshots 231/231 |
 | 2026-09-30 | v1.5 - aio 1.2.0: aio ask (BM25 + local-Ollama rerank, link+function output), aio borrow (ephemeral GitHub clones, 24h TTL), aio doctor/evolve (self-diagnosis/self-upgrade), ## SITES (45) + disclosure site, db-first catalog (clones optional), animated README/flow assets, screenshots artifacts removed, repo renamed all-in-one |
 | 2026-09-30 | v1.6 — aio 1.3.0: 100% live architecture — ai-tools.db + catalog.js + build-db deleted, aio ask = parallel GitHub/npm/crates search (BM25 + source diversity + warm qwen3 rerank), web = agent's own search, zero storage (0 bytes), assets v2 live pipeline redesign, 34/34 tests, doctor live check |
+
+| 2026-09-30 | v1.7 — aio 1.3.1: evaluation round — verified figures corrected (630M+ Octoverse 2025, crates api 342,787 → 340K+, SKILL.md count 6,832,128 → 6.8M+), flow.svg full English + loop-wire fix, hero wordmark → constructed vector letterforms, new disclosure card asset, banner rounded terminals, 34/34 tests |

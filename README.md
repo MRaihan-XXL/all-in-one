@@ -32,17 +32,18 @@
 </p>
 
 <p align="center">
-  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus: 400M+ GitHub repos · 3M+ npm packages · 150K+ crates · 33K+ skill files · 0 bytes stored · 34/34 tests">
+  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · 0 bytes stored · 34/34 tests">
 </p>
 
 ## ✨ What it does
 
 `aio` has **no bundled catalog and no database** — it teaches every AI agent on
-your machine to **search live on each prompt**: GitHub (**400M+ repos** plus
-`filename:SKILL.md` public skills), npm (**3M+ packages**) and crates
-(**150K+ crates**), queried in parallel; websites go through your agent's own
-built-in web search. Results are printed, ranked and used — **0 bytes are ever
-stored**:
+your machine to **search live on each prompt**: GitHub (**630M+ repos** plus
+`filename:SKILL.md` public skills — **6.8M+ skill files**), npm (**3M+
+packages**) and crates (**340K+ crates**), queried in parallel — all counts are
+**verified floors, measured 2026-09-30**; websites go through your agent's
+own built-in web search. Results are printed, ranked and used — **0 bytes are
+ever stored**:
 
 ```text
 prompt → aio ask (live: github ∥ npm ∥ crates) → top-8 ranked (BM25 + diversity)
@@ -53,7 +54,7 @@ prompt → aio ask (live: github ∥ npm ∥ crates) → top-8 ranked (BM25 + di
 | Command | What you get |
 |---|---|
 | `aio` | scan → slim manifest → inject the auto-use block into every agent |
-| `aio ask "csv ke chart"` | **live search** across GitHub (400M+ repos + public skills), npm (3M+ pkgs) and crates in parallel (4 s per source), merge-ranked with BM25 + source diversity; every hit prints **link + one-line function + `<github>`/`<npm>`/`<crates>` tag**; reranked by your local Ollama (qwen3) only when it is warm and fast; `--json` → `{…, stored: 0, hits}` |
+| `aio ask "csv ke chart"` | **live search** across GitHub (630M+ repos + public skills), npm (3M+ pkgs) and crates (340K+) in parallel (4 s per source), merge-ranked with BM25 + source diversity; every hit prints **link + one-line function + `<github>`/`<npm>`/`<crates>` tag**; reranked by your local Ollama (qwen3) only when it is warm and fast; `--json` → `{…, stored: 0, hits}` |
 | `aio borrow "etl tool"` | **optional ephemeral fetch** — `--get owner/repo` shallow-clones to temp (**24 h TTL**, auto-purged), `--list` inspects, `--clean` wipes it. Not a fallback for `ask`: use it when you actually need the files locally |
 | `aio doctor` | self-diagnosis: node · state · live sources · manifest ↔ agent blocks ↔ Ollama; `--fix` repairs, `--check` = CI gate |
 | `aio evolve` | the whole self-upgrade pipeline in one run: install-plan scan → setup → doctor → tests (never commits) |
@@ -102,6 +103,10 @@ Perubahan: added chart.js, wired the data feed.
 ```
 
 `<type>` = `repo | cli | service | skill | site`.
+
+<p align="center">
+  <img src="./assets/aio-disclosure.svg" width="98%" alt="Disclosure card: every agent reply begins with the [aio] Using name-url-type-function line — linked, attributed, auditable; first line, every time">
+</p>
 
 ## 🔁 Nothing is stored permanently
 
