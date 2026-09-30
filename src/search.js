@@ -1,68 +1,12 @@
-// search.js — catalog search for `aio ask`: BM25 over repos/tools/sites/skills,
-// then an optional local Ollama rerank (qwen3). Zero npm dependencies — fetch only.
-import fs from 'node:fs';
-import path from 'node:path';
-import os from 'node:os';
-import { loadRepos, loadSites, scanSkills } from './scan.js';
+// search.js — `aio ask`: adaptive live search (GitHub repos/skills, npm, crates)
+// merged + ranked with BM25, optional local Ollama rerank (qwen3). Zero storage:
+// every result is printed only — nothing is written to disk or database.
+import { liveSearch } from './live.js';
 
 const OLLAMA = process.env.OLLAMA_HOST || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.AIO_OLLAMA_MODEL || 'qwen3:4b';
 
-/* ---------------- catalog ---------------- */
-
-/** Normalized entries: { type, name, url, func, meta } — func/meta feed ranking. */
-export async function loadCatalog(dataDir, reposDir) {
-  const entries = [];
-  for (const r of await loadRepos(dataDir, reposDir)) {
-    entries.push({
-      type: 'repo',
-      name: r.name,
-      url: r.url || '',
-      func: r.description || 'GitHub repository (no description in catalog)',
-      meta: [r.category, r.language, r.stars ? `\u2605${r.stars}` : ''].filter(Boolean).join(' \u00b7 '),
-    });
-  }
-  if (dataDir) {
-    const dbPath = path.join(dataDir, 'ai-tools.db');
-    if (fs.existsSync(dbPath)) {
-      try {
-        const { DatabaseSync } = await import('node:sqlite');
-        const db = new DatabaseSync(dbPath, { readOnly: true });
-        for (const t of db
-          .prepare('SELECT name, category, url, description, access FROM tools ORDER BY id')
-          .all()) {
-          entries.push({
-            type: 'tool',
-            name: t.name,
-            url: t.url || '',
-            func: t.description || 'Local tool from the catalog',
-            meta: [t.category, t.access ? String(t.access) : ''].filter(Boolean).join(' \u00b7 '),
-          });
-        }
-        db.close();
-      } catch (e) {
-        console.error(`[aio] note: tools table unreadable (${e.message})`);
-      }
-    }
-    for (const s of await loadSites(dataDir)) {
-      entries.push({
-        type: 'site',
-        name: s.name,
-        url: s.url,
-        func: s.why || 'Web tool in the curated sites catalog',
-        meta: [s.category, s.used_by ? `for ${s.used_by}` : ''].filter(Boolean).join(' \u00b7 '),
-      });
-    }
-  }
-  for (const loc of scanSkills()) {
-    for (const n of loc.names) {
-      entries.push({ type: 'skill', name: n, url: '', func: `Agent skill installed at ${loc.location}`, meta: 'skill' });
-    }
-  }
-  return entries;
-}
-
-/* ---------------- BM25 ---------------- */
+/* ---------------- BM25 (in-memory merge ranker) ---------------- */
 
 function tokenize(s) {
   return String(s).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
@@ -116,7 +60,7 @@ export async function aiRerank(query, hits) {
   try {
     const res = await fetch(`${OLLAMA}/api/chat`, {
       method: 'POST',
-      signal: AbortSignal.timeout(20000), // covers first-call model load
+      signal: AbortSignal.timeout(3500), // warm model only — cold load must not stall `ask`
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         model: OLLAMA_MODEL,
@@ -151,40 +95,78 @@ export async function aiRerank(query, hits) {
     const rest = hits.filter((_, i) => !seen.has(i));
     return { ai: true, hits: [...top, ...rest] };
   } catch {
-    return { ai: false, hits }; // Ollama down/slow/invalid → BM25 order stands
+    return { ai: false, hits }; // Ollama down/slow/invalid → merged order stands
   }
 }
 
 /* ---------------- command helpers ---------------- */
 
 /** `aio ask` → { ok, text, json }. Every hit carries url + function (item 3). */
-export async function runAsk({ query, json, dataDir, reposDir }) {
+export async function runAsk({ query, json }) {
   if (!query || !query.trim()) {
     return { ok: false, text: 'usage: aio ask "<what you need>"\nexample: aio ask "csv ke chart interaktif"', json: null };
   }
-  const entries = await loadCatalog(dataDir, reposDir);
-  const core = entries.filter((e) => e.type !== 'skill').length; // repos+tools+sites
-  if (!core) {
-    return { ok: false, text: '[aio] catalog empty — no db/manifest found. Run `aio` first.', json: null };
+  const t0 = Date.now();
+  const { entries, sources, web, offline } = await liveSearch(query);
+
+  if (offline) {
+    return {
+      ok: false,
+      json: null,
+      text: '[aio] offline (AIO_OFFLINE=1) — aio keeps zero local catalog by design; live search needs network.',
+    };
   }
-  const bm = bm25Search(query, entries);
-  const { ai, hits } = await aiRerank(query, bm);
-  const out = { query, engine: ai ? `ollama:${OLLAMA_MODEL}` : 'bm25', count: hits.length, hits };
+
+  // Merge-rank everything (source order carries stars/relevance; BM25 aligns to the query).
+  const ranked = bm25Search(query, entries, 8);
+  const pool = (ranked.length ? ranked : entries.slice(0, 8)).map((h) =>
+    h.why ? h : { ...h, why: `source-ranked by ${h.src || 'live'}` }
+  );
+  // Source diversity: every answering source keeps at least 2 rows (best first).
+  for (const s of [...new Set(entries.map((e) => e.src))]) {
+    const best = entries.filter((e) => e.src === s);
+    while (pool.filter((h) => h.src === s).length < 2 && pool.length < 10) {
+      const next = best.find((e) => !pool.includes(e));
+      if (!next) break;
+      pool.push({ ...next, why: `top ${next.src} hit` });
+    }
+  }
+
+  // Rerank only if we are still inside the speed budget (warm Ollama, ≤3.5s).
+  let ai = false;
+  let hits = pool;
+  if (pool.length && Date.now() - t0 <= 2500) {
+    const r = await aiRerank(query, pool);
+    ai = r.ai;
+    hits = r.hits;
+  }
+
+  const engine = sources.length ? `live: ${sources.join('+')}` : 'live: no source answered';
+  const ms = ((Date.now() - t0) / 1000).toFixed(1);
+  const out = {
+    query,
+    engine: ai ? `${engine} + ollama:${OLLAMA_MODEL}` : engine,
+    sources,
+    count: hits.length,
+    stored: 0, // zero storage — results are never persisted
+    hits,
+  };
   if (json) return { ok: true, text: JSON.stringify(out, null, 2), json: out };
   if (!hits.length) {
     return {
       ok: true,
       json: out,
       text:
-        `aio ask — "${query}" (engine: ${out.engine})\n` +
-        'No catalog match. Try `aio borrow "<keywords>"` for live GitHub search.',
+        `aio ask — "${query}" (${engine} · ${ms}s)\n` +
+        'No result from live sources. Refine keywords — or search the web with your own web-search tool' +
+        `${web ? ' (URL detected in the prompt)' : ''}.`,
     };
   }
-  const lines = [`aio ask — "${query}" (engine: ${out.engine} · ${hits.length} hasil)`, ''];
+  const lines = [`aio ask — "${query}" (${engine} · ${hits.length} hasil · ${ms}s${web ? ' · web → your web search' : ''})`, ''];
   hits.forEach((h, i) => {
-    lines.push(`${i + 1}. ${h.name} [${h.type}] — ${h.func}`);
+    lines.push(`${i + 1}. ${h.name} [${h.type}] ${h.src ? `<${h.src}>` : ''} — ${h.func}`);
     if (h.meta) lines.push(`   ${h.meta}`);
-    lines.push(h.url ? `   ${h.url}` : '   (local — no public URL)');
+    lines.push(h.url ? `   ${h.url}` : '   (no public URL)');
     lines.push(`   why: ${h.why}`);
   });
   return { ok: true, text: lines.join('\n'), json: out };

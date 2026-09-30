@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
-import { resolveDataDir, resolveReposDir, readState } from './paths.js';
+import { STATE_DIR, readState } from './paths.js';
 import { detectAgents } from './scan.js';
 import { BLOCK_START } from './write.js';
 import { getVersion } from './banner.js';
@@ -43,42 +43,33 @@ export async function runChecks(opts = {}) {
   // 2. State
   const state = readState();
   checks.push(
-    state
-      ? line('ok', 'state', `config.json ok${state.dataDir ? ` — dataDir ${state.dataDir}` : ''}`)
+    Object.keys(state).length
+      ? line('ok', 'state', 'config.json ok (zero-storage layout)')
       : line('warn', 'state', 'no persisted state — run `aio` once')
   );
 
-  // 3. Data dir + db
-  const dataDir = resolveDataDir(opts.home);
-  let dbCount = -1;
-  let siteCount = -1;
-  if (dataDir && fs.existsSync(path.join(dataDir, 'ai-tools.db'))) {
-    try {
-      const { DatabaseSync } = await import('node:sqlite');
-      const db = new DatabaseSync(path.join(dataDir, 'ai-tools.db'), { readOnly: true });
-      dbCount = db.prepare('SELECT COUNT(*) c FROM repos').get().c;
-      const t = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='sites'").get();
-      siteCount = t ? db.prepare('SELECT COUNT(*) c FROM sites').get().c : 0;
-      db.close();
-      checks.push(line('ok', 'catalog db', `${dbCount} repos, ${siteCount} sites — ${path.join(dataDir, 'ai-tools.db')}`));
-    } catch (e) {
-      checks.push(line('bad', 'catalog db', `unreadable: ${e.message}`));
-    }
+  // 3. Live sources (info — the catalog IS the network; warn never fails CI)
+  if (process.env.AIO_OFFLINE === '1') {
+    checks.push(line('ok', 'live', 'AIO_OFFLINE=1 — live search intentionally disabled'));
   } else {
-    checks.push(line('bad', 'catalog db', 'ai-tools.db not found — run `aio` inside the data project or pass --home'));
+    try {
+      const res = await fetch('https://api.github.com/rate_limit', { headers: { 'user-agent': 'aio-connect/1.3' }, signal: AbortSignal.timeout(3000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      checks.push(line('ok', 'live', 'github reachable — ask searches GitHub + npm + crates (0 bytes stored)'));
+    } catch (e) {
+      checks.push(line('warn', 'live', `github unreachable (${e.message}) — aio ask will still try npm/crates`));
+    }
   }
 
-  // 4. Manifest freshness + count sync
-  const manifestPath = dataDir ? path.join(dataDir, 'aio-context.md') : null;
-  if (manifestPath && fs.existsSync(manifestPath)) {
+  // 4. Manifest freshness
+  const manifestPath = path.join(STATE_DIR, 'aio-context.md');
+  if (fs.existsSync(manifestPath)) {
     const txt = fs.readFileSync(manifestPath, 'utf8');
-    const m = txt.match(/^## REPOS \((\d+)\)/m);
-    const s = txt.match(/^## SITES \((\d+)\)/m);
     const ageDays = (Date.now() - fs.statSync(manifestPath).mtimeMs) / 86400000;
-    const repoN = m ? Number(m[1]) : -1;
-    const detail = `REPOS ${repoN}${s ? ` · SITES ${s[1]}` : ''} · ${ageDays.toFixed(1)}d old — ${manifestPath}`;
-    if (dbCount >= 0 && repoN !== dbCount) {
-      checks.push(line('bad', 'manifest', `${detail} — OUT OF SYNC (db=${dbCount}) — fix: aio --fix`));
+    const live = txt.includes('zero storage');
+    const detail = `${live ? 'live architecture (0 bytes stored)' : 'LEGACY layout'} · ${ageDays.toFixed(1)}d old — ${manifestPath}`;
+    if (!live) {
+      checks.push(line('bad', 'manifest', `${detail} — fix: aio --fix`));
     } else if (ageDays > 7) {
       checks.push(line('warn', 'manifest', `${detail} — stale (>7d) — refresh: aio`));
     } else {
@@ -116,7 +107,7 @@ export async function runChecks(opts = {}) {
     const data = await res.json();
     checks.push(line('ok', 'ollama', `reachable — models: ${(data.models || []).map((m) => m.name).slice(0, 4).join(', ')}`));
   } catch {
-    checks.push(line('warn', 'ollama', 'not reachable — `aio ask` falls back to BM25 keyword search'));
+    checks.push(line('warn', 'ollama', 'not reachable — ask rerank skipped (source/BM25 order kept)'));
   }
 
   const issues = checks.filter((c) => c.level === 'bad').length;

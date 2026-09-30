@@ -36,6 +36,6 @@ export function runRollback() {
 
   console.log(`\nRemoved ${removed} context block(s).`);
   console.log(`File backups (kept as safety net): ${BACKUP_DIR}`);
-  console.log('Local data (ai-tools.db, TOOLS-INDEX.md, TRACKING.md) was never touched.');
+  console.log('Local data (TRACKING.md, TOOLS-INDEX.md) was never touched.');
   console.log('');
 }

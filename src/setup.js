@@ -2,8 +2,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { resolveDataDir, resolveReposDir, writeState, BACKUP_DIR, STATE_DIR } from './paths.js';
-import { detectAgents, detectBinary, loadRepos, loadSites, loadTools, scanSkills } from './scan.js';
+import { resolveReposDir, writeState, BACKUP_DIR, STATE_DIR } from './paths.js';
+import { detectAgents, detectBinary } from './scan.js';
 import { buildBlock, injectBlock, genContext, ensureMcp, fixPaths, backup } from './write.js';
 import { getVersion } from './banner.js';
 
@@ -31,29 +31,18 @@ export async function runSetup(opts = {}) {
     console.error(`[aio] warning: Node ${process.versions.node} detected — Node >= 22 recommended`);
   }
 
-  const dataDir = resolveDataDir(opts.home);
   const reposDir = resolveReposDir(opts.repos);
-  if (!dataDir) {
-    console.log('[aio] note: no local data dir found (ai-tools.db / TOOLS-INDEX.md).');
-    console.log('[aio]      Install location registry first, or run with --home <dir>.');
-  }
   if (!reposDir) {
-    console.log('[aio] note: repos dir not found. Pass --repos <dir> or set AIO_REPOS_DIR.');
+    console.log('[aio] note: repos dir not found (optional — install plan only). Pass --repos <dir>.');
   }
 
   const agents = detectAgents();
-  const repos = await loadRepos(dataDir, reposDir);
-  const sites = await loadSites(dataDir);
-  const tools = await loadTools(dataDir);
-  const skills = scanSkills();
   const mcpBin = detectBinary('codebase-memory-mcp');
 
-  const manifestPath = dataDir
-    ? path.join(dataDir, 'aio-context.md')
-    : path.join(STATE_DIR, 'aio-context.md');
-  genContext({ version, dataDir, reposDir, repos, tools, sites, skills, agents }, manifestPath);
+  const manifestPath = path.join(STATE_DIR, 'aio-context.md');
+  genContext({ version, agents }, manifestPath);
 
-  const body = buildBlock({ version, manifestPath, dataDir });
+  const body = buildBlock({ version, manifestPath });
   const targets = targetFiles(home);
   const blockResults = targets.map((t) => {
     if (!fs.existsSync(path.dirname(t.file))) {
@@ -70,7 +59,6 @@ export async function runSetup(opts = {}) {
 
   writeState({
     version,
-    dataDir,
     reposDir,
     manifestPath,
     lastRun: new Date().toISOString(),
@@ -107,15 +95,13 @@ export async function runSetup(opts = {}) {
   if (!pathResults.length) console.log('  [x] clean — no broken "AI tutorial" references');
   for (const r of pathResults) row('x', path.basename(r.target), r.status);
 
-  const skillTotal = skills.reduce((n, s) => n + s.count, 0);
-  const cloned = repos.filter((r) => r.cloned).length;
-  console.log('\nManifest');
-  row('x', 'aio-context.md', `REPOS ${repos.length} (${cloned} cloned) · TOOLS ${tools.length} · SITES ${sites.length} · SKILLS ${skillTotal}`);
+  console.log('\nManifest (slim — catalog stays LIVE, zero storage)');
+  row('x', 'aio-context.md', `rules + disclosure + ${agents.filter((a) => a.found).length} agents · manifest data = live at ask time`);
   console.log(`  ${manifestPath}`);
   console.log('');
   console.log(`Backups: ${BACKUP_DIR}`);
-  console.log('Done. Every agent now knows your repos, tools, skills & sites — no slash-commands.');
-  console.log('Prompt flow: aio ask → aio borrow (temp) → use → report (link + function) → clean.');
+  console.log('Done. Every agent now searches LIVE (GitHub/npm/crates) — no slash-commands, nothing stored.');
+  console.log('Prompt flow: aio ask (live) → use ephemerally → report (link + function) → clean.');
   console.log('  [aio] Using [<name>](<url>) (<type>) — <function>');
   console.log('');
 }

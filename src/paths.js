@@ -1,8 +1,7 @@
-// paths.js — location resolution: state (~/.aio), data dir, repos dir
+// paths.js — location resolution: state (~/.aio), repos dir
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { fileURLToPath } from 'node:url';
 
 export const STATE_DIR = process.env.AIO_STATE_DIR
   ? path.resolve(process.env.AIO_STATE_DIR)
@@ -26,53 +25,6 @@ export function writeState(partial) {
   const next = { ...readState(), ...partial };
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(next, null, 2));
   return next;
-}
-
-function hasLocalData(dir) {
-  return ['ai-tools.db', 'TOOLS-INDEX.md'].some((f) => fs.existsSync(path.join(dir, f)));
-}
-
-/** Priority: --home > $AIO_HOME > persisted state > walk up from cwd (marker discovery). */
-export function resolveDataDir(cliHome) {
-  if (cliHome) {
-    const abs = path.resolve(cliHome);
-    if (!hasLocalData(abs)) {
-      console.error(`[aio] warning: --home has no ai-tools.db / TOOLS-INDEX.md: ${abs}`);
-    }
-    writeState({ dataDir: abs });
-    return abs;
-  }
-  if (process.env.AIO_HOME) return path.resolve(process.env.AIO_HOME);
-  const st = readState();
-  if (st.dataDir && hasLocalData(st.dataDir)) return st.dataDir;
-  let dir = process.cwd();
-  for (let i = 0; i < 10; i++) {
-    if (hasLocalData(dir)) {
-      writeState({ dataDir: dir });
-      return dir;
-    }
-    const parent = path.dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  return bundledFallback();
-}
-
-/** First-run fallback: copy the catalog shipped inside the npm package to ~/.aio/. */
-function bundledFallback() {
-  try {
-    const src = fileURLToPath(new URL('../ai-tools.db', import.meta.url));
-    if (!fs.existsSync(src)) return null;
-    const dest = path.join(STATE_DIR, 'ai-tools.db');
-    if (!fs.existsSync(dest)) {
-      fs.mkdirSync(STATE_DIR, { recursive: true });
-      fs.copyFileSync(src, dest);
-    }
-    writeState({ dataDir: STATE_DIR });
-    return STATE_DIR;
-  } catch {
-    return null;
-  }
 }
 
 /** Priority: --repos > $AIO_REPOS_DIR > persisted state > default (if it exists). */

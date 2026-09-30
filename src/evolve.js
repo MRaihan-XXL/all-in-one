@@ -3,7 +3,7 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { resolveDataDir, resolveReposDir } from './paths.js';
+import { resolveReposDir } from './paths.js';
 import { getVersion } from './banner.js';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname.replace(/^\//, ''));
@@ -22,29 +22,25 @@ function step(name, file, args = []) {
 
 /** `aio evolve` command → { ok, text, exit }. */
 export async function runEvolve(opts = {}) {
-  const dataDir = resolveDataDir(opts.home);
   const reposDir = resolveReposDir(opts.repos);
   const results = [];
 
-  // 1. Install plan refresh (no-op when zero local clones — catalog lives in db).
+  // 1. Install plan refresh (local clones only — the catalog itself is live).
   const hasClones = reposDir && fs.existsSync(reposDir) &&
     fs.readdirSync(reposDir, { withFileTypes: true }).some((d) => d.isDirectory());
   results.push(
     hasClones
       ? step('scan (install plan)', path.join(ROOT, 'scripts', 'install-tools.mjs'), ['scan'])
-      : { name: 'scan (install plan)', ok: true, ms: 0, out: 'skipped — no local clones (db is the catalog)' }
+      : { name: 'scan (install plan)', ok: true, ms: 0, out: 'skipped — no local clones (catalog is live)' }
   );
 
-  // 2. Rebuild/enrich the db from itself + gh api.
-  results.push(step('build-db --enrich', path.join(ROOT, 'scripts', 'build-db.mjs'), ['--enrich']));
+  // 2. Regenerate manifest + reinject agent blocks (idempotent).
+  results.push(step('aio setup (manifest+blocks)', path.join(ROOT, 'bin', 'aio.js'), []));
 
-  // 3. Regenerate manifest + reinject agent blocks (idempotent).
-  results.push(step('aio setup (manifest+blocks)', path.join(ROOT, 'bin', 'aio.js'), opts.home ? ['--home', opts.home] : []));
-
-  // 4. Health gate.
+  // 3. Health gate.
   results.push(step('doctor --check', path.join(ROOT, 'bin', 'aio.js'), ['doctor', '--check']));
 
-  // 5. Tests.
+  // 4. Tests.
   const testStep = (() => {
     const started = Date.now();
     try {

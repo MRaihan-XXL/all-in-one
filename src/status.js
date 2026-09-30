@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { CONFIG_FILE, STATE_DIR, resolveDataDir, resolveReposDir } from './paths.js';
+import { CONFIG_FILE, STATE_DIR, resolveReposDir } from './paths.js';
 import { BLOCK_START } from './write.js';
 
 /** injected | no block | missing — for one agent instruction file. */
@@ -55,37 +55,24 @@ export function runStatus(opts = {}) {
 
   lines.push(`state      ${STATE_DIR} ${fs.existsSync(CONFIG_FILE) ? '(config.json ok)' : '(no config.json yet)'}`);
 
-  const dataDir = resolveDataDir(opts.home);
-  if (dataDir && fs.existsSync(path.join(dataDir, 'ai-tools.db'))) {
-    lines.push(`data       ${dataDir}`);
-  } else if (dataDir) {
-    lines.push(`data       ${dataDir} (no ai-tools.db)`);
-    issues.push('data dir has no ai-tools.db — run aio inside the data project or pass --home');
-  } else {
-    lines.push('data       MISSING — run `aio` from the data project or pass --home <dir>');
-    issues.push('data dir not found');
-  }
-
   const reposDir = resolveReposDir(opts.repos);
   if (reposDir && fs.existsSync(reposDir)) {
     const n = countRepoDirs(reposDir);
-    // Clones are optional since the catalog lives in ai-tools.db (`aio borrow` on demand).
-    lines.push(n ? `repos      ${reposDir} (${n} dirs)` : `repos      ${reposDir} (0 dirs — catalog is db-driven, clones optional)`);
+    lines.push(n ? `repos      ${reposDir} (${n} dirs)` : `repos      ${reposDir} (0 dirs — optional, install plan only)`);
   } else {
-    lines.push('repos      not configured (optional — catalog is db-driven; pass --repos to scan a clone dir)');
+    lines.push('repos      not configured (optional — the catalog is LIVE; pass --repos to scan a clone dir)');
   }
 
-  const mp = dataDir && path.join(dataDir, 'aio-context.md');
-  if (!mp || !fs.existsSync(mp)) {
+  const mp = path.join(STATE_DIR, 'aio-context.md');
+  if (!fs.existsSync(mp)) {
     lines.push('manifest   MISSING — run `aio` to generate it');
     issues.push('manifest missing');
   } else {
-    const txt = fs.readFileSync(mp, 'utf8');
     const age = Math.floor((Date.now() - fs.statSync(mp).mtimeMs) / 86400000);
-    const rows = txt.match(/## REPOS \((\d+)\)/);
-    const sites = txt.match(/## SITES \((\d+)\)/);
-    lines.push(`manifest   ${mp} — ${age}d old, REPOS ${rows ? rows[1] : '?'}${sites ? ` · SITES ${sites[1]}` : ''}`);
-    if (age > 7) issues.push(`manifest is ${age} days old — run \`aio\` to refresh`);
+    const live = fs.readFileSync(mp, 'utf8').includes('zero storage');
+    lines.push(`manifest   ${mp} — ${age}d old, ${live ? 'live architecture (0 bytes stored)' : 'legacy layout — refresh: aio'}`);
+    if (!live) issues.push('manifest still has the legacy catalog layout — run `aio` to refresh');
+    else if (age > 7) issues.push(`manifest is ${age} days old — run \`aio\` to refresh`);
   }
 
   const inst = installSummary();

@@ -1,30 +1,42 @@
-// ask.test.js — `aio ask` search engine (fixture db, no network, no Ollama).
+// ask.test.js — `aio ask` live router. ALL network is mocked: zero real fetch.
+process.env.AIO_NO_GH = '1'; // ghSkills skips execFile — no shell in tests
+process.env.AIO_NO_AI = '1'; // deterministic: BM25/source order, no Ollama
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 
-process.env.AIO_NO_AI = '1'; // deterministic: BM25 only
 const { bm25Search, runAsk } = await import('../src/search.js');
 
-// ---- fixture catalog ----
-const home = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-ask-home-'));
-const dbPath = path.join(home, 'ai-tools.db');
-const db = new DatabaseSync(dbPath);
-db.exec(`CREATE TABLE repos (folder TEXT PRIMARY KEY, url TEXT, category TEXT, description TEXT,
-  homepage TEXT, language TEXT, stars INTEGER, screenshot TEXT, status TEXT, installed TEXT)`);
-db.exec(`CREATE TABLE tools (id INTEGER PRIMARY KEY, name TEXT, category TEXT, access TEXT,
-  version TEXT, url TEXT, description TEXT, screenshot TEXT, status TEXT, installed TEXT)`);
-db.exec(`CREATE TABLE sites (name TEXT PRIMARY KEY, url TEXT, category TEXT, why TEXT, used_by TEXT)`);
-db.prepare('INSERT INTO repos (folder,url,category,description,language,stars) VALUES (?,?,?,?,?,?)')
-  .run('zeta-etl', 'https://github.com/demo/zeta-etl', 'Data / ETL', 'ETL csv ke chart interaktif', 'Python', 999);
-db.prepare('INSERT INTO tools (name,category,access,url,description) VALUES (?,?,?,?,?)')
-  .run('csvkit', 'Data / CLI', 'csvsql', '', 'CLI untuk manipulasi & query CSV');
-db.prepare('INSERT INTO sites (name,url,category,why,used_by) VALUES (?,?,?,?,?)')
-  .run('ChartGo', 'https://chartgo.com', 'Chart / Web', 'Bikin chart cepat tanpa login', 'analyst');
-db.close();
+function json(body) {
+  return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+}
+
+/** Answer npm + GitHub search; anything else fails loudly (no silent network). */
+function mockLive(t) {
+  return t.mock.method(globalThis, 'fetch', async (input) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes('registry.npmjs.org')) {
+      return json({
+        objects: [{ package: { name: 'zeta-etl', version: '1.0.0', description: 'ETL for csv', keywords: ['etl'] } }],
+      });
+    }
+    if (url.includes('api.github.com/search/repositories')) {
+      return json({
+        items: [
+          {
+            full_name: 'acme/zeta-etl',
+            html_url: 'https://github.com/acme/zeta-etl',
+            description: 'csv ETL',
+            stargazers_count: 42,
+            language: 'Go',
+          },
+        ],
+      });
+    }
+    if (url.includes('crates.io')) return json({ crates: [] });
+    throw new Error(`unexpected network call in test: ${url}`);
+  });
+}
 
 test('bm25Search: ranks the matching entry first with score + why', () => {
   const entries = [
@@ -40,41 +52,63 @@ test('bm25Search: ranks the matching entry first with score + why', () => {
   assert.equal(bm25Search('qqqzzz', entries).length, 0, 'no token overlap → no hits');
 });
 
-test('runAsk: catalog hits always carry url + function (item 3)', async () => {
-  const r = await runAsk({ query: 'zeta etl csv', json: false, dataDir: home, reposDir: null });
+test('runAsk: live hits carry url + function + <src> tag, header says live:', async (t) => {
+  const net = mockLive(t);
+  const r = await runAsk({ query: 'zeta etl csv', json: false });
   assert.equal(r.ok, true);
-  assert.match(r.text, /aio ask/);
-  assert.match(r.text, /zeta-etl \[repo\]/);
-  assert.match(r.text, /https:\/\/github\.com\/demo\/zeta-etl/, 'link printed');
-  assert.match(r.text, /why:/, 'function/reason printed');
-  assert.equal(r.json.hits[0].type, 'repo');
-  assert.ok(r.json.hits[0].func.length > 0, 'func non-empty');
+  assert.match(r.text, /^aio ask — "zeta etl csv" \(live: /, 'header carries live: sources');
+  assert.match(r.text, /live: github\+npm/, 'both answering sources named');
+  assert.match(r.text, /\[repo\] <github> — csv ETL/);
+  assert.match(r.text, /https:\/\/github\.com\/acme\/zeta-etl/, 'github url printed');
+  assert.match(r.text, /\[tool\] <npm> — ETL for csv/);
+  assert.match(r.text, /https:\/\/www\.npmjs\.com\/package\/zeta-etl/, 'npm url printed');
+  assert.match(r.text, /why:/, 'reason printed');
+  assert.ok(r.json.hits.length >= 2, `both sources surfaced (${r.json.hits.length})`);
+  for (const h of r.json.hits) {
+    assert.ok(h.url, `${h.name} url`);
+    assert.ok(h.func && h.func.length > 0, `${h.name} func`);
+    assert.ok(['github', 'npm', 'crates'].includes(h.src), `${h.name} src tag`);
+    assert.ok(['repo', 'tool', 'skill'].includes(h.type), `${h.name} type`);
+  }
+  assert.equal(net.mock.callCount(), 2, 'github + npm probed exactly once each');
 });
 
-test('runAsk: sites and tools are searchable too', async () => {
-  const site = await runAsk({ query: 'ChartGo chart cepat', json: false, dataDir: home, reposDir: null });
-  assert.equal(site.json.hits[0].type, 'site');
-  assert.equal(site.json.hits[0].url, 'https://chartgo.com');
-
-  const tool = await runAsk({ query: 'csvkit query CSV', json: false, dataDir: home, reposDir: null });
-  assert.equal(tool.json.hits[0].type, 'tool');
+test('runAsk: --json → machine payload with stored=0, sources, count', async (t) => {
+  mockLive(t);
+  const j = await runAsk({ query: 'zeta etl csv', json: true });
+  assert.equal(j.ok, true);
+  const p = JSON.parse(j.text);
+  assert.equal(p.query, 'zeta etl csv');
+  assert.ok(p.engine.startsWith('live:'), p.engine);
+  assert.deepEqual(p.sources, ['github', 'npm']);
+  assert.equal(p.stored, 0, 'zero storage');
+  assert.equal(typeof p.count, 'number');
+  assert.equal(p.count, p.hits.length, 'count matches hits');
+  assert.ok(Array.isArray(p.hits) && p.hits.length >= 1);
+  assert.deepEqual(p, j.json, 'text and json payloads agree');
 });
 
-test('runAsk: --json emits machine-readable payload; empty query → usage + exit 1', async () => {
-  const j = await runAsk({ query: 'etl csv', json: true, dataDir: home, reposDir: null });
-  const parsed = JSON.parse(j.text);
-  assert.equal(parsed.query, 'etl csv');
-  assert.ok(Array.isArray(parsed.hits) && parsed.hits.length >= 1);
-  assert.ok(parsed.hits[0].url !== undefined && parsed.hits[0].func !== undefined);
-
-  const bad = await runAsk({ query: '', json: false, dataDir: home, reposDir: null });
-  assert.equal(bad.ok, false);
-  assert.match(bad.text, /usage: aio ask/);
-});
-
-test('runAsk: empty/missing catalog → friendly failure', async () => {
-  const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-ask-empty-'));
-  const r = await runAsk({ query: 'anything', json: false, dataDir: empty, reposDir: null });
+test('runAsk: AIO_OFFLINE=1 → ok=false + offline message, no network touched', async (t) => {
+  process.env.AIO_OFFLINE = '1';
+  t.after(() => {
+    delete process.env.AIO_OFFLINE;
+  });
+  t.mock.method(globalThis, 'fetch', async (input) => {
+    throw new Error(`offline mode must not fetch: ${input}`);
+  });
+  const r = await runAsk({ query: 'anything at all', json: false });
   assert.equal(r.ok, false);
-  assert.match(r.text, /catalog empty/);
+  assert.equal(r.json, null);
+  assert.match(r.text, /offline \(AIO_OFFLINE=1\)/);
+});
+
+test('runAsk: empty query → usage, ok=false', async () => {
+  const blank = await runAsk({ query: '   ', json: false });
+  assert.equal(blank.ok, false);
+  assert.match(blank.text, /usage: aio ask/);
+  assert.equal(blank.json, null);
+
+  const missing = await runAsk({ json: false });
+  assert.equal(missing.ok, false);
+  assert.match(missing.text, /usage: aio ask/);
 });

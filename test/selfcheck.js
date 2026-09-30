@@ -9,7 +9,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-selfcheck-'));
 process.env.AIO_STATE_DIR = path.join(tmp, 'state'); // isolate ~/.aio side effects
 
 const { injectBlock, stripBlock, buildBlock, ensureJsonEntry, ensureTomlEntry } = await import('../src/write.js');
-const { scanRepos, parseToolsIndex, detectAgents } = await import('../src/scan.js');
+const { scanRepos, detectAgents } = await import('../src/scan.js');
 const { ART, banner } = await import('../src/banner.js');
 
 test('injectBlock: exactly one block, refreshed in place, prefix kept (FR4)', () => {
@@ -54,30 +54,6 @@ test('scanRepos: URL from real .git/config, non-repos listed as local-only', () 
   assert.equal(repos.length, 2);
   assert.equal(repos.find((r) => r.name === 'proj-a').url, 'https://github.com/foo/bar');
   assert.equal(repos.find((r) => r.name === 'not-a-repo').url, '');
-});
-
-test('parseToolsIndex: tables → rows, headers/separators skipped', () => {
-  const md = [
-    '# Registry',
-    '## 1. AI CODING AGENTS (CLI, langsung ketik di terminal)',
-    '| Command | Version | Catatan |',
-    '|---|---|---|',
-    '| opencode | v1.18 | provider lokal |',
-    '## 6. LAINNYA',
-    '| **Item** | **Lokasi/Akses** |',
-    '|---|---|',
-    '| **GSAP** `3.15` | `D:\\Tools\\gsap` |',
-    '',
-  ].join('\n');
-  const mdFile = path.join(tmp, 'TOOLS-INDEX.md');
-  fs.writeFileSync(mdFile, md);
-  const rows = parseToolsIndex(mdFile);
-  assert.equal(rows.length, 2);
-  assert.equal(rows[0].name, 'opencode');
-  assert.equal(rows[0].category, 'AI CODING AGENTS');
-  assert.ok(rows[0].description.includes('provider lokal'));
-  assert.equal(rows[1].name, 'GSAP 3.15');
-  assert.equal(rows[1].category, 'LAINNYA');
 });
 
 test('ensureJsonEntry: create=true bootstraps file inside existing dir (gemini)', () => {

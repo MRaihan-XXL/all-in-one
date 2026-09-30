@@ -35,7 +35,7 @@ export function banner() {
     '',
     ...art,
     `${accent}  ▌ all-in-one${reset}${dim} v${version} — auto-connect every AI agent to${reset}`,
-    `${dim}  ▌ repos · tools · skills · sites${reset}   ${cyan}prompt → aio ask → aio borrow → report → clean${reset}`,
+    `${dim}  ▌ live: github · npm · crates · web${reset}   ${cyan}prompt → aio ask → use → report → clean${reset}`,
     rule,
     `${dim}  GPL-3.0 · https://github.com/MRaihan-XXL/all-in-one${reset}`,
     '',

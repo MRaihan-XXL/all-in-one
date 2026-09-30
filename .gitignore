@@ -1,5 +1,5 @@
 # --- local data NEVER uploaded (FR8) ---
-# ai-tools.db is the shipped catalog (bundled in npm; versioned on GitHub);
+# zero-storage architecture: no catalog db ships (github/npm/crates are searched live);
 # screenshots/TRACKING/etc stay machine-local.
 screenshots/
 TRACKING.md

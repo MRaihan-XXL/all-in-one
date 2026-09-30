@@ -7,44 +7,44 @@ const binPath = fileURLToPath(import.meta.url);
 
 const HELP = `
   AIO — all-in-one
-  auto-connect every AI agent to your repos, tools, skills & websites
+  auto-connect every AI agent to repos, tools, skills & websites — 100% LIVE
 
   Usage
     aio                          Wire up every detected agent (default: setup)
-    aio status                   Read-only health report (state, manifest, agents)
-    aio ask "<what you need>"    Search the catalog (repo/tool/site/skill) —
-                                 every hit prints link + function (+ local-AI rerank)
-    aio borrow "<keywords>"      Live GitHub search for what the catalog lacks
+    aio status                   Read-only health report (manifest, agents)
+    aio ask "<what you need>"    LIVE search across GitHub (400M+ repos, public
+                                 skills), npm (3M+ pkgs) + crates — adaptive
+                                 sources, every hit prints link + function,
+                                 ZERO storage (nothing ever saved)
+    aio borrow "<keywords>"      Live GitHub search for what you need cloned
       aio borrow --get <owner/repo>   shallow-clone to temp (24h TTL, then purged)
       aio borrow --list | --clean     inspect / wipe temp clones
     aio doctor [--check|--fix]   Self-diagnosis; --fix = safe auto-repair,
                                  --check = CI gate (exit 1 on issues)
-    aio evolve                   Self-upgrade pipeline: scan → build-db →
-                                 manifest+blocks → doctor → tests (never commits)
+    aio evolve                   Self-upgrade pipeline: setup → doctor → tests
+                                 (never commits)
     aio update                   Update from npm, then re-run setup
     aio rollback                 Remove everything aio injected (backups kept)
 
   Options
-    --repos <dir>                Directory of cloned git repositories
-                                 (default: ~/github, ~/repos, ~/Projects … or $AIO_REPOS_DIR)
-    --home <dir>                 Data dir with ai-tools.db / TOOLS-INDEX.md
-                                 (default: $AIO_HOME, persisted state, or cwd walk)
+    --repos <dir>                Directory of cloned git repositories (optional,
+                                 used for the local install plan only)
     --json                       Machine-readable output (ask / borrow)
     -h, --help                   This help
     -v, --version                Version
 
   Environment
-    AIO_REPOS_DIR, AIO_HOME, OLLAMA_HOST, AIO_OLLAMA_MODEL, AIO_NO_AI=1
+    AIO_REPOS_DIR, AIO_OFFLINE=1, AIO_NO_GH=1, OLLAMA_HOST,
+    AIO_OLLAMA_MODEL, AIO_NO_AI=1
 
   What it does
-    1. Scans installed agents (opencode, claude, kimi, jcode, …), the catalog
-       db (repos + tools + sites), and global skills.
-    2. Generates a context manifest (aio-context.md): REPOS / TOOLS / SITES /
-       SKILLS — each entry carries URL + one-line function.
+    1. Scans installed agents (opencode, claude, kimi, jcode, …).
+    2. Generates a slim context manifest (aio-context.md): rules, disclosure,
+       detected agents — catalog data stays LIVE, never stored.
     3. Injects a marker-delimited auto-use block into each agent's instruction
        file — idempotent, always exactly one copy.
     4. Teaches every agent the prompt flow:
-       prompt → aio ask → aio borrow (ephemeral) → use → report with links → clean.
+       prompt → aio ask (live) → use ephemerally → report → clean.
 
   Disclosure (mandatory, every reply that touches the manifest):
     [aio] Using [<name>](<url>) (<type>) — <function>
@@ -52,12 +52,11 @@ const HELP = `
 `;
 
 function parseArgs(argv) {
-  const opts = { command: 'setup', repos: null, home: null, query: '', flags: {} };
+  const opts = { command: 'setup', repos: null, query: '', flags: {} };
   const rest = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--repos') opts.repos = argv[++i] ?? null;
-    else if (a === '--home') opts.home = argv[++i] ?? null;
     else if (a === '--get') opts.flags.get = argv[++i] ?? null;
     else if (a === '--json') opts.flags.json = true;
     else if (a === '--clean') opts.flags.clean = true;
@@ -109,14 +108,8 @@ switch (opts.command) {
     break;
   }
   case 'ask': {
-    const { resolveDataDir, resolveReposDir } = await import('../src/paths.js');
     const { runAsk } = await import('../src/search.js');
-    const r = await runAsk({
-      query: opts.query,
-      json: opts.flags.json,
-      dataDir: resolveDataDir(opts.home),
-      reposDir: resolveReposDir(opts.repos),
-    });
+    const r = await runAsk({ query: opts.query, json: opts.flags.json });
     console.log(r.text);
     process.exit(r.ok ? 0 : 1);
     break;
@@ -136,14 +129,14 @@ switch (opts.command) {
   }
   case 'doctor': {
     const { runDoctor } = await import('../src/doctor.js');
-    const r = await runDoctor({ check: opts.flags.check, fix: opts.flags.fix, home: opts.home });
+    const r = await runDoctor({ check: opts.flags.check, fix: opts.flags.fix });
     console.log(r.text);
     process.exit(r.exit);
     break;
   }
   case 'evolve': {
     const { runEvolve } = await import('../src/evolve.js');
-    const r = await runEvolve({ home: opts.home, repos: opts.repos });
+    const r = await runEvolve({ repos: opts.repos });
     console.log(r.text);
     process.exit(r.exit);
     break;
