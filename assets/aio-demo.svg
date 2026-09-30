@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 440" role="img" aria-label="60-second terminal demo: aio setup wires every agent, aio ask searches github npm and crates live, results ranked with a verify note, reply opens with the disclosure line">
+  <defs>
+    <style>
+      .sans{font-family:ui-sans-serif,system-ui,"Segoe UI",sans-serif}
+      .mono{font-family:ui-monospace,"Cascadia Mono","SF Mono",Consolas,monospace}
+      .eyebrow{font-size:11px;letter-spacing:2.6px;fill:#7C828C}
+      .bezel{fill:none;stroke:#2A2F37;stroke-width:1}
+      .core{fill:#101318;stroke:#171B21;stroke-width:1}
+      @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+      @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+      @keyframes caret{0%,45%{opacity:1}50%,95%{opacity:0}100%{opacity:1}}
+      .fd{animation:fadeIn .8s cubic-bezier(.32,.72,0,1) both}
+      .rv{transform-box:fill-box;transform-origin:0 50%;animation:rise .8s cubic-bezier(.32,.72,0,1) both}
+      .ln{animation:fadeIn .45s cubic-bezier(.32,.72,0,1) both}
+      .caret{animation:caret 1.1s steps(1,end) infinite}
+      @media (prefers-reduced-motion:reduce){.fd,.rv,.ln{animation:none}.caret{animation:none;opacity:1}}
+    </style>
+  </defs>
+
+  <rect width="1200" height="440" rx="20" fill="#0B0D10"/>
+  <rect x="0.5" y="0.5" width="1199" height="439" rx="19.5" fill="none" stroke="#21252C"/>
+
+  <!-- corner ticks -->
+  <g stroke="#343A43" stroke-width="1.5" fill="none" class="fd" style="animation-delay:1s">
+    <path d="M18 34 V18 H34"/><path d="M1166 18 H1182 V34"/>
+    <path d="M1182 406 V422 H1166"/><path d="M34 422 H18 V406"/>
+  </g>
+
+  <!-- header -->
+  <text x="64" y="46" class="mono eyebrow">DEMO <tspan fill="#343A43">-</tspan> THE WHOLE FLOW IN ONE RUN</text>
+  <g class="fd" style="animation-delay:.6s">
+    <rect x="1014" y="28" width="122" height="26" rx="13" fill="none" stroke="#FF4A1C" stroke-opacity="0.45">
+      <animate attributeName="stroke-opacity" values="0.45;0.15;0.45" dur="3.2s" repeatCount="indefinite"/>
+    </rect>
+    <text x="1075" y="45.5" text-anchor="middle" class="mono" font-size="10.5" letter-spacing="1.6" fill="#FF4A1C">LIVE 60s</text>
+  </g>
+  <line x1="64" y1="62" x2="1136" y2="62" stroke="#21252C" class="fd" style="animation-delay:.15s"/>
+
+  <!-- terminal card (double bezel) -->
+  <g class="rv" style="animation-delay:.3s">
+    <rect x="64.5" y="84.5" width="1071" height="331" rx="16" class="bezel"/>
+    <rect x="74" y="94" width="1052" height="312" rx="11" class="core"/>
+    <!-- title bar -->
+    <circle cx="96" cy="112" r="4.5" fill="#FF4A1C" opacity=".8"/>
+    <circle cx="114" cy="112" r="4.5" fill="#343A43"/>
+    <circle cx="132" cy="112" r="4.5" fill="#343A43"/>
+    <text x="156" y="116" class="mono" font-size="11" fill="#5A606A">terminal — aio</text>
+    <line x1="74" y1="128" x2="1126" y2="128" stroke="#171B21"/>
+
+    <!-- 1. setup -->
+    <g class="ln" style="animation-delay:.7s">
+      <text x="96" y="154" class="mono" font-size="13" fill="#FF4A1C">$</text>
+      <text x="114" y="154" class="mono" font-size="13" fill="#EDEBE6">aio</text>
+      <text x="152" y="154" class="mono" font-size="12.5" fill="#8A919B">setup v1.4.0 — 6 agents wired, block injected, manifest written</text>
+    </g>
+    <g class="ln" style="animation-delay:1.15s">
+      <text x="96" y="176" class="mono" font-size="13" fill="#FF4A1C">$</text>
+      <text x="114" y="176" class="mono" font-size="13" fill="#EDEBE6">aio --dry-run</text>
+      <text x="238" y="176" class="mono" font-size="12.5" fill="#8A919B">plan only — would inject / would add / unchanged, nothing written</text>
+    </g>
+
+    <!-- 2. ask -->
+    <g class="ln" style="animation-delay:1.7s">
+      <text x="96" y="206" class="mono" font-size="13" fill="#FF4A1C">$</text>
+      <text x="114" y="206" class="mono" font-size="13" fill="#EDEBE6">aio ask "awesome animated chart library"</text>
+    </g>
+    <g class="ln" style="animation-delay:2.15s">
+      <text x="114" y="228" class="mono" font-size="12.5" fill="#8A919B">aio ask — (live: github+npm · 8 hasil · 0.9s)</text>
+    </g>
+    <g class="ln" style="animation-delay:2.5s">
+      <text x="114" y="250" class="mono" font-size="12" fill="#7C828C">note: ranked by keyword match + source popularity — verify before npx/uvx</text>
+    </g>
+
+    <!-- 3. results (verbatim from a real run) -->
+    <g class="ln" style="animation-delay:2.9s">
+      <text x="114" y="278" class="mono" font-size="12.5" fill="#EDEBE6">1. lightweight-charts <tspan fill="#8A919B">[tool] &lt;npm&gt;</tspan> <tspan fill="#5A606A">— financial charts, HTML5 canvas</tspan></text>
+      <text x="138" y="298" class="mono" font-size="12" fill="#5A606A">v5.2.1 · why: BM25 keyword match (#1) + trust high</text>
+    </g>
+    <g class="ln" style="animation-delay:3.3s">
+      <text x="114" y="324" class="mono" font-size="12.5" fill="#EDEBE6">2. vizzuhq/vizzu-lib <tspan fill="#8A919B">[repo] &lt;github&gt;</tspan> <tspan fill="#5A606A">— animated data visualizations</tspan></text>
+      <text x="138" y="344" class="mono" font-size="12" fill="#5A606A">★2037 · why: BM25 keyword match (#2) + trust high</text>
+    </g>
+
+    <!-- 4. disclosure + clean -->
+    <g class="ln" style="animation-delay:3.8s">
+      <text x="114" y="372" class="mono" font-size="12.5" fill="#FF4A1C">[aio] Using [lightweight-charts](https://www.npmjs.com/package/lightweight-charts) (tool) — financial charts</text>
+    </g>
+    <g class="ln" style="animation-delay:4.3s">
+      <text x="96" y="396" class="mono" font-size="13" fill="#FF4A1C">$</text>
+      <text x="114" y="396" class="mono" font-size="13" fill="#EDEBE6">aio borrow --clean</text>
+      <text x="272" y="396" class="mono" font-size="12.5" fill="#8A919B">every step reversible — aio rollback, backups kept</text>
+      <rect x="0" y="0" width="8" height="15" fill="#FF4A1C" class="caret" transform="translate(114 384)"/>
+    </g>
+  </g>
+</svg>

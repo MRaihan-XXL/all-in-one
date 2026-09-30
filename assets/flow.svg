@@ -47,7 +47,7 @@
   <rect x="980" y="28" width="156" height="26" rx="13" fill="none" stroke="#FF4A1C" stroke-opacity="0.45" class="fd" style="animation-delay:.7s">
     <animate attributeName="stroke-opacity" values="0.45;0.15;0.45" dur="3.2s" repeatCount="indefinite"/>
   </rect>
-  <text x="1058" y="45" text-anchor="middle" class="mono fd" font-size="10" letter-spacing="1.4" fill="#FF4A1C" style="animation-delay:.7s">0 BYTES STORED</text>
+  <text x="1058" y="45" text-anchor="middle" class="mono fd" font-size="10" letter-spacing="1.4" fill="#FF4A1C" style="animation-delay:.7s">NO SEARCH STORAGE</text>
   <line x1="64" y1="62" x2="1136" y2="62" stroke="#21252C" class="fd" style="animation-delay:.15s"/>
 
   <!-- ===== wires ===== -->
@@ -199,7 +199,7 @@
     <rect class="bezel cardout" x="344.5" y="470.5" width="299" height="95" rx="14" style="animation-delay:6.4s"/>
     <rect class="core" x="350" y="476" width="288" height="84" rx="10"/>
     <text x="366" y="500" class="mono idx">05</text>
-    <text x="366" y="528" class="sans t">mandatory report</text>
+    <text x="366" y="528" class="sans t">report every link</text>
     <text x="366" y="550" class="sans s">changes + [[name](url)] — one line per entry</text>
   </g>
 
