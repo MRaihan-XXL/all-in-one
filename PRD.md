@@ -233,6 +233,18 @@ for `ask` / `borrow`). Environment overrides: `AIO_REPOS_DIR`, `AIO_HOME`,
   `docs/flow.md`.
 - **Animated hero** `assets/aio-hero.svg` — logo animation used at the top of
   the README.
+- **UI assets v1.2 redesign** (2026-09-30) — `assets/aio-hero.svg`,
+  `assets/flow.svg` and the new `assets/aio-stats.svg` (verified-counts strip:
+  231 repos · 23 tools · 45 sites · 67 skills · 30/30 tests · 3/3 OS CI) rebuilt
+  as one editorial system: dark `#0B0D10`, single accent `#FF4A1C` from the
+  logo, hairline rules, high-contrast type — no rainbow/glow. Animation is
+  SMIL/CSS only inside the SVG (no JavaScript, no runtime dependency); the hero
+  and stats strips are embedded in `index.html` as well as the README.
+- **Token economy in generated docs** — `buildBlock` (src/write.js) output cut
+  from 3258 → 2119 bytes per agent block (−35% ≈ −285 tokens × 7 agent files ≈
+  −2000 tokens per session; every mandate and test string preserved verbatim);
+  the `aio ask` rerank payload (src/search.js `aiRerank`) trimmed: top-12
+  candidates, `func` ≤ 100 chars, query ≤ 160 chars, shorter system prompt.
 - **Banner** — strict-grid ASCII wordmark printed by every `aio` command
   (regression-tested for alignment).
 - **README.md** (English) — CI/npm badges, animated hero + flowchart, quick

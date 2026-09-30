@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/aio-hero.svg" width="92%" alt="AIO — all-in-one: animated logo (repos · tools · sites · skills)">
+  <img src="./assets/aio-hero.svg" width="92%" alt="aio — the everything connector for AI agents: live catalog + prompt flow">
 </p>
 
 <h1 align="center">aio — all-in-one</h1>
@@ -29,6 +29,10 @@
 
 <p align="center">
   <img src="./assets/flow.svg" width="98%" alt="Animated flowchart: prompt → aio ask → aio borrow → use ephemerally → report with links → clean">
+</p>
+
+<p align="center">
+  <img src="./assets/aio-stats.svg" width="98%" alt="Verified: 231 repos · 23 tools · 45 sites · 67 skills · 30/30 tests · green CI">
 </p>
 
 ## ✨ What it does
