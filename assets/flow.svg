@@ -18,6 +18,7 @@
       .bezel{fill:none;stroke:#2A2F37;stroke-width:1}
       .core{fill:#101318;stroke:#171B21;stroke-width:1}
       .wire{fill:none;stroke:#2E333B;stroke-width:1.5;stroke-dasharray:900;stroke-dashoffset:900;animation:draw 1.2s cubic-bezier(.32,.72,0,1) both}
+      .wireL{fill:none;stroke:#2E333B;stroke-width:1.5;stroke-dasharray:1400;stroke-dashoffset:1400;animation:draw 1.5s cubic-bezier(.32,.72,0,1) both}
       .chev{fill:none;stroke:#5A606A;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
       .pulse{fill:none;stroke:#FF4A1C;stroke-width:2.2;stroke-linecap:round;stroke-dasharray:5 95;stroke-dashoffset:100}
       @keyframes draw{to{stroke-dashoffset:0}}
@@ -28,7 +29,7 @@
       .cardout{animation:hl 11.2s cubic-bezier(.45,0,.55,1) infinite}
       .ch{animation:fadeIn .45s ease both}
       .fd{animation:fadeIn .7s cubic-bezier(.32,.72,0,1) both}
-      @media (prefers-reduced-motion:reduce){.card,.ch,.fd{animation:none}.wire{stroke-dashoffset:0;animation:none}.cardout{animation:none}}
+      @media (prefers-reduced-motion:reduce){.card,.ch,.fd{animation:none}.wire,.wireL{stroke-dashoffset:0;animation:none}.cardout{animation:none}}
     </style>
   </defs>
 
@@ -56,7 +57,7 @@
     <path class="wire" style="animation-delay:.8s"  d="M864 258 V330"/>
     <path class="wire" style="animation-delay:.92s" d="M804 430 V444 Q804 452 796 452 H612 Q604 452 604 460 V470"/>
     <path class="wire" style="animation-delay:1.04s" d="M644 518 H744"/>
-    <path class="wire" style="animation-delay:1.16s" d="M864 558 V586 Q864 600 848 600 H190 Q174 600 174 586 V230" stroke-dasharray="1600" stroke-dashoffset="1600"/>
+    <path class="wireL" style="animation-delay:1.16s" d="M864 558 V586 Q864 600 848 600 H190 Q174 600 174 586 V230"/>
   </g>
 
   <!-- energy comets -->
@@ -98,7 +99,7 @@
     <rect class="core" x="70" y="136" width="208" height="88" rx="10"/>
     <text x="86" y="160" class="mono idx">01</text>
     <text x="86" y="188" class="sans t">User prompt</text>
-    <text x="86" y="212" class="sans s">“aku butuh X yang GG”</text>
+    <text x="86" y="212" class="sans s">“I need an awesome X”</text>
     <rect x="242" y="200" width="8" height="14" fill="#FF4A1C">
       <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.52;0.52;1" dur="1.3s" repeatCount="indefinite"/>
     </rect>
@@ -187,7 +188,7 @@
     <rect class="bezel cardout" x="744.5" y="330.5" width="391" height="99" rx="14" style="animation-delay:4.8s"/>
     <rect class="core" x="750" y="336" width="380" height="88" rx="10"/>
     <text x="766" y="360" class="mono idx">04</text>
-    <text x="766" y="388" class="sans t">pakai sementara</text>
+    <text x="766" y="388" class="sans t">use ephemerally</text>
     <text x="766" y="410" class="sans s">npx · uvx · copy — ephemeral, no permanent install</text>
     <rect x="1002.5" y="372.5" width="112" height="21" rx="10.5" fill="none" stroke="#FF4A1C" stroke-opacity="0.55" stroke-dasharray="4 3"/>
     <text x="1014" y="387" class="mono" font-size="9.5" letter-spacing="0.8" fill="#FF4A1C">± borrow --get</text>
@@ -198,8 +199,8 @@
     <rect class="bezel cardout" x="344.5" y="470.5" width="299" height="95" rx="14" style="animation-delay:6.4s"/>
     <rect class="core" x="350" y="476" width="288" height="84" rx="10"/>
     <text x="366" y="500" class="mono idx">05</text>
-    <text x="366" y="528" class="sans t">laporan wajib</text>
-    <text x="366" y="550" class="sans s">perubahan + [[name](url)] — fungsi tiap entri</text>
+    <text x="366" y="528" class="sans t">mandatory report</text>
+    <text x="366" y="550" class="sans s">changes + [[name](url)] — one line per entry</text>
   </g>
 
   <!-- ===== 06 clean ===== -->

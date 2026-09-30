@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-label="aio live stats: 400M+ github repos, 3M+ npm packages, 150K+ crates, 33K+ skill files, 0 bytes stored, 34/34 tests pass">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-label="aio live stats: 630M+ github repos (Octoverse 2025), 3M+ npm packages, 340K+ crates (measured 342,787), 6.8M+ skill files (measured 6,832,128), 0 bytes stored, 34/34 tests pass">
   <defs>
     <clipPath id="stripClip"><rect x="64" y="76" width="1072" height="150" rx="12"/></clipPath>
     <linearGradient id="stripSheen" x1="0" y1="0" x2="0" y2="1">
@@ -29,7 +29,7 @@
   <rect x="0.5" y="0.5" width="1199" height="299" rx="19.5" fill="none" stroke="#21252C"/>
 
   <!-- header -->
-  <text x="64" y="42" class="mono eyebrow">VERIFIED <tspan fill="#343A43">—</tspan> LIVE CORPUS, MEASURED 2026-09-30</text>
+    <text x="64" y="42" class="mono eyebrow">VERIFIED <tspan fill="#343A43">—</tspan> LIVE CORPUS, FLOORS MEASURED 2026-09-30</text>
   <g class="fd" style="animation-delay:.6s">
     <rect x="990.5" y="24.5" width="146" height="26" rx="13" fill="none" stroke="#FF4A1C" stroke-opacity="0.45">
       <animate attributeName="stroke-opacity" values="0.45;0.15;0.45" dur="3.2s" repeatCount="indefinite"/>
@@ -62,9 +62,9 @@
     <rect x="88" y="96" width="16" height="3" rx="1.5" fill="#EDEBE6">
       <animate attributeName="x" values="88;192;88" dur="3.4s" begin="1.6s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
     </rect>
-    <text x="88" y="156" class="disp rv" font-size="40" letter-spacing="-1.5" style="animation-delay:.5s">400M+</text>
+    <text x="88" y="156" class="disp rv" font-size="40" letter-spacing="-1.5" style="animation-delay:.5s">630M+</text>
     <text x="88" y="186" class="mono lbl rv" style="animation-delay:.58s">GITHUB REPOS</text>
-    <text x="88" y="208" class="mono micro rv" style="animation-delay:.66s">search · code · skills</text>
+    <text x="88" y="208" class="mono micro rv" style="animation-delay:.66s">octoverse 2025</text>
   </g>
 
   <!-- cell 2: npm packages -->
@@ -84,9 +84,9 @@
     <rect x="444" y="96" width="16" height="3" rx="1.5" fill="#EDEBE6">
       <animate attributeName="x" values="444;548;444" dur="3.4s" begin="2.4s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
     </rect>
-    <text x="444" y="156" class="disp rv" font-size="40" letter-spacing="-1.5" style="animation-delay:.74s">150K+</text>
+    <text x="444" y="156" class="disp rv" font-size="40" letter-spacing="-1.5" style="animation-delay:.74s">340K+</text>
     <text x="444" y="186" class="mono lbl rv" style="animation-delay:.82s">CRATES</text>
-    <text x="444" y="208" class="mono micro rv" style="animation-delay:.9s">crates.io api</text>
+    <text x="444" y="208" class="mono micro rv" style="animation-delay:.9s">api total 342,787</text>
   </g>
 
   <!-- cell 4: skill files -->
@@ -95,9 +95,9 @@
     <rect x="622" y="96" width="16" height="3" rx="1.5" fill="#EDEBE6">
       <animate attributeName="x" values="622;726;622" dur="3.4s" begin="2.8s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
     </rect>
-    <text x="622" y="156" class="disp rv" font-size="40" letter-spacing="-1.5" style="animation-delay:.86s">33K+</text>
+    <text x="622" y="156" class="disp rv" font-size="40" letter-spacing="-1.5" style="animation-delay:.86s">6.8M+</text>
     <text x="622" y="186" class="mono lbl rv" style="animation-delay:.94s">SKILL FILES</text>
-    <text x="622" y="208" class="mono micro rv" style="animation-delay:1.02s">filename:SKILL.md</text>
+    <text x="622" y="208" class="mono micro rv" style="animation-delay:1.02s">counted 6,832,128</text>
   </g>
 
   <!-- cell 5: zero bytes (accent) -->
