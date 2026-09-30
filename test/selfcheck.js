@@ -125,5 +125,5 @@ test('banner: strict grid — every ART row same width, no crooked letters', () 
   for (const [i, line] of ART.entries()) {
     assert.equal(line.length, w, `row ${i} width ${line.length} != ${w}`);
   }
-  assert.ok(banner().includes('all-in-one-repo v'));
+  assert.ok(banner().includes('all-in-one v'), 'branded tagline present');
 });

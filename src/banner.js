@@ -19,16 +19,26 @@ const GLYPHS = {
 };
 export const ART = GLYPHS.A.map((row, i) => `${row} ${GLYPHS.I[i]} ${GLYPHS.O[i]}`);
 
+// Top-to-bottom glow: dark ember → bright coral (a rising "powering up" ramp).
+const RAMP = [52, 94, 135, 167, 180, 203];
+
 export function banner() {
-  const color = process.stdout.isTTY;
-  const accent = color ? '\x1b[38;5;203m' : '';
+  const color = Boolean(process.stdout.isTTY);
   const dim = color ? '\x1b[2m' : '';
+  const accent = color ? '\x1b[38;5;203m' : '';
+  const cyan = color ? '\x1b[38;5;80m' : '';
   const reset = color ? '\x1b[0m' : '';
   const version = getVersion();
+  const art = ART.map((l, i) => (color ? `\x1b[38;5;${RAMP[i]}m` : '') + l + reset);
+  const rule = dim + '─'.repeat(74) + reset;
   const lines = [
-    ...ART.map((l) => accent + l + reset),
-    `${dim}  all-in-one-repo v${version} — auto-connect AI agents to your repos, tools & skills${reset}`,
-    `${dim}  GPL-3.0 · https://github.com/MRaihan-XXL/all-in-one-repo${reset}`,
+    '',
+    ...art,
+    `${accent}  ▌ all-in-one${reset}${dim} v${version} — auto-connect every AI agent to${reset}`,
+    `${dim}  ▌ repos · tools · skills · sites${reset}   ${cyan}prompt → aio ask → aio borrow → report → clean${reset}`,
+    rule,
+    `${dim}  GPL-3.0 · https://github.com/MRaihan-XXL/all-in-one${reset}`,
+    '',
   ];
   return lines.join('\n');
 }
