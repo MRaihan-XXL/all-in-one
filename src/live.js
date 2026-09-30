@@ -58,7 +58,7 @@ export function ghQuery(q) {
 
 /* ---------------- sources ---------------- */
 
-/** GitHub repository search — the whole public corpus (400M+ repos). */
+/** GitHub repository search — the whole public corpus (630M+ repos, Octoverse 2025). */
 export async function ghRepos(q, n = 6) {
   const gq = ghQuery(q);
   const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(gq)}&sort=stars&order=desc&per_page=${n}`;

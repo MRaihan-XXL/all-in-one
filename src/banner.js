@@ -12,10 +12,11 @@ export function getVersion() {
 
 // Strict grid: each glyph is a fixed width, joined with single spaces — every
 // row is exactly 8+1+4+1+8 = 22 columns, so letters can never come out crooked.
+// Half-block corners (▄/▀) give the O and the A's shoulder soft, rounded terminals.
 const GLYPHS = {
-  A: [' ██████ ', '██    ██', '██    ██', '████████', '██    ██', '██    ██'],
+  A: [' ▄████▄ ', '██    ██', '██    ██', '████████', '██    ██', '██    ██'],
   I: ['████', ' ██ ', ' ██ ', ' ██ ', ' ██ ', '████'],
-  O: [' ██████ ', '██    ██', '██    ██', '██    ██', '██    ██', ' ██████ '],
+  O: [' ▄████▄ ', '██    ██', '██    ██', '██    ██', '██    ██', ' ▀████▀ '],
 };
 export const ART = GLYPHS.A.map((row, i) => `${row} ${GLYPHS.I[i]} ${GLYPHS.O[i]}`);
 

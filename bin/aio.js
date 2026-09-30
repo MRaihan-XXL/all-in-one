@@ -12,7 +12,7 @@ const HELP = `
   Usage
     aio                          Wire up every detected agent (default: setup)
     aio status                   Read-only health report (manifest, agents)
-    aio ask "<what you need>"    LIVE search across GitHub (400M+ repos, public
+    aio ask "<what you need>"    LIVE search across GitHub (630M+ repos, public
                                  skills), npm (3M+ pkgs) + crates — adaptive
                                  sources, every hit prints link + function,
                                  ZERO storage (nothing ever saved)
