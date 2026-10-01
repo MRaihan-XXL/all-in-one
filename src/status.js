@@ -4,6 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { CONFIG_FILE, STATE_DIR, resolveReposDir } from './paths.js';
 import { BLOCK_START } from './write.js';
+import { detectAgents } from './scan.js';
 
 /** injected | no block | missing — for one agent instruction file. */
 export function blockState(file) {
@@ -11,17 +12,22 @@ export function blockState(file) {
   return fs.readFileSync(file, 'utf8').includes(BLOCK_START) ? 'injected' : 'no block';
 }
 
-/** Same target list as setup.js targetFiles(). */
+/** Same target list as setup.js targetFiles() — global only for hermes/freebuff or when it exists. */
 function targetFiles(home) {
-  return [
+  const files = [
     ['opencode', path.join(home, '.config', 'opencode', 'AGENTS.md')],
     ['claude', path.join(home, '.claude', 'CLAUDE.md')],
     ['kimi', path.join(home, '.kimi-code', 'AGENTS.md')],
     ['jcode', path.join(home, '.jcode', 'AGENTS.md')],
     ['codex', path.join(home, '.codex', 'AGENTS.md')],
     ['gemini', path.join(home, '.gemini', 'GEMINI.md')],
-    ['global', path.join(home, 'AGENTS.md')],
   ];
+  const globalFile = path.join(home, 'AGENTS.md');
+  const wantGlobal =
+    fs.existsSync(globalFile) ||
+    detectAgents().some((a) => a.found && (a.name === 'hermes' || a.name === 'freebuff'));
+  if (wantGlobal) files.push(['global', globalFile]);
+  return files;
 }
 
 function countRepoDirs(reposDir) {
@@ -55,7 +61,7 @@ export function runStatus(opts = {}) {
 
   lines.push(`state      ${STATE_DIR} ${fs.existsSync(CONFIG_FILE) ? '(config.json ok)' : '(no config.json yet)'}`);
 
-  const reposDir = resolveReposDir(opts.repos);
+  const reposDir = resolveReposDir(opts.repos, { write: false }); // status is read-only
   if (reposDir && fs.existsSync(reposDir)) {
     const n = countRepoDirs(reposDir);
     lines.push(n ? `repos      ${reposDir} (${n} dirs)` : `repos      ${reposDir} (0 dirs — optional, install plan only)`);

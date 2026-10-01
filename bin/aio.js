@@ -111,8 +111,13 @@ switch (opts.command) {
   }
   case 'rollback': {
     console.log(banner());
-    const { runRollback } = await import('../src/rollback.js');
-    runRollback();
+    try {
+      const { runRollback } = await import('../src/rollback.js');
+      runRollback();
+    } catch (e) {
+      console.error(`[aio] rollback failed: ${e.message}`);
+      process.exit(1);
+    }
     break;
   }
   case 'ask': {

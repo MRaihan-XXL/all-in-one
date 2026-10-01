@@ -4,19 +4,24 @@ import path from 'node:path';
 import os from 'node:os';
 import { resolveReposDir, writeState, BACKUP_DIR, STATE_DIR } from './paths.js';
 import { detectAgents, detectBinary } from './scan.js';
-import { buildBlock, injectBlock, genContext, ensureMcp, fixPaths, backup } from './write.js';
+import { buildBlock, injectBlock, genContext, ensureMcp, fixPaths, backup, pruneBackups } from './write.js';
 import { getVersion } from './banner.js';
 
-function targetFiles(home) {
-  return [
+function targetFiles(home, agents) {
+  const files = [
     { label: 'opencode', file: path.join(home, '.config', 'opencode', 'AGENTS.md') },
     { label: 'claude', file: path.join(home, '.claude', 'CLAUDE.md') },
     { label: 'kimi', file: path.join(home, '.kimi-code', 'AGENTS.md') },
     { label: 'jcode', file: path.join(home, '.jcode', 'AGENTS.md') },
     { label: 'codex', file: path.join(home, '.codex', 'AGENTS.md') },
     { label: 'gemini', file: path.join(home, '.gemini', 'GEMINI.md') },
-    { label: 'global', file: path.join(home, 'AGENTS.md') },
   ];
+  // global ~/AGENTS.md only for hermes/freebuff (or when the file already exists)
+  const globalFile = path.join(home, 'AGENTS.md');
+  const wantGlobal =
+    fs.existsSync(globalFile) || agents.some((a) => a.found && (a.name === 'hermes' || a.name === 'freebuff'));
+  if (wantGlobal) files.push({ label: 'global', file: globalFile });
+  return files;
 }
 
 function row(tag, name, detail) {
@@ -44,7 +49,7 @@ export async function runSetup(opts = {}) {
   if (!dry) genContext({ version, agents }, manifestPath);
 
   const body = buildBlock({ version, manifestPath });
-  const targets = targetFiles(home);
+  const targets = targetFiles(home, agents);
   const blockResults = targets.map((t) => {
     if (!fs.existsSync(path.dirname(t.file))) {
       return { ...t, status: 'skipped (agent not installed)' };
@@ -58,6 +63,7 @@ export async function runSetup(opts = {}) {
 
   const pathResults = fixPaths(dry);
 
+  let pruned = 0;
   if (!dry) {
     writeState({
       version,
@@ -65,6 +71,7 @@ export async function runSetup(opts = {}) {
       manifestPath,
       lastRun: new Date().toISOString(),
     });
+    pruned = pruneBackups(30); // backups older than 30 days → no unbounded growth
   }
 
   /* ---- report ---- */
@@ -105,7 +112,7 @@ export async function runSetup(opts = {}) {
     console.log(`  ${manifestPath}`);
   }
   console.log('');
-  console.log(dry ? 'Backups: none created (dry-run)' : `Backups: ${BACKUP_DIR}`);
+  console.log(dry ? 'Backups: none created (dry-run)' : `Backups: ${BACKUP_DIR}${pruned ? ` (${pruned} expired >30d pruned)` : ''}`);
   console.log(
     dry
       ? 'Dry run complete — no files were written. Re-run without --dry-run to apply.'

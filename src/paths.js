@@ -27,11 +27,12 @@ export function writeState(partial) {
   return next;
 }
 
-/** Priority: --repos > $AIO_REPOS_DIR > persisted state > default (if it exists). */
-export function resolveReposDir(cliRepos) {
+/** Priority: --repos > $AIO_REPOS_DIR > persisted state > default (if it exists).
+ *  {write:false} = read-only callers (status) must not touch config.json. */
+export function resolveReposDir(cliRepos, { write = true } = {}) {
   if (cliRepos) {
     const abs = path.resolve(cliRepos);
-    writeState({ reposDir: abs });
+    if (write) writeState({ reposDir: abs });
     return abs;
   }
   if (process.env.AIO_REPOS_DIR) return path.resolve(process.env.AIO_REPOS_DIR);

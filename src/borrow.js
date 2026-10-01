@@ -186,7 +186,7 @@ export async function runBorrow({ query, get, clean, list, json }) {
     if (!hits.length) {
       return { ok: true, json: out, text: `aio borrow — "${query}": no GitHub result. Refine keywords or check https://github.com/search` };
     }
-    const lines = [`aio borrow — "${query}" (GitHub live search \u00b7 ${hits.length} hasil)`];
+    const lines = [`aio borrow — "${query}" (GitHub live search \u00b7 ${hits.length} results)`];
     if (purged.length) lines.push(`TTL purge: ${purged.length} expired clone(s) removed`);
     lines.push('');
     hits.forEach((h, i) => {

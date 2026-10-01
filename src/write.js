@@ -125,6 +125,27 @@ export function ledgerList() {
   return ledgerRead();
 }
 
+/** Drop backups older than `maxAgeDays` so ~/.aio/backups cannot grow forever. */
+export function pruneBackups(maxAgeDays = 30) {
+  let removed = 0;
+  try {
+    for (const f of fs.readdirSync(BACKUP_DIR)) {
+      const p = path.join(BACKUP_DIR, f);
+      try {
+        if (Date.now() - fs.statSync(p).mtimeMs > maxAgeDays * 86400000) {
+          fs.rmSync(p, { force: true });
+          removed++;
+        }
+      } catch {
+        /* locked file — retried next run */
+      }
+    }
+  } catch {
+    /* no backup dir yet */
+  }
+  return removed;
+}
+
 export function ensureJsonEntry(file, key, entry, label, rootKey, create = false, { dry = false } = {}) {
   let obj = {};
   if (fs.existsSync(file)) {
@@ -173,12 +194,14 @@ function ensureOpencodeJsonc(key, entry, { dry = false } = {}) {
   const file = path.join(os.homedir(), '.config', 'opencode', 'opencode.jsonc');
   if (!fs.existsSync(file)) return { target: 'opencode.jsonc', status: 'file not found — skipped' };
   const txt = fs.readFileSync(file, 'utf8');
-  if (txt.includes(`"${key}"`)) return { target: 'opencode.jsonc', status: 'present' };
-  const marker = '"mcp": {';
-  const idx = txt.indexOf(marker);
-  if (idx === -1) return { target: 'opencode.jsonc', status: 'no "mcp" block — skipped' };
+  // key must be an object key ("<key>":), not a random mention of the string
+  if (new RegExp(`"${key}"\\s*:`).test(txt)) return { target: 'opencode.jsonc', status: 'present' };
+  const markerMatch = txt.match(/"mcp"\s*:\s*\{/); // tolerate spacing/newline variants
+  if (!markerMatch) return { target: 'opencode.jsonc', status: 'no "mcp" block — skipped' };
   if (dry) return { target: 'opencode.jsonc', status: 'would add (dry-run)' };
   backup(file, 'opencode-jsonc');
+  const idx = markerMatch.index;
+  const marker = markerMatch[0];
   const after = txt.slice(idx + marker.length);
   const empty = /^\s*\}/.test(after);
   const insert = `${marker}\n    ${JSON.stringify(key)}: ${JSON.stringify(entry)}${empty ? '' : ','}`;
@@ -210,12 +233,19 @@ export function ensureMcp(binary, { dry = false } = {}) {
   return results;
 }
 
-/** Reverse exactly what ensureMcp added (recorded in the ledger). */
+/** Reverse exactly what ensureMcp added (recorded in the ledger).
+ *  Per-file try/catch: a malformed config is reported, never crashed on, and its
+ *  ledger entry is KEPT so rollback can retry after the user fixes the file.
+ *  A temporarily missing file is also KEPT (retry when it reappears); a file
+ *  whose key is genuinely gone drops out of the ledger. Backups are taken only
+ *  when a real modification is about to happen. */
 export function removeMcpAdditions() {
   const out = [];
+  const keep = [];
   for (const { file, key } of ledgerRead()) {
     if (!fs.existsSync(file)) {
-      out.push({ target: path.basename(file), status: 'missing' });
+      keep.push({ file, key });
+      out.push({ target: path.basename(file), status: 'missing — ledger entry kept for retry' });
       continue;
     }
     const txt = fs.readFileSync(file, 'utf8');
@@ -223,28 +253,54 @@ export function removeMcpAdditions() {
       out.push({ target: path.basename(file), status: 'already gone' });
       continue;
     }
-    backup(file, 'rollback-mcp');
-    if (file.endsWith('.toml')) {
-      const esc = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const re = new RegExp(`\\n?\\[mcp_servers\\."?${esc}"?\\][^\\[]*`, 'g');
-      fs.writeFileSync(file, txt.replace(re, ''));
-    } else if (file.endsWith('.jsonc')) {
-      const re = new RegExp(`${JSON.stringify(key).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*\\{[^{}]*\\},?\\s*`, 'g');
-      fs.writeFileSync(file, txt.replace(re, ''));
-    } else {
-      const obj = JSON.parse(txt);
-      for (const rk of ['mcpServers', 'servers']) {
-        if (obj[rk] && typeof obj[rk] === 'object' && key in obj[rk]) {
-          delete obj[rk][key];
-          break;
+    try {
+      if (file.endsWith('.toml')) {
+        const esc = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = new RegExp(`\\n?\\[mcp_servers\\."?${esc}"?\\][^\\[]*`, 'g');
+        const next = txt.replace(re, '');
+        if (next === txt) {
+          out.push({ target: path.basename(file), status: 'already gone' });
+          continue;
         }
+        backup(file, 'rollback-mcp');
+        fs.writeFileSync(file, next);
+      } else if (file.endsWith('.jsonc')) {
+        const re = new RegExp(`${JSON.stringify(key).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*\\{[^{}]*\\},?\\s*`, 'g');
+        const next = txt.replace(re, '');
+        if (next === txt) {
+          out.push({ target: path.basename(file), status: 'already gone' });
+          continue;
+        }
+        backup(file, 'rollback-mcp');
+        fs.writeFileSync(file, next);
+      } else {
+        const obj = JSON.parse(txt);
+        let removed = false;
+        for (const rk of ['mcpServers', 'servers']) {
+          if (obj[rk] && typeof obj[rk] === 'object' && key in obj[rk]) {
+            delete obj[rk][key];
+            removed = true;
+            break;
+          }
+        }
+        if (key in obj) {
+          delete obj[key];
+          removed = true;
+        }
+        if (!removed) {
+          out.push({ target: path.basename(file), status: 'already gone' });
+          continue;
+        }
+        backup(file, 'rollback-mcp');
+        fs.writeFileSync(file, JSON.stringify(obj, null, 2) + '\n');
       }
-      if (key in obj) delete obj[key];
-      fs.writeFileSync(file, JSON.stringify(obj, null, 2) + '\n');
+      out.push({ target: path.basename(file), status: 'removed' });
+    } catch (e) {
+      keep.push({ file, key });
+      out.push({ target: path.basename(file), status: `parse error — skipped, ledger entry kept (${String(e.message).slice(0, 60)})` });
     }
-    out.push({ target: path.basename(file), status: 'removed' });
   }
-  fs.writeFileSync(LEDGER, '[]');
+  fs.writeFileSync(LEDGER, JSON.stringify(keep, null, 2));
   return out;
 }
 

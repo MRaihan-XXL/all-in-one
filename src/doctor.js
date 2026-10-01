@@ -4,11 +4,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { STATE_DIR, readState } from './paths.js';
 import { detectAgents } from './scan.js';
-import { BLOCK_START } from './write.js';
+import { BLOCK_START, ledgerList } from './write.js';
 import { getVersion } from './banner.js';
+
+/** Absolute path to the CLI entry — fileURLToPath (POSIX + Windows + spaces-safe). */
+export function aioBinPath() {
+  return fileURLToPath(new URL('../bin/aio.js', import.meta.url));
+}
 
 const AGENT_FILES = [
   ['.config/opencode/AGENTS.md', '.config/opencode'],
@@ -53,7 +59,7 @@ export async function runChecks(opts = {}) {
     checks.push(line('ok', 'live', 'AIO_OFFLINE=1 — live search intentionally disabled'));
   } else {
     try {
-      const res = await fetch('https://api.github.com/rate_limit', { headers: { 'user-agent': 'aio-connect/1.3' }, signal: AbortSignal.timeout(3000) });
+      const res = await fetch('https://api.github.com/rate_limit', { headers: { 'user-agent': `aio-connect/${getVersion()}` }, signal: AbortSignal.timeout(3000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       checks.push(line('ok', 'live', 'github reachable — ask searches GitHub + npm + crates (no search storage)'));
     } catch (e) {
@@ -83,10 +89,17 @@ export async function runChecks(opts = {}) {
   let injected = 0;
   let installed = 0;
   const missing = [];
+  const agents = detectAgents();
+  const globalWanted =
+    fs.existsSync(path.join(home, 'AGENTS.md')) ||
+    agents.some((a) => a.found && (a.name === 'hermes' || a.name === 'freebuff'));
   for (const [rel, dirHint] of AGENT_FILES) {
     const file = path.join(home, rel);
-    const agentHome = dirHint ? path.join(home, dirHint) : null;
-    if (!agentHome || !fs.existsSync(agentHome)) continue; // agent not installed → skip
+    if (dirHint) {
+      if (!fs.existsSync(path.join(home, dirHint))) continue; // agent not installed → skip
+    } else if (!globalWanted) {
+      continue; // ~/AGENTS.md only matters for hermes/freebuff (or if it already exists)
+    }
     installed++;
     if (fs.existsSync(file) && fs.readFileSync(file, 'utf8').includes(BLOCK_START)) injected++;
     else missing.push(path.basename(file));
@@ -98,8 +111,8 @@ export async function runChecks(opts = {}) {
   );
 
   // 6. Agents detected (info)
-  const agents = detectAgents().filter((a) => a.found).map((a) => a.name);
-  checks.push(line('ok', 'agents', agents.length ? agents.join(', ') : 'none detected'));
+  const found = agents.filter((a) => a.found).map((a) => a.name);
+  checks.push(line('ok', 'agents', found.length ? found.join(', ') : 'none detected'));
 
   // 7. Ollama (info — powers `aio ask` AI rerank)
   try {
@@ -108,6 +121,36 @@ export async function runChecks(opts = {}) {
     checks.push(line('ok', 'ollama', `reachable — models: ${(data.models || []).map((m) => m.name).slice(0, 4).join(', ')}`));
   } catch {
     checks.push(line('warn', 'ollama', 'not reachable — ask rerank skipped (source/BM25 order kept)'));
+  }
+
+  // 8. MCP ledger — entries aio added must still exist and their files must parse
+  const ledger = ledgerList();
+  if (ledger.length) {
+    const broken = [];
+    for (const { file, key } of ledger) {
+      if (!fs.existsSync(file)) {
+        broken.push(`${key}: ${path.basename(file)} missing`);
+        continue;
+      }
+      const txt = fs.readFileSync(file, 'utf8');
+      if (file.endsWith('.jsonc')) {
+        if (!txt.includes(key)) broken.push(`${key}: entry gone from ${path.basename(file)}`);
+      } else if (file.endsWith('.toml')) {
+        if (!txt.includes(key)) broken.push(`${key}: entry gone from ${path.basename(file)}`);
+      } else {
+        try {
+          JSON.parse(txt);
+          if (!txt.includes(key)) broken.push(`${key}: entry gone from ${path.basename(file)}`);
+        } catch {
+          broken.push(`${path.basename(file)}: parse error — fix before \`aio rollback\``);
+        }
+      }
+    }
+    checks.push(
+      broken.length
+        ? line('warn', 'mcp ledger', broken.join('; '))
+        : line('ok', 'mcp ledger', `${ledger.length} aio-added MCP entry file(s) present & valid`)
+    );
   }
 
   const issues = checks.filter((c) => c.level === 'bad').length;
@@ -124,7 +167,7 @@ export async function runDoctor(opts = {}) {
   if (opts.fix && !ok) {
     // Safe fix = re-run the idempotent setup (regen manifest + reinject blocks).
     try {
-      execFileSync(process.execPath, [new URL('../bin/aio.js', import.meta.url).pathname.replace(/^\//, '')], {
+      execFileSync(process.execPath, [aioBinPath()], {
         stdio: 'ignore',
         timeout: 120000,
       });
