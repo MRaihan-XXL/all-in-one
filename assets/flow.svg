@@ -24,15 +24,17 @@
       .march{fill:none;stroke:#FF4A1C;stroke-dasharray:4 3;animation:march 1.4s linear infinite}
       @keyframes draw{to{stroke-dashoffset:0}}
       @keyframes march{to{stroke-dashoffset:-14}}
+      @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
       @keyframes fadeIn{from{opacity:0}to{opacity:1}}
       @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
       @keyframes hl{0%{stroke:#2A2F37}2%{stroke:#FF4A1C}11%{stroke:#2A2F37}100%{stroke:#2A2F37}}
       @keyframes tick{0%,100%{opacity:1}50%{opacity:.35}}
       .card{transform-box:fill-box;transform-origin:0 50%;animation:rise .85s cubic-bezier(.32,.72,0,1) both}
       .cardout{animation:hl 11.2s cubic-bezier(.45,0,.55,1) infinite}
+      .gw{transform-box:fill-box;transform-origin:0 50%;animation:grow .8s cubic-bezier(.32,.72,0,1) both}
       .ch{animation:fadeIn .45s ease both}
       .fd{animation:fadeIn .7s cubic-bezier(.32,.72,0,1) both}
-      @media (prefers-reduced-motion:reduce){.card,.ch,.fd,.march{animation:none}.wire,.wireL{stroke-dashoffset:0;animation:none}.cardout{animation:none}}
+      @media (prefers-reduced-motion:reduce){.card,.ch,.fd,.march,.gw{animation:none}.wire,.wireL{stroke-dashoffset:0;animation:none}.cardout{animation:none}}
     </style>
   </defs>
 
@@ -63,25 +65,27 @@
     <path class="wireL" style="animation-delay:1.16s" d="M864 558 V586 Q864 600 848 600 H190 Q174 600 174 586 V230"/>
   </g>
 
-  <!-- energy comets -->
+  <!-- energy comets — ONE synchronized 8s master loop: the pulse travels the
+       pipeline step by step (01→02→03→04→05→06→loop) instead of six
+       independent infinite timers competing for attention (excess fix) -->
   <g>
     <path class="pulse" pathLength="100" d="M284 180 H344">
-      <animate attributeName="stroke-dashoffset" values="100;0" dur="2s" begin="1.4s" repeatCount="indefinite"/>
+      <animate attributeName="stroke-dashoffset" values="100;100;0;0" keyTimes="0;0.07;0.16;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
     </path>
     <path class="pulse" pathLength="100" d="M644 184 H744">
-      <animate attributeName="stroke-dashoffset" values="100;0" dur="2s" begin="1.9s" repeatCount="indefinite"/>
+      <animate attributeName="stroke-dashoffset" values="100;100;0;0" keyTimes="0;0.18;0.27;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
     </path>
     <path class="pulse" pathLength="100" d="M864 258 V330">
-      <animate attributeName="stroke-dashoffset" values="100;0" dur="1.8s" begin="2.4s" repeatCount="indefinite"/>
+      <animate attributeName="stroke-dashoffset" values="100;100;0;0" keyTimes="0;0.30;0.39;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
     </path>
     <path class="pulse" pathLength="100" d="M804 430 V444 Q804 452 796 452 H612 Q604 452 604 460 V470">
-      <animate attributeName="stroke-dashoffset" values="100;0" dur="2.6s" begin="2.9s" repeatCount="indefinite"/>
+      <animate attributeName="stroke-dashoffset" values="100;100;0;0" keyTimes="0;0.44;0.56;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
     </path>
     <path class="pulse" pathLength="100" d="M644 518 H744">
-      <animate attributeName="stroke-dashoffset" values="100;0" dur="1.8s" begin="3.4s" repeatCount="indefinite"/>
+      <animate attributeName="stroke-dashoffset" values="100;100;0;0" keyTimes="0;0.60;0.68;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
     </path>
     <path class="pulse" pathLength="100" stroke-opacity="0.4" d="M864 558 V586 Q864 600 848 600 H190 Q174 600 174 586 V230">
-      <animate attributeName="stroke-dashoffset" values="100;0" dur="6.4s" begin="4s" repeatCount="indefinite"/>
+      <animate attributeName="stroke-dashoffset" values="100;100;0;0" keyTimes="0;0.72;0.98;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
     </path>
   </g>
 
@@ -128,46 +132,38 @@
 
     <!-- lane: github -->
     <g>
-      <circle cx="370" cy="172" r="3" fill="#FF4A1C">
-        <animate attributeName="opacity" values="1;0.25;1" dur="1.8s" repeatCount="indefinite"/>
-      </circle>
+      <circle cx="370" cy="172" r="3" fill="#FF4A1C"/>
       <text x="382" y="176" class="mono lane">GITHUB</text>
       <line x1="452" y1="172" x2="626" y2="172" stroke="#1D2127" stroke-width="2"/>
       <rect x="452" y="170.5" width="24" height="3" rx="1.5" fill="#FF4A1C">
-        <animate attributeName="x" values="452;602;452" dur="2.6s" begin="1.6s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+        <animate attributeName="x" values="452;602;452" dur="3s" begin="1.6s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
       </rect>
     </g>
     <!-- lane: npm -->
     <g>
-      <circle cx="370" cy="196" r="3" fill="#FF4A1C">
-        <animate attributeName="opacity" values="1;0.25;1" dur="1.8s" begin="0.4s" repeatCount="indefinite"/>
-      </circle>
+      <circle cx="370" cy="196" r="3" fill="#FF4A1C"/>
       <text x="382" y="200" class="mono lane">NPM</text>
       <line x1="452" y1="196" x2="626" y2="196" stroke="#1D2127" stroke-width="2"/>
       <rect x="452" y="194.5" width="24" height="3" rx="1.5" fill="#FF4A1C">
-        <animate attributeName="x" values="452;602;452" dur="2.2s" begin="2.1s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+        <animate attributeName="x" values="452;602;452" dur="3s" begin="1.9s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
       </rect>
     </g>
     <!-- lane: crates -->
     <g>
-      <circle cx="370" cy="220" r="3" fill="#FF4A1C">
-        <animate attributeName="opacity" values="1;0.25;1" dur="1.8s" begin="0.9s" repeatCount="indefinite"/>
-      </circle>
+      <circle cx="370" cy="220" r="3" fill="#FF4A1C"/>
       <text x="382" y="224" class="mono lane">CRATES</text>
       <line x1="452" y1="220" x2="626" y2="220" stroke="#1D2127" stroke-width="2"/>
       <rect x="452" y="218.5" width="24" height="3" rx="1.5" fill="#FF4A1C">
-        <animate attributeName="x" values="452;602;452" dur="3s" begin="2.6s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+        <animate attributeName="x" values="452;602;452" dur="3s" begin="2.2s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
       </rect>
     </g>
     <!-- lane: web → agent -->
     <g>
-      <circle cx="370" cy="244" r="3" fill="none" stroke="#5A606A">
-        <animate attributeName="opacity" values="1;0.3;1" dur="1.8s" begin="1.4s" repeatCount="indefinite"/>
-      </circle>
+      <circle cx="370" cy="244" r="3" fill="none" stroke="#5A606A"/>
       <text x="382" y="248" class="mono lane" fill="#5A606A">WEB → AGENT</text>
       <line x1="490" y1="244" x2="626" y2="244" stroke="#1D2127" stroke-width="2" stroke-dasharray="3 5"/>
       <rect x="490" y="242.5" width="24" height="3" rx="1.5" fill="none" stroke="#FF4A1C" stroke-opacity="0.7">
-        <animate attributeName="x" values="490;602;490" dur="3.4s" begin="3.1s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+        <animate attributeName="x" values="490;602;490" dur="3s" begin="2.5s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
       </rect>
     </g>
   </g>
@@ -181,10 +177,13 @@
     <g class="fd" style="animation-delay:1.1s">
       <circle cx="770" cy="188" r="2.5" fill="#FF4A1C"/>
       <text x="782" y="192" class="mono" font-size="10" fill="#9AA0A8">github + npm + crates merged</text>
+      <rect x="782" y="197" width="146" height="2" rx="1" fill="#FF4A1C" opacity="0.75" class="gw" style="animation-delay:1.25s"/>
       <circle cx="770" cy="210" r="2.5" fill="#FF4A1C"/>
       <text x="782" y="214" class="mono" font-size="10" fill="#9AA0A8">BM25 rank · ≥2 rows/source</text>
+      <rect x="782" y="219" width="118" height="2" rx="1" fill="#FF4A1C" opacity="0.55" class="gw" style="animation-delay:1.45s"/>
       <circle cx="770" cy="232" r="2.5" fill="#FF4A1C"/>
       <text x="782" y="236" class="mono" font-size="10" fill="#9AA0A8">qwen3 rerank (warm, ≤3.5s)</text>
+      <rect x="782" y="241" width="92" height="2" rx="1" fill="#FF4A1C" opacity="0.4" class="gw" style="animation-delay:1.65s"/>
     </g>
   </g>
 
@@ -214,5 +213,6 @@
     <rect class="core" x="750" y="484" width="228" height="68" rx="10"/>
     <text x="766" y="506" class="mono idx">06</text>
     <text x="766" y="534" class="sans t">borrow --clean</text>
+    <rect class="march" x="766" y="542" width="114" height="2" rx="1" stroke-opacity="0.65"/>
   </g>
 </svg>

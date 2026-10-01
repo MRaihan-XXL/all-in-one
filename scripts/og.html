@@ -1,0 +1,53 @@
+<!doctype html>
+<!-- og.html — source for assets/og-cover.png (1200×630 social card).
+     Render: msedge --headless --screenshot=..\assets\og-cover.png --window-size=1200,630 -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background:
+      radial-gradient(900px 500px at 82% -10%, rgba(255, 74, 28, .22), transparent 60%),
+      radial-gradient(700px 480px at -8% 110%, rgba(64, 120, 255, .18), transparent 62%),
+      #0b0f16;
+    color: #f2f5f8;
+    position: relative;
+    padding: 72px 84px;
+  }
+  .logo { display: flex; align-items: center; gap: 26px; }
+  .logo img { width: 96px; height: 96px; }
+  .logo .mark { font-size: 92px; font-weight: 800; letter-spacing: -3px; line-height: 1; }
+  .logo .mark span { color: #ff4a1c; }
+  h1 { font-size: 52px; font-weight: 750; letter-spacing: -1.2px; margin-top: 56px; line-height: 1.12; }
+  .sub { font-size: 30px; color: #aab6c4; margin-top: 22px; line-height: 1.35; }
+  .sub b { color: #e8edf3; font-weight: 650; }
+  .chips { position: absolute; left: 84px; bottom: 64px; display: flex; gap: 16px; }
+  .chip {
+    font-size: 24px; font-weight: 650; padding: 12px 26px; border-radius: 999px;
+    border: 1.5px solid rgba(255, 255, 255, .22); color: #dfe6ed;
+    background: rgba(255, 255, 255, .06);
+  }
+  .chip.hot { border-color: rgba(255, 74, 28, .65); color: #ffb9a5; }
+  .url { position: absolute; right: 84px; bottom: 72px; font-size: 25px; color: #7f8b99; letter-spacing: .4px; }
+  .rule { position: absolute; left: 84px; right: 84px; top: 210px; height: 1px; background: linear-gradient(90deg, rgba(255,74,28,.75), rgba(255,255,255,.12) 40%, transparent); }
+</style>
+</head>
+<body>
+  <div class="logo">
+    <img src="../assets/logo-mark-reversed.svg" alt="">
+    <div class="mark">ai<span>o</span></div>
+  </div>
+  <div class="rule"></div>
+  <h1>Auto-connect every AI agent<br>to live GitHub, npm &amp; crates search.</h1>
+  <div class="sub"><b>One command.</b> No slash-commands. <b>Zero search storage</b> — results printed, never saved.</div>
+  <div class="chips">
+    <div class="chip hot">8 agents</div>
+    <div class="chip">zero runtime deps</div>
+    <div class="chip">GPL-3.0</div>
+  </div>
+  <div class="url">mraihan-xxl.github.io/all-in-one</div>
+</body>
+</html>

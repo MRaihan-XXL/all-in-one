@@ -80,6 +80,6 @@
   </g>
 
   <!-- footer micro -->
-  <text x="64" y="286" class="mono fd" font-size="11" letter-spacing="1.6" fill="#4A505A" style="animation-delay:1.2s">THE SAME LINE IS WRITTEN INTO EVERY AGENT BLOCK + THE SHARED MANIFEST</text>
+  <text x="64" y="286" class="mono fd" font-size="11" letter-spacing="1.6" fill="#4A505A" style="animation-delay:1.2s">THE SAME LINE LIVES IN EVERY AGENT BLOCK — ONE SOURCE OF TRUTH, SLIM MANIFEST POINTS TO IT</text>
   <text x="1136" y="286" text-anchor="end" class="mono fd" font-size="11" letter-spacing="1.6" fill="#4A505A" style="animation-delay:1.2s">NO SLASH-COMMANDS · ENFORCED BY THE MODEL</text>
 </svg>
