@@ -4,7 +4,7 @@
 |---|---|
 | **Product** | `aio` — All-In-One auto-connect layer for AI coding agents |
 | **Package** | `aio-connect` (npm registry; GitHub repo `MRaihan-XXL/all-in-one`) |
-| **Version** | 1.4.0 |
+| **Version** | 1.4.1 |
 | **Status** | Approved for implementation |
 | **License** | GPL-3.0 |
 | **Docs language** | English (international) |
@@ -189,10 +189,12 @@ hit, `--json` (`stored: 0`), and the borrow lifecycle (24 h TTL purge,
   sync, agent blocks, Ollama reachability — and exits 1 when any issue exists
   (`--check` = CI gate); `--fix` re-runs the idempotent setup pipeline (safe
   fixes only).
-- `aio evolve` runs the full pipeline in one command: install-plan scan
-  (skipped when there are no local clones) → setup (manifest + blocks) →
-  `doctor --check` → `npm test`, prints a per-step pass/fail report with
-  timings, and **never commits or pushes** (git stays with the human).
+- `aio evolve` runs the full pipeline in one command: setup (manifest +
+  blocks) → `doctor --check` → `npm test`, prints a per-step pass/fail report
+  with timings, and **never commits or pushes** (git stays with the human).
+  The install-plan scan step was dropped: `scripts/install-tools.mjs` is
+  dev-machine tooling and is **not shipped in the npm package** (the repos-dir
+  scan that feeds the install plan still runs inside `aio setup`).
 
 **Acceptance:** `node --test` covers doctor checks; `aio evolve` reports every
 step green on the owner machine (verified 2026-09-30).
@@ -214,8 +216,8 @@ code search `total_count` = 6,832,128; npm packages **3M+** — npm's official
 figure (unchanged).
 
 **Acceptance:** `aio ask --json` reports `stored: 0` (asserted in the test
-suite) and there is no catalog file to write — `npm test` **45/45** as of
-2026-09-30.
+suite) and there is no catalog file to write — `npm test` **52/52** as of
+2026-10-01.
 
 ### FR12 — Security & trust
 - **Threat model** — `docs/THREATS.md` documents assets, trust boundaries,
@@ -237,7 +239,8 @@ suite) and there is no catalog file to write — `npm test` **45/45** as of
 
 **Acceptance:** `test/safety.test.js` covers `--dry-run` (no writes);
 `test/relevance.test.js` covers trust-weighted ranking; `node scripts/eval-relevance.mjs`
-prints hit@8 (measured **20/20**, 100%, 2026-09-30); suite **45/45**.
+prints hit@8 (**20/20**, 100%) and hit@1 (**19/20**, 95%), MRR **0.97** —
+measured 2026-10-01; suite **52/52**.
 
 ## 5. Non-functional requirements
 
@@ -275,7 +278,7 @@ prints hit@8 (measured **20/20**, 100%, 2026-09-30); suite **45/45**.
 | `aio ask "<prompt>"` | **Live search router**: GitHub (630M+ repos + `filename:SKILL.md` skills, 6.8M+ files) + npm (3M+) + crates (340K+) in parallel, 4 s/source; BM25 merge + source diversity + optional warm-Ollama rerank; every hit prints link + one-line function + `<src>` tag; `--json` (`stored: 0`) |
 | `aio borrow "<kw>"` | Optional live GitHub search for what you want cloned; `--get <owner/repo>` shallow-clone to `%TEMP%\aio-borrow` (24 h TTL, 1 GB disk guard); `--list` / `--clean` |
 | `aio doctor [--check\|--fix]` | Self-diagnosis: node / state / live sources / manifest-sync / agent blocks / Ollama; `--check` = CI gate, `--fix` = safe repair |
-| `aio evolve` | Pipeline: install-plan scan (skipped without clones) → setup → doctor → `npm test`; never commits |
+| `aio evolve` | Pipeline: setup (manifest + blocks) → `doctor --check` → `npm test`; never commits |
 | `aio update` | Reinstall latest from npm → re-run setup automatically |
 | `aio rollback` | Remove injected block + reverse MCP additions from ledger |
 | `aio --help` | Usage + branding |
@@ -307,14 +310,14 @@ overrides: `AIO_REPOS_DIR`, `AIO_STATE_DIR` (state dir, default `~/.aio`),
   and stats strips are embedded in `index.html` as well as the README.
 - **UI assets v2 — live pipeline** (2026-09-30, v1.3.0, finalised in 1.3.1) —
   same three SVGs re-rendered for the 100% live architecture, each verified via
-  headless Edge screenshots: `assets/aio-hero.svg` (version chip now `v1.4.0`,
+  headless Edge screenshots: `assets/aio-hero.svg` (version chip now `v1.4.1`,
   "LIVE — NO SEARCH STORAGE" panel, rows github 630M+ / npm 3M+ / crates 340K+ /
   skill files 6.8M+, ticker `$ prompt → aio ask → use → report ↗ → clean`;
   wordmark redrawn as constructed vector letterforms, no system fonts),
   `assets/flow.svg` (six-step live pipeline: parallel github/npm/crates/web
-  lanes, top-8 ranked, no catalog-miss branch; full-English labels + loop-wire
+  lanes, top-8 + diversity, no catalog-miss branch; full-English labels + loop-wire
   `stroke-dasharray` fixed), `assets/aio-stats.svg` (630M+ · 3M+ · 340K+ ·
-  6.8M+ · 0 RESULTS KEPT · 45/45 TESTS, eyebrow "VERIFIED — LIVE CORPUS,
+  6.8M+ · 0 RESULTS KEPT · 52/52 TESTS, eyebrow "VERIFIED — LIVE CORPUS,
   FLOORS MEASURED 2026-09-30", chip "100% LIVE"), plus the new disclosure-card
   asset `assets/aio-disclosure.svg` (details in the next bullet). Figures are
   **verified floors, measured 2026-09-30** (sources in §4 FR11); the v1.2
@@ -408,6 +411,8 @@ commit (a follow-up run covers this docs batch).
 
 Verified 2026-09-30 (v1.4.0): tests 45/45, doctor 0 issues / 0 warnings, eval hit@8 20/20 (scripts/eval-relevance.mjs), --dry-run writes nothing
 
+Verified 2026-10-01 (v1.4.1): tests 52/52, doctor 0 issues / 0 warnings (incl. mcp-ledger check), eval hit@8 20/20 · hit@1 19/20 (95%) · MRR 0.97 (scripts/eval-relevance.mjs, 2026-10-01), evolve pipeline green, --dry-run writes nothing
+
 ## 10. Known limitations
 
 - **`aio ask` rerank needs a warm local Ollama.** The BM25 + source-diversity
@@ -458,3 +463,5 @@ Verified 2026-09-30 (v1.4.0): tests 45/45, doctor 0 issues / 0 warnings, eval hi
 | 2026-09-30 | v1.7 — aio 1.3.1: evaluation round — verified figures corrected (630M+ Octoverse 2025, crates api 342,787 → 340K+, SKILL.md count 6,832,128 → 6.8M+), flow.svg full English + loop-wire fix, hero wordmark → constructed vector letterforms, new disclosure card asset, banner rounded terminals, 34/34 tests |
 
 | 2026-09-30 | v1.8 — aio 1.4.0: security pass — docs/THREATS.md threat model, trust-weighted ranking (65% relevance + 35% popularity), verify-before-run note, aio --dry-run, relevance eval hit@8 20/20, aioc alias (Adobe PATH conflict), claim precision (no search storage / instruction-level disclosure), 45/45 tests |
+
+| 2026-10-01 | v1.9 — aio 1.4.1: POSIX-safe paths (fileURLToPath), evolve = setup → doctor → tests (install-plan scan dropped — dev tooling, not shipped in the npm package), status strictly read-only, conditional global AGENTS block, ask error transparency (errors[], ok:false when every source fails), diversity identity fix (URL/name, ≤10 rows), default n=8, MCP rollback hardening (per-file try/catch; parse-error/missing ledger entries kept for retry), 30-day backup pruning, versioned UA, ranking eval hit@1 19/20 + MRR 0.97, 52/52 tests, test/ shipped in npm package, animation upgrade across all 5 SVG assets |

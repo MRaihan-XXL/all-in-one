@@ -28,7 +28,7 @@
 ---
 
 <p align="center">
-  <img src="./assets/flow.svg" width="98%" alt="Animated live pipeline: prompt → aio ask (github, npm and crates searched in parallel) → top-8 ranked → use ephemerally → report with links → clean → loop">
+  <img src="./assets/flow.svg" width="98%" alt="Animated live pipeline: prompt → aio ask (github, npm and crates searched in parallel) → top-8 + diversity ranking → use ephemerally → report with links → clean → loop">
 </p>
 
 <p align="center">
@@ -36,7 +36,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 45/45 tests">
+  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 52/52 tests">
 </p>
 
 ## ✨ What it does
@@ -54,7 +54,7 @@ can reach — the searchable universe, not aio's own size; ranking is not
 capped by them**:
 
 ```text
-prompt → aio ask (live: github ∥ npm ∥ crates) → top-8 ranked (BM25 + diversity)
+prompt → aio ask (live: github ∥ npm ∥ crates) → top-8 + diversity (BM25 + ≥2 rows/source)
        → use it ephemerally → report WHAT changed + EVERY link used + function
        → aio borrow --clean
 ```
@@ -66,17 +66,17 @@ prompt → aio ask (live: github ∥ npm ∥ crates) → top-8 ranked (BM25 + di
 | Command | What you get |
 |---|---|
 | `aio` | scan → slim manifest → inject the auto-use block into every agent — add `--dry-run` to preview every change, write nothing |
-| `aio ask "csv ke chart"` | **live search** across GitHub (630M+ repos + public skills), npm (3M+ pkgs) and crates (340K+) in parallel (4 s per source), merge-ranked with BM25 + source diversity, blended 65% keyword relevance + 35% source popularity (stars/downloads/npm score); every hit prints **link + one-line function + `<github>`/`<npm>`/`<crates>` tag**; reranked by your local Ollama (qwen3) only when it is warm and fast; `--json` → `{…, stored: 0, hits}` (`stored: 0` = search results stored) |
+| `aio ask "csv ke chart"` | **live search** across GitHub (630M+ repos + public skills), npm (3M+ pkgs) and crates (340K+) in parallel (4 s per source), merge-ranked with BM25 + source diversity, blended 65% keyword relevance + 35% source popularity (stars/downloads/npm score); every hit prints **link + one-line function + `<github>`/`<npm>`/`<crates>` tag**; reranked by your local Ollama (qwen3) only when it is warm and fast; `--json` → `{…, stored: 0, hits}` (`stored: 0` = no search results stored) |
 | `aio borrow "etl tool"` | **optional ephemeral fetch** — `--get owner/repo` shallow-clones to temp (**24 h TTL**, auto-purged), `--list` inspects, `--clean` wipes it. Not a fallback for `ask`: use it when you actually need the files locally |
 | `aio doctor` | self-diagnosis: node · state · live sources · manifest ↔ agent blocks ↔ Ollama; `--fix` repairs, `--check` = CI gate |
-| `aio evolve` | the whole self-upgrade pipeline in one run: install-plan scan → setup → doctor → tests (never commits) |
+| `aio evolve` | the whole self-upgrade pipeline in one run: setup (manifest+blocks) → doctor --check → npm test (never commits) |
 | `aio status` | read-only health report |
 | `aio update` / `aio rollback` | update from npm / remove everything aio injected |
 
 Example — real `aio ask` output, abridged (links + functions always included):
 
 ```text
-aio ask — "awesome animated chart library" (live: github+npm · 8 hasil · 5.0s)
+aio ask — "awesome animated chart library" (live: github+npm · 8 results · 5.0s)
 
 note: ranked by keyword match + source popularity — public results are unvetted;
       verify before running npx/uvx or cloning (docs/THREATS.md).
@@ -119,7 +119,7 @@ markdown link with a one-line function**:
 
 ```text
 - [[d3](https://github.com/d3/d3)] — chart library, rendered the bar chart
-Perubahan: added chart.js, wired the data feed.
+Changes: added chart.js, wired the data feed.
 ```
 
 `<type>` = `repo | cli | service | skill | site`.
@@ -156,8 +156,8 @@ No telemetry; the only network calls are your explicit `ask`/`borrow`,
 - **New repo cloned?** Run `aio` — the manifest rebuilds from the fresh scan
   (clones feed only the optional install plan; the catalog itself stays live).
 - **Something drifted?** `aio doctor --fix` (or `--check` in CI).
-- **Full self-upgrade?** `aio evolve` runs install-plan scan → setup →
-  doctor → tests and prints the diff; committing stays your call.
+- **Full self-upgrade?** `aio evolve` runs setup (manifest+blocks) →
+  doctor --check → npm test and prints the diff; committing stays your call.
 - **Want your machine back?** `aio rollback`.
 
 ## 🧩 Supported agents
@@ -203,11 +203,11 @@ No telemetry; the only network calls are your explicit `ask`/`borrow`,
 ## 🛠 Development
 
 ```bash
-npm test             # node --test — 45 checks (live search, injection, borrow, doctor, …)
+npm test             # node --test — 52 checks (live search, injection, borrow, doctor, …)
 node bin/aio.js      # run from a checkout without installing
 node bin/aio.js ask "pdf ke word"
 node bin/aio.js doctor --check
-node scripts/eval-relevance.mjs   # live 20-query golden set → hit@8 = 20/20 (100%), measured 2026-09-30
+node scripts/eval-relevance.mjs   # live 20-query golden set → hit@8 = 20/20 (100%), hit@1 = 19/20 (95%), MRR 0.97, measured 2026-10-01
 ```
 
 ## 🎨 Brand kit
