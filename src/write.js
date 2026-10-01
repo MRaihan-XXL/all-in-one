@@ -14,7 +14,12 @@ export function backup(file, label) {
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
   const ts = new Date().toISOString().replace(/[:.]/g, '-');
   const safe = String(label).replace(/[^a-z0-9_-]/gi, '_');
-  const dest = path.join(BACKUP_DIR, `${safe}__${ts}__${path.basename(file)}`);
+  const base = `${safe}__${ts}__${path.basename(file)}`;
+  // two backups in the same millisecond must not overwrite each other (CI race)
+  let dest = path.join(BACKUP_DIR, base);
+  for (let i = 1; fs.existsSync(dest); i++) {
+    dest = path.join(BACKUP_DIR, `${safe}__${ts}_${i}__${path.basename(file)}`);
+  }
   fs.copyFileSync(file, dest);
   return dest;
 }
