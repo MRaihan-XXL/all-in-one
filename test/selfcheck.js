@@ -9,7 +9,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-selfcheck-'));
 process.env.AIO_STATE_DIR = path.join(tmp, 'state'); // isolate ~/.aio side effects
 
 const { injectBlock, stripBlock, buildBlock, ensureJsonEntry, ensureTomlEntry } = await import('../src/write.js');
-const { scanRepos, detectAgents } = await import('../src/scan.js');
+const { detectAgents } = await import('../src/scan.js');
 const { ART, banner } = await import('../src/banner.js');
 
 test('injectBlock: exactly one block, refreshed in place, prefix kept (FR4)', () => {
@@ -40,20 +40,6 @@ test('buildBlock: mandatory usage-disclosure line (FR6)', () => {
   assert.ok(b.includes('[aio] Using [<name>](<url>) (<type>) — <function>'));
   assert.ok(b.includes('NO slash-commands'));
   assert.ok(b.includes('/tmp/m.md'));
-});
-
-test('scanRepos: URL from real .git/config, non-repos listed as local-only', () => {
-  const rd = path.join(tmp, 'repos');
-  fs.mkdirSync(path.join(rd, 'proj-a', '.git'), { recursive: true });
-  fs.writeFileSync(
-    path.join(rd, 'proj-a', '.git', 'config'),
-    '[remote "origin"]\n\turl = https://github.com/foo/bar.git\n'
-  );
-  fs.mkdirSync(path.join(rd, 'not-a-repo'));
-  const repos = scanRepos(rd);
-  assert.equal(repos.length, 2);
-  assert.equal(repos.find((r) => r.name === 'proj-a').url, 'https://github.com/foo/bar');
-  assert.equal(repos.find((r) => r.name === 'not-a-repo').url, '');
 });
 
 test('ensureJsonEntry: create=true bootstraps file inside existing dir (gemini)', () => {

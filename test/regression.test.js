@@ -1,6 +1,6 @@
-// regression.test.js — v1.4.1 regression guards: diversify/dedupe (src/search.js),
-// read-only resolveReposDir (src/paths.js), POSIX-safe bin path (src/doctor.js),
-// backup pruning + MCP rollback resilience (src/write.js). Isolated state, temp fixtures.
+// regression.test.js — regression guards: diversify/dedupe (src/search.js),
+// POSIX-safe bin path (src/doctor.js), backup pruning + MCP rollback resilience
+// (src/write.js). Isolated state, temp fixtures.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -11,7 +11,7 @@ process.env.AIO_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-regress-'
 process.env.AIO_NO_AI = '1'; // deterministic: no Ollama
 
 const { diversify, dedupe } = await import('../src/search.js');
-const { STATE_DIR, CONFIG_FILE, BACKUP_DIR, resolveReposDir } = await import('../src/paths.js');
+const { STATE_DIR, CONFIG_FILE, BACKUP_DIR } = await import('../src/paths.js');
 const { aioBinPath } = await import('../src/doctor.js');
 const { pruneBackups, removeMcpAdditions } = await import('../src/write.js');
 
@@ -72,24 +72,6 @@ test('dedupe: same url keeps only the first hit; distinct urls all kept', () => 
   assert.equal(out[0].name, 'a', 'first occurrence wins');
   assert.deepEqual(out.map((h) => h.name), ['a', 'b', 'c']);
   assert.equal(hits.length, 4, 'input array untouched');
-});
-
-test('resolveReposDir: {write:false} read-only, default write persists config.json', () => {
-  fs.rmSync(CONFIG_FILE, { force: true }); // clean slate inside the isolated state dir
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-repos-'));
-
-  const readonly = resolveReposDir(tmp, { write: false });
-
-  assert.equal(readonly, path.resolve(tmp), 'absolute path returned');
-  assert.ok(path.isAbsolute(readonly));
-  assert.ok(!fs.existsSync(CONFIG_FILE), 'read-only call must NOT create config.json');
-
-  const persisted = resolveReposDir(tmp); // write default
-
-  assert.equal(persisted, path.resolve(tmp));
-  assert.ok(fs.existsSync(CONFIG_FILE), 'default write creates config.json');
-  const cfg = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-  assert.equal(cfg.reposDir, path.resolve(tmp), 'config.json contains reposDir');
 });
 
 test('aioBinPath: fileURLToPath → existing absolute bin/aio.js (POSIX-path guard)', () => {

@@ -4,8 +4,11 @@ process.env.AIO_NO_AI = '1';
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
-const { detectIntent, liveSearch } = await import('../src/live.js');
+const { detectIntent, liveSearch, ghSkills } = await import('../src/live.js');
 
 function json(body) {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
@@ -102,4 +105,36 @@ test('liveSearch: AIO_OFFLINE=1 → empty result and no network touched', async 
   });
   const r = await liveSearch('zeta etl csv');
   assert.deepEqual(r, { entries: [], sources: [], offline: true });
+});
+
+test('ghSkills: AIO_NO_GH=1 → resolves [] (lane disabled, no gh subprocess)', async () => {
+  assert.equal(process.env.AIO_NO_GH, '1', 'file runs in shell-free mode');
+  assert.deepEqual(await ghSkills('awesome cursor skill'), []);
+});
+
+test('liveSearch: AIO_NO_GH=1 → skills lane absent from sources and errors', async (t) => {
+  const it = detectIntent('awesome cursor skills list');
+  assert.ok(it.skills, 'intent routes skills → the skip is live.js\'s guard, not the router');
+  const net = mockLive(t);
+
+  const r = await liveSearch('awesome cursor skills list');
+
+  assert.ok(!r.sources.includes('skills'), `skills lane never scheduled: ${r.sources}`);
+  assert.ok(!r.errors.some((e) => e.src === 'skills'), 'no skills entry in errors either');
+  assert.deepEqual(r.sources, ['github', 'npm'], 'only the fetch-based lanes answer');
+  assert.equal(net.mock.callCount(), 2, 'github + npm probed once each — no extra lane ran');
+});
+
+test('ghSkills: gh api failure REJECTS (errors[] path, never a fake empty answer)', async (t) => {
+  const prevGh = process.env.AIO_NO_GH;
+  const prevPath = process.env.PATH;
+  delete process.env.AIO_NO_GH; // engage the real `gh api` lane
+  process.env.PATH = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-no-gh-')); // gh unresolvable → spawn fails
+  t.after(() => {
+    if (prevGh === undefined) delete process.env.AIO_NO_GH;
+    else process.env.AIO_NO_GH = prevGh;
+    process.env.PATH = prevPath;
+  });
+
+  await assert.rejects(ghSkills('awesome cursor skill'), /ENOENT/, 'gh failure must reject, not return []');
 });

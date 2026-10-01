@@ -8,6 +8,7 @@ import path from 'node:path';
 process.env.AIO_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-doctor-state-'));
 const { runChecks, runDoctor } = await import('../src/doctor.js');
 const { STATE_DIR } = await import('../src/paths.js');
+const { BLOCK_START, BLOCK_END } = await import('../src/write.js');
 
 const MANIFEST = path.join(STATE_DIR, 'aio-context.md');
 const SLIM_MANIFEST = [
@@ -83,6 +84,13 @@ test('runChecks: AIO_OFFLINE=1 + fresh slim manifest → ok=true (deterministic,
     throw new Error(`network must not be touched in offline mode: ${input}`);
   });
   fs.writeFileSync(MANIFEST, SLIM_MANIFEST); // fresh mtime → not stale
+  // Hermetic agent env: temp home whose ~/AGENTS.md carries the block, so
+  // globalWanted (hermes/freebuff on the real PATH, or ~/AGENTS.md existing)
+  // can never turn the "agent blocks" check into [!!] missing: global.
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-doctor-home-'));
+  fs.writeFileSync(path.join(home, 'AGENTS.md'), `${BLOCK_START}\nmocked\n${BLOCK_END}\n`);
+  t.mock.method(os, 'homedir', () => home);
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
 
   const r = await runChecks({});
   const live = r.checks.find((c) => c.id === 'live');

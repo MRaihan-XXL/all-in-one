@@ -33,22 +33,20 @@ test('blockState: missing / no block / injected', () => {
   assert.equal(blockState(wired), 'injected');
 });
 
-test('runStatus: healthy — fresh slim live manifest in STATE_DIR + repos dir', (t) => {
+test('runStatus: healthy — fresh slim live manifest in STATE_DIR', (t) => {
   t.mock.method(console, 'log', () => {}); // keep test output clean
   fs.writeFileSync(MANIFEST, SLIM_MANIFEST); // fresh mtime → not stale
   t.after(() => fs.rmSync(MANIFEST, { force: true }));
 
-  const repos = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-status-repos-'));
-  fs.mkdirSync(path.join(repos, 'alpha'));
-  fs.mkdirSync(path.join(repos, 'beta'));
-  fs.mkdirSync(path.join(repos, '.git'));
-
-  const r = runStatus({ repos });
+  const r = runStatus({});
   const out = r.lines.join('\n');
   const manifestLine = r.lines.find((l) => l.startsWith('manifest'));
   assert.ok(manifestLine && manifestLine.includes(MANIFEST), `manifest line points at ${MANIFEST}`);
   assert.match(out, /live architecture \(no search storage\)/, 'slim manifest → live architecture line');
-  assert.match(out, /\(2 dirs\)/, 'non-dot dirs counted, .git skipped');
+  assert.match(out, /agents/, 'agents section present');
+  // opencode row must exist in one of the known states — n/a on machines where
+  // ~/.config/opencode is absent (e.g. clean CI runners), never a bare gap.
+  assert.match(out, /opencode\s+(injected\*?|missing|n\/a|no block)/, 'target list from shared blockTargets');
   assert.ok(!r.issues.some((i) => i.includes('manifest')), r.issues.join('; '));
   assert.equal(r.ok, true, r.issues.join('; '));
 });
