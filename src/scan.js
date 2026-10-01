@@ -1,4 +1,4 @@
-// scan.js — read-only machine scan: agents, repos, MCP binary
+// scan.js — read-only machine scan: agents, MCP binary
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -58,22 +58,3 @@ export function detectBinary(name) {
   return findOnPath(name);
 }
 
-/** Scan a directory of cloned git repos; URL comes from each real .git/config. */
-export function scanRepos(reposDir) {
-  if (!reposDir || !fs.existsSync(reposDir)) return [];
-  const out = [];
-  for (const ent of fs.readdirSync(reposDir, { withFileTypes: true })) {
-    if (!ent.isDirectory()) continue;
-    const full = path.join(reposDir, ent.name);
-    let url = '';
-    try {
-      const cfg = fs.readFileSync(path.join(full, '.git', 'config'), 'utf8');
-      const m = cfg.match(/url\s*=\s*(\S+)/);
-      if (m) url = m[1].replace(/\.git$/, '');
-    } catch {
-      /* not a git repo — listed as local-only */
-    }
-    out.push({ name: ent.name, url, path: full });
-  }
-  return out.sort((a, b) => a.name.localeCompare(b.name));
-}

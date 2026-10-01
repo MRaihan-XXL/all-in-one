@@ -1,20 +1,13 @@
 // rollback.js — `aio rollback`: surgically undo everything setup did (FR7)
-import path from 'node:path';
 import os from 'node:os';
-import { stripBlock, removeMcpAdditions, backup } from './write.js';
+import { stripBlock, removeMcpAdditions } from './write.js';
+import { blockTargets } from './targets.js';
 import { BACKUP_DIR } from './paths.js';
 
 export function runRollback() {
   const home = os.homedir();
-  const targets = [
-    { label: 'opencode', file: path.join(home, '.config', 'opencode', 'AGENTS.md') },
-    { label: 'claude', file: path.join(home, '.claude', 'CLAUDE.md') },
-    { label: 'kimi', file: path.join(home, '.kimi-code', 'AGENTS.md') },
-    { label: 'jcode', file: path.join(home, '.jcode', 'AGENTS.md') },
-    { label: 'codex', file: path.join(home, '.codex', 'AGENTS.md') },
-    { label: 'gemini', file: path.join(home, '.gemini', 'GEMINI.md') },
-    { label: 'global', file: path.join(home, 'AGENTS.md') },
-  ];
+  // one shared list with setup/status/doctor — global always included (B-04)
+  const targets = blockTargets(home, { global: 'always' });
 
   console.log('aio rollback');
   console.log('─'.repeat(76));

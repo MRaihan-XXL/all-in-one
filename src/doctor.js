@@ -5,10 +5,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execFile } from 'node:child_process';
 import { STATE_DIR, readState } from './paths.js';
 import { detectAgents } from './scan.js';
-import { BLOCK_START, ledgerList } from './write.js';
+import { BLOCK_START, ledgerList, ledgerFile } from './write.js';
+import { blockTargets } from './targets.js';
 import { getVersion } from './banner.js';
 
 /** Absolute path to the CLI entry — fileURLToPath (POSIX + Windows + spaces-safe). */
@@ -16,34 +17,56 @@ export function aioBinPath() {
   return fileURLToPath(new URL('../bin/aio.js', import.meta.url));
 }
 
-const AGENT_FILES = [
-  ['.config/opencode/AGENTS.md', '.config/opencode'],
-  ['.claude/CLAUDE.md', '.claude'],
-  ['.kimi-code/AGENTS.md', '.kimi-code'],
-  ['.jcode/AGENTS.md', '.jcode'],
-  ['.codex/AGENTS.md', '.codex'],
-  ['.gemini/GEMINI.md', '.gemini'],
-  ['AGENTS.md', null],
-];
-
 function line(level, id, detail) {
   const tag = level === 'ok' ? '[ok]' : level === 'warn' ? '[~~]' : '[!!]';
   return { level, id, detail, text: `${tag} ${id.padEnd(14)} ${detail}` };
 }
 
-/** Run all checks. Returns { checks, issues, warns, ok }. */
+/** All network/subprocess probes in parallel (P-02) — results consumed in order. */
+function probeLive() {
+  if (process.env.AIO_OFFLINE === '1') return Promise.resolve({ ok: true, offline: true });
+  return fetch('https://api.github.com/rate_limit', {
+    headers: { 'user-agent': `aio-connect/${getVersion()}` },
+    signal: AbortSignal.timeout(3000),
+  })
+    .then((res) => (res.ok ? { ok: true } : Promise.reject(new Error(`HTTP ${res.status}`))))
+    .catch((e) => ({ ok: false, msg: e.message }));
+}
+
+function probeOllama() {
+  return fetch(`${process.env.OLLAMA_HOST || 'http://localhost:11434'}/api/tags`, {
+    signal: AbortSignal.timeout(1500),
+  })
+    .then((res) => res.json())
+    .then((data) => ({ ok: true, models: (data.models || []).map((m) => m.name).slice(0, 4).join(', ') }))
+    .catch(() => ({ ok: false }));
+}
+
+function probeGhAuth() {
+  if (process.env.AIO_NO_GH === '1') return Promise.resolve({ state: 'off' });
+  return new Promise((resolve) => {
+    execFile('gh', ['auth', 'status'], { timeout: 4000, windowsHide: true }, (err) => {
+      resolve({ state: err ? 'missing-or-out' : 'ok' });
+    });
+  });
+}
+
+/** Run all checks. Returns { checks, issues, warns, ok } — always 9 checks (B-09). */
 export async function runChecks(opts = {}) {
   const home = os.homedir();
   const checks = [];
 
-  // 1. Node
+  // Kick off the three probes together, then report in stable order (P-02).
+  const [live, ollama, gh] = await Promise.all([probeLive(), probeOllama(), probeGhAuth()]);
+
+  // 1. Node — supported line is >= 22 (package engines); older runs are unsupported (B-08)
   const major = Number(process.versions.node.split('.')[0]);
   checks.push(
     major >= 22
-      ? line('ok', 'node', `v${process.versions.node} (>= 22 recommended line)`)
+      ? line('ok', 'node', `v${process.versions.node} (supported: >= 22)`)
       : major >= 18
-        ? line('warn', 'node', `v${process.versions.node} — works, but >= 22 recommended`)
-        : line('bad', 'node', `v${process.versions.node} — Node >= 18 required`)
+        ? line('warn', 'node', `v${process.versions.node} — runs, but unsupported; install Node >= 22`)
+        : line('bad', 'node', `v${process.versions.node} — Node >= 22 required`)
   );
 
   // 2. State
@@ -55,26 +78,22 @@ export async function runChecks(opts = {}) {
   );
 
   // 3. Live sources (info — the catalog IS the network; warn never fails CI)
-  if (process.env.AIO_OFFLINE === '1') {
-    checks.push(line('ok', 'live', 'AIO_OFFLINE=1 — live search intentionally disabled'));
-  } else {
-    try {
-      const res = await fetch('https://api.github.com/rate_limit', { headers: { 'user-agent': `aio-connect/${getVersion()}` }, signal: AbortSignal.timeout(3000) });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      checks.push(line('ok', 'live', 'github reachable — ask searches GitHub + npm + crates (no search storage)'));
-    } catch (e) {
-      checks.push(line('warn', 'live', `github unreachable (${e.message}) — aio ask will still try npm/crates`));
-    }
-  }
+  checks.push(
+    live.offline
+      ? line('ok', 'live', 'AIO_OFFLINE=1 — live search intentionally disabled')
+      : live.ok
+        ? line('ok', 'live', 'github reachable — ask searches GitHub + npm + crates (no search storage)')
+        : line('warn', 'live', `github unreachable (${live.msg}) — aio ask will still try npm/crates`)
+  );
 
   // 4. Manifest freshness
   const manifestPath = path.join(STATE_DIR, 'aio-context.md');
   if (fs.existsSync(manifestPath)) {
     const txt = fs.readFileSync(manifestPath, 'utf8');
     const ageDays = (Date.now() - fs.statSync(manifestPath).mtimeMs) / 86400000;
-    const live = txt.includes('Live architecture');
-    const detail = `${live ? 'live architecture (no search storage)' : 'LEGACY layout'} · ${ageDays.toFixed(1)}d old — ${manifestPath}`;
-    if (!live) {
+    const liveLayout = txt.includes('Live architecture');
+    const detail = `${liveLayout ? 'live architecture (no search storage)' : 'LEGACY layout'} · ${ageDays.toFixed(1)}d old — ${manifestPath}`;
+    if (!liveLayout) {
       checks.push(line('bad', 'manifest', `${detail} — fix: aio --fix`));
     } else if (ageDays > 7) {
       checks.push(line('warn', 'manifest', `${detail} — stale (>7d) — refresh: aio`));
@@ -85,24 +104,17 @@ export async function runChecks(opts = {}) {
     checks.push(line('bad', 'manifest', 'aio-context.md missing — fix: aio --fix'));
   }
 
-  // 5. Agent blocks
+  // 5. Agent blocks — from the shared target list (B-04); only count agents
+  //    whose config dir exists (an agent you don't have is not "missing")
+  const agents = detectAgents();
   let injected = 0;
   let installed = 0;
   const missing = [];
-  const agents = detectAgents();
-  const globalWanted =
-    fs.existsSync(path.join(home, 'AGENTS.md')) ||
-    agents.some((a) => a.found && (a.name === 'hermes' || a.name === 'freebuff'));
-  for (const [rel, dirHint] of AGENT_FILES) {
-    const file = path.join(home, rel);
-    if (dirHint) {
-      if (!fs.existsSync(path.join(home, dirHint))) continue; // agent not installed → skip
-    } else if (!globalWanted) {
-      continue; // ~/AGENTS.md only matters for hermes/freebuff (or if it already exists)
-    }
+  for (const { label, file, dir } of blockTargets(home, { agents })) {
+    if (!fs.existsSync(dir)) continue;
     installed++;
     if (fs.existsSync(file) && fs.readFileSync(file, 'utf8').includes(BLOCK_START)) injected++;
-    else missing.push(path.basename(file));
+    else missing.push(label);
   }
   checks.push(
     missing.length
@@ -114,43 +126,54 @@ export async function runChecks(opts = {}) {
   const found = agents.filter((a) => a.found).map((a) => a.name);
   checks.push(line('ok', 'agents', found.length ? found.join(', ') : 'none detected'));
 
-  // 7. Ollama (info — powers `aio ask` AI rerank)
-  try {
-    const res = await fetch(`${process.env.OLLAMA_HOST || 'http://localhost:11434'}/api/tags`, { signal: AbortSignal.timeout(1500) });
-    const data = await res.json();
-    checks.push(line('ok', 'ollama', `reachable — models: ${(data.models || []).map((m) => m.name).slice(0, 4).join(', ')}`));
-  } catch {
-    checks.push(line('warn', 'ollama', 'not reachable — ask rerank skipped (source/BM25 order kept)'));
-  }
+  // 7. gh auth — the skills lane reports an error on use without it (W1)
+  checks.push(
+    gh.state === 'ok'
+      ? line('ok', 'gh auth', 'logged in — skills lane enabled (gh api search/code)')
+      : gh.state === 'off'
+        ? line('ok', 'gh auth', 'AIO_NO_GH=1 — skills lane disabled by choice')
+        : line('warn', 'gh auth', 'not logged in — skills lane will report an error on use (run `gh auth login`)')
+  );
 
-  // 8. MCP ledger — entries aio added must still exist and their files must parse
-  const ledger = ledgerList();
-  if (ledger.length) {
-    const broken = [];
-    for (const { file, key } of ledger) {
-      if (!fs.existsSync(file)) {
-        broken.push(`${key}: ${path.basename(file)} missing`);
-        continue;
-      }
-      const txt = fs.readFileSync(file, 'utf8');
-      if (file.endsWith('.jsonc')) {
-        if (!txt.includes(key)) broken.push(`${key}: entry gone from ${path.basename(file)}`);
-      } else if (file.endsWith('.toml')) {
-        if (!txt.includes(key)) broken.push(`${key}: entry gone from ${path.basename(file)}`);
-      } else {
-        try {
-          JSON.parse(txt);
+  // 8. Ollama (info — powers `aio ask` AI rerank)
+  checks.push(
+    ollama.ok
+      ? line('ok', 'ollama', `reachable — models: ${ollama.models || 'none'}`)
+      : line('warn', 'ollama', 'not reachable — ask rerank skipped (source/BM25 order kept)')
+  );
+
+  // 9. MCP ledger — always reported (B-09); missing ledger + state = attribution lost (S-01)
+  if (!fs.existsSync(ledgerFile()) && Object.keys(state).length) {
+    checks.push(line('warn', 'mcp ledger', 'ledger missing — re-run `aio` to re-record MCP entries for rollback'));
+  } else {
+    const ledger = ledgerList();
+    if (ledger.length) {
+      const broken = [];
+      for (const { file, key } of ledger) {
+        if (!fs.existsSync(file)) {
+          broken.push(`${key}: ${path.basename(file)} missing`);
+          continue;
+        }
+        const txt = fs.readFileSync(file, 'utf8');
+        if (file.endsWith('.jsonc') || file.endsWith('.toml')) {
           if (!txt.includes(key)) broken.push(`${key}: entry gone from ${path.basename(file)}`);
-        } catch {
-          broken.push(`${path.basename(file)}: parse error — fix before \`aio rollback\``);
+        } else {
+          try {
+            JSON.parse(txt);
+            if (!txt.includes(key)) broken.push(`${key}: entry gone from ${path.basename(file)}`);
+          } catch {
+            broken.push(`${path.basename(file)}: parse error — fix before \`aio rollback\``);
+          }
         }
       }
+      checks.push(
+        broken.length
+          ? line('warn', 'mcp ledger', broken.join('; '))
+          : line('ok', 'mcp ledger', `${ledger.length} aio-added MCP entry file(s) present & valid`)
+      );
+    } else {
+      checks.push(line('ok', 'mcp ledger', '0 entries on record — nothing aio-added'));
     }
-    checks.push(
-      broken.length
-        ? line('warn', 'mcp ledger', broken.join('; '))
-        : line('ok', 'mcp ledger', `${ledger.length} aio-added MCP entry file(s) present & valid`)
-    );
   }
 
   const issues = checks.filter((c) => c.level === 'bad').length;
@@ -166,8 +189,9 @@ export async function runDoctor(opts = {}) {
   let fixNote = '';
   if (opts.fix && !ok) {
     // Safe fix = re-run the idempotent setup (regen manifest + reinject blocks).
+    // --yes: the fix itself is the consent (non-TTY gate would stop at the plan).
     try {
-      execFileSync(process.execPath, [aioBinPath()], {
+      execFileSync(process.execPath, [aioBinPath(), '--yes'], {
         stdio: 'ignore',
         timeout: 120000,
       });
@@ -184,6 +208,6 @@ export async function runDoctor(opts = {}) {
     }
   }
   const summary = `${issues} issue(s), ${warns} warning(s)`;
-  const hint = !ok ? `\n→ run \`aio doctor --fix\` (regenerate manifest + agent blocks) or \`aio\` directly.` : '';
+  const hint = !ok ? `\n→ run \`aio doctor --fix\` (regenerate manifest + agent blocks) or \`aio --yes\` directly.` : '';
   return { ok, text: `${header}\n${body}${fixNote}\n${summary}${hint}`, exit: ok ? 0 : 1 };
 }

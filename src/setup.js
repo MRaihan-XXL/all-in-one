@@ -1,32 +1,19 @@
-// setup.js — the `aio` default command: scan → generate → inject → ensure → report
+// setup.js — the `aio` default command: detect → generate → inject → ensure → report
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { resolveReposDir, writeState, BACKUP_DIR, STATE_DIR } from './paths.js';
+import { writeState, BACKUP_DIR, STATE_DIR } from './paths.js';
 import { detectAgents, detectBinary } from './scan.js';
-import { buildBlock, injectBlock, genContext, ensureMcp, fixPaths, backup, pruneBackups } from './write.js';
+import { buildBlock, injectBlock, genContext, ensureMcp, pruneBackups } from './write.js';
+import { blockTargets } from './targets.js';
 import { getVersion } from './banner.js';
-
-function targetFiles(home, agents) {
-  const files = [
-    { label: 'opencode', file: path.join(home, '.config', 'opencode', 'AGENTS.md') },
-    { label: 'claude', file: path.join(home, '.claude', 'CLAUDE.md') },
-    { label: 'kimi', file: path.join(home, '.kimi-code', 'AGENTS.md') },
-    { label: 'jcode', file: path.join(home, '.jcode', 'AGENTS.md') },
-    { label: 'codex', file: path.join(home, '.codex', 'AGENTS.md') },
-    { label: 'gemini', file: path.join(home, '.gemini', 'GEMINI.md') },
-  ];
-  // global ~/AGENTS.md only for hermes/freebuff (or when the file already exists)
-  const globalFile = path.join(home, 'AGENTS.md');
-  const wantGlobal =
-    fs.existsSync(globalFile) || agents.some((a) => a.found && (a.name === 'hermes' || a.name === 'freebuff'));
-  if (wantGlobal) files.push({ label: 'global', file: globalFile });
-  return files;
-}
 
 function row(tag, name, detail) {
   console.log(`  [${tag}] ${name.padEnd(26)} ${detail}`);
 }
+
+/** Report tag: '!' = error/parse error, ' ' = skipped, 'x' = ok (B-07). */
+const tagOf = (status) => (/error/i.test(status) ? '!' : /skip/i.test(status) ? ' ' : 'x');
 
 export async function runSetup(opts = {}) {
   const version = getVersion();
@@ -37,11 +24,6 @@ export async function runSetup(opts = {}) {
     console.error(`[aio] warning: Node ${process.versions.node} detected — Node >= 22 recommended`);
   }
 
-  const reposDir = dry && opts.repos ? path.resolve(opts.repos) : resolveReposDir(dry ? null : opts.repos);
-  if (!reposDir) {
-    console.log('[aio] note: repos dir not found (optional — install plan only). Pass --repos <dir>.');
-  }
-
   const agents = detectAgents();
   const mcpBin = detectBinary('codebase-memory-mcp');
 
@@ -49,10 +31,10 @@ export async function runSetup(opts = {}) {
   if (!dry) genContext({ version, agents }, manifestPath);
 
   const body = buildBlock({ version, manifestPath });
-  const targets = targetFiles(home, agents);
+  const targets = blockTargets(home, { agents });
   const blockResults = targets.map((t) => {
-    if (!fs.existsSync(path.dirname(t.file))) {
-      return { ...t, status: 'skipped (agent not installed)' };
+    if (!fs.existsSync(t.dir)) {
+      return { ...t, status: 'skipped (no config dir yet)' };
     }
     return { ...t, ...injectBlock(t.file, body, `inject-${t.label}`, { dry }) };
   });
@@ -61,13 +43,10 @@ export async function runSetup(opts = {}) {
     ? ensureMcp(mcpBin, { dry })
     : [{ target: 'codebase-memory-mcp', status: 'binary not on PATH — skipped' }];
 
-  const pathResults = fixPaths(dry);
-
   let pruned = 0;
   if (!dry) {
     writeState({
       version,
-      reposDir,
       manifestPath,
       lastRun: new Date().toISOString(),
     });
@@ -95,15 +74,11 @@ export async function runSetup(opts = {}) {
   }
 
   console.log('\nContext block (auto-use rules + usage disclosure)');
-  for (const r of blockResults) row(r.status.includes('skip') ? ' ' : 'x', path.basename(r.file), `${r.status} — ${r.file}`);
+  for (const r of blockResults) row(tagOf(r.status), r.label, `${r.status} — ${r.file}`);
 
   console.log('\nMCP (codebase-memory-mcp)');
   if (!mcpResults.length) console.log('  [ ] none — no config files found');
-  for (const r of mcpResults) row(r.status.includes('skip') ? ' ' : 'x', r.target, r.status);
-
-  console.log('\nStale path repair (folder rename)');
-  if (!pathResults.length) console.log('  [x] clean — no broken "AI tutorial" references');
-  for (const r of pathResults) row('x', path.basename(r.target), r.status);
+  for (const r of mcpResults) row(tagOf(r.status), r.target, r.status);
 
   console.log('\nManifest (slim — no local catalog, search stays live)');
   if (dry) row(' ', 'aio-context.md', `would write — ${manifestPath}`);
@@ -111,11 +86,19 @@ export async function runSetup(opts = {}) {
     row('x', 'aio-context.md', `rules + disclosure + ${agents.filter((a) => a.found).length} agents · manifest data = live at ask time`);
     console.log(`  ${manifestPath}`);
   }
+
+  if (opts.showBlock) {
+    console.log('\nBlock preview (exact content that would be written)');
+    console.log('─'.repeat(76));
+    console.log(body);
+    console.log('─'.repeat(76));
+  }
+
   console.log('');
   console.log(dry ? 'Backups: none created (dry-run)' : `Backups: ${BACKUP_DIR}${pruned ? ` (${pruned} expired >30d pruned)` : ''}`);
   console.log(
     dry
-      ? 'Dry run complete — no files were written. Re-run without --dry-run to apply.'
+      ? 'Dry run complete — no files were written. Re-run with --yes (or confirm the prompt) to apply.'
       : 'Done. Every agent now searches LIVE (GitHub/npm/crates) — no slash-commands, no search history kept.'
   );
   if (!dry) console.log('Prompt flow: aio ask (live) → use ephemerally → report (link + function) → clean.');

@@ -27,7 +27,8 @@ export async function runEvolve(opts = {}) {
   const results = [];
 
   // 1. Regenerate manifest + reinject agent blocks (idempotent).
-  results.push(step('aio setup (manifest+blocks)', path.join(ROOT, 'bin', 'aio.js'), []));
+  //    --yes: the pipeline itself is the consent (non-TTY gate would stop at the plan).
+  results.push(step('aio setup (manifest+blocks)', path.join(ROOT, 'bin', 'aio.js'), ['--yes']));
 
   // 2. Health gate.
   results.push(step('doctor --check', path.join(ROOT, 'bin', 'aio.js'), ['doctor', '--check']));

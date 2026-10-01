@@ -1,4 +1,4 @@
-// paths.js — location resolution: state (~/.aio), repos dir
+// paths.js — location resolution: state (~/.aio)
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -8,9 +8,6 @@ export const STATE_DIR = process.env.AIO_STATE_DIR
   : path.join(os.homedir(), '.aio');
 export const CONFIG_FILE = path.join(STATE_DIR, 'config.json');
 export const BACKUP_DIR = path.join(STATE_DIR, 'backups');
-/** First existing repos dir under $HOME (platform-neutral; machines persist their own via state). */
-export const DEFAULT_REPOS_DIR =
-  ['github', 'repos', 'Projects', 'projects', 'code', 'dev'].map((d) => path.join(os.homedir(), d)).find((d) => fs.existsSync(d)) ?? null;
 
 export function readState() {
   try {
@@ -25,19 +22,4 @@ export function writeState(partial) {
   const next = { ...readState(), ...partial };
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(next, null, 2));
   return next;
-}
-
-/** Priority: --repos > $AIO_REPOS_DIR > persisted state > default (if it exists).
- *  {write:false} = read-only callers (status) must not touch config.json. */
-export function resolveReposDir(cliRepos, { write = true } = {}) {
-  if (cliRepos) {
-    const abs = path.resolve(cliRepos);
-    if (write) writeState({ reposDir: abs });
-    return abs;
-  }
-  if (process.env.AIO_REPOS_DIR) return path.resolve(process.env.AIO_REPOS_DIR);
-  const st = readState();
-  if (st.reposDir && fs.existsSync(st.reposDir)) return st.reposDir;
-  if (DEFAULT_REPOS_DIR) return DEFAULT_REPOS_DIR;
-  return null;
 }
