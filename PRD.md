@@ -4,7 +4,7 @@
 |---|---|
 | **Product** | `aio` — All-In-One auto-connect layer for AI coding agents |
 | **Package** | `aio-connect` (npm registry; GitHub repo `MRaihan-XXL/all-in-one`) |
-| **Version** | 1.4.1 |
+| **Version** | 1.5.0 |
 | **Status** | Approved for implementation |
 | **License** | GPL-3.0 |
 | **Docs language** | English (international) |
@@ -50,7 +50,7 @@ prompts in plain language — no slash commands.
 
 1. **Primary** — the owner: power user running 8 agents on one Windows
    machine; the catalog is **live** (GitHub 630M+ repos · npm · crates —
-   zero search storage), local clones optional (install plan only).
+   zero search storage).
 2. **Secondary** — public GitHub users: anyone installing
    `npm install -g aio-connect` on their own machine with
    their own repos/agents (data folder optional).
@@ -77,40 +77,51 @@ search for websites/URLs, and never ask the user to type `/…` for routing.
 **Acceptance:** block content contains explicit "never ask the user to type
 a slash-command" rule **and** the `aio ask` → use → report → clean mandate.
 
-### FR3 — Manifest = slim live-architecture rules (no catalog data)
+### FR3 — Manifest = slim live-architecture status (no catalog data, no rules)
 Generated file `aio-context.md` carries no catalog tables — the catalog is
-live, so there is nothing to store:
+live, so there is nothing to store. Since v1.5.0 (M-04) it also carries **no
+rules**: the auto-use rules and the usage-disclosure rule live only in the
+injected block (single source of truth, no token double-cost per session):
 - **Header** — live-architecture statement (GitHub 630M+ repos + public
   skills, npm 3M+ packages, crates 340K+; websites → the agent's own web
-  search; **no search storage**) + the instruction-level usage-disclosure rule
-  (model-dependent compliance) + the prompt
+  search; **no search storage**) + a pointer to the block
+  ("rules & mandatory disclosure live in the `AIO AUTO-CONTEXT` block")
+  + the prompt
   flow (`aio ask` → ephemeral use → report → `borrow --clean`).
 - **AGENTS DETECTED** — per-agent found/not-installed list.
 
 Repositories/tools/sites/skills are no longer enumerated: `aio ask` resolves
-them at query time (FR9/FR11); the optional `--repos` dir feeds only the
-install plan.
+them at query time (FR9/FR11).
 
 **Acceptance:** after setup the manifest exists, states "zero search storage", and
 `aio doctor`/`aio status` flag a legacy (pre-v1.3) catalog layout as stale
 until refreshed.
 
-### FR4 — Update resilience (repos & features)
-- `aio` **rescans** on every run: a repository added to the repos directory
-  is picked up by the optional install plan after a re-run (the catalog
-  itself is live, so it never goes stale).
+### FR4 — Update resilience (agent set & block)
+- `aio` **rescans** on every run: a newly installed agent is detected and
+  wired after a re-run (the catalog itself is live, so it never goes stale).
+  There is no repos directory or install plan since v1.5.0 — `--repos`,
+  `AIO_REPOS_DIR`, `resolveReposDir` and `scanRepos` were removed from the
+  package.
 - The injected block is marker-delimited (`aio:auto-config:v1`) and
   **regenerated** from the running package version: updating `aio` and
   re-running replaces block content in place — never duplicated, never stale.
+- **Drift detection (C-02)** — each inject records a SHA-256 prefix (16 hex)
+  per target in `~/.aio/block-hashes.json`; `aio status` flags hand-edited
+  blocks as `injected*` (stale note + issue), and the next `aio` run reports
+  `updated (hand-edit replaced — kept in backups/)` — the edit stays in
+  `~/.aio/backups/`.
 
-**Acceptance:** run `aio` twice → block appears exactly once; add a dummy repo
-folder → re-run → `aio status` shows the new dir count.
+**Acceptance:** run `aio` twice → block appears exactly once; hand-edit an
+injected block → `aio status` shows `injected*`; re-run `aio` → replaced and
+the edit kept in `backups/`.
 
 ### FR5 — Auto-update
-`aio update` reinstalls the package from npm (`npm install -g aio-connect`;
-GitHub `github:<owner>/all-in-one` remains a fallback source) and then
-automatically re-runs setup with the new code, so rules/manifest pick up the
-new version.
+`aio update` reinstalls the package from npm (`npm install -g aio-connect` —
+npm is the only source since v1.5.0) and then re-runs setup with the
+**freshly installed global binary** (`npm root -g` → `bin/aio.js --yes`), so
+the new rules/manifest are applied by the new code and never by a stale
+npx-cached copy (B-03).
 
 **Acceptance:** `aio update` exits 0 on success, prints new version + setup
 report; offline → clear error, exit 1, no partial damage.
@@ -184,17 +195,19 @@ hit, `--json` (`stored: 0`), and the borrow lifecycle (24 h TTL purge,
 `--clean`, `--list`).
 
 ### FR10 — Self-diagnosis & self-upgrade (`doctor` / `evolve`)
-- `aio doctor [--check|--fix]` runs read-only checks — Node, persisted state,
-  live source reachability (no search storage), manifest freshness + live-layout
-  sync, agent blocks, Ollama reachability — and exits 1 when any issue exists
-  (`--check` = CI gate); `--fix` re-runs the idempotent setup pipeline (safe
-  fixes only).
+- `aio doctor [--check|--fix]` runs **exactly 9 read-only checks**, each row
+  tagged `[ok]` / `[~~]` / `[!!]` — Node, persisted state, live source
+  reachability (no search storage), manifest freshness + live layout, agent
+  blocks, agents detected, `gh` auth, Ollama, MCP ledger
+  (B-08, B-09; network probes run in parallel) — and exits 1 when any issue
+  exists (`--check` = CI gate); `--fix` re-runs the idempotent setup pipeline
+  (safe fixes only).
 - `aio evolve` runs the full pipeline in one command: setup (manifest +
   blocks) → `doctor --check` → `npm test`, prints a per-step pass/fail report
   with timings, and **never commits or pushes** (git stays with the human).
-  The install-plan scan step was dropped: `scripts/install-tools.mjs` is
-  dev-machine tooling and is **not shipped in the npm package** (the repos-dir
-  scan that feeds the install plan still runs inside `aio setup`).
+  No repos-dir or install-plan scan runs anywhere: `scripts/install-tools.mjs`
+  is dev-machine tooling, not shipped in the npm package, and `aio setup`
+  contains no repository scan (removed entirely in v1.5.0).
 
 **Acceptance:** `node --test` covers doctor checks; `aio evolve` reports every
 step green on the owner machine (verified 2026-09-30).
@@ -203,9 +216,12 @@ step green on the owner machine (verified 2026-09-30).
 The catalog is **the network, queried at prompt time** — unlimited (630M+
 GitHub repos, 3M+ npm packages, 340K+ crates, 6.8M+ public skill files), always
 current, and never persisted: no SQLite file, no `catalog.js`, no build step,
-no search history. Every answering source degrades silently (4 s timeout,
-missing `gh`, rate limit → skip), so a partial answer still returns; the only
-bytes aio writes are the manifest, the agent blocks, backups and MCP state
+no search history. Answering sources degrade rather than block the answer
+(4 s timeout, rate limit → skip; a lane that *fails* — e.g. the skills lane
+without `gh` auth — is reported in `errors[]`, never silently faked as "0
+hits"), so a partial answer still returns; the only
+bytes aio writes are the manifest, the agent blocks, backups, MCP state and
+the drift-hash list `block-hashes.json`
 (see docs/CONFIG.md).
 
 **Sources for the figures** (all floors, re-verified 2026-09-30 after a user
@@ -216,7 +232,7 @@ code search `total_count` = 6,832,128; npm packages **3M+** — npm's official
 figure (unchanged).
 
 **Acceptance:** `aio ask --json` reports `stored: 0` (asserted in the test
-suite) and there is no catalog file to write — `npm test` **52/52** as of
+suite) and there is no catalog file to write — `npm test` **79/79** as of
 2026-10-01.
 
 ### FR12 — Security & trust
@@ -228,19 +244,25 @@ suite) and there is no catalog file to write — `npm test` **52/52** as of
   skills neutral 0.5); `why` lines show `+ trust high|mid|low`.
 - **Verify-before-run note** — every `aio ask` output ends with
   `note: ranked by keyword match + source popularity — public results are unvetted; verify before running npx/uvx or cloning (docs/THREATS.md).`
+- **Consent gate (B-02)** — `aio` / `aio init` print the plan first: TTY →
+  `Proceed with these writes? [y/N] ` prompt; non-TTY → plan only, exit 0,
+  nothing written ("Re-run with --yes to apply."); `--yes` applies silently;
+  `--dry-run` / `aio preview` are always plan-only.
 - **`aio --dry-run`** — plan-only setup: prints exactly what would change
-  (block inject/update, MCP would-add, path repairs, manifest would-write)
-  and writes nothing (no backup, no state write).
-- **Write guards** — backups before every modification, malformed target
-  configs reported as `parse error` and never overwritten, rollback ledger
-  for MCP entries.
+  (block inject/update, MCP would-add, manifest would-write) and writes
+  nothing at all — no manifest, no block, no MCP entry, no backups, no state
+  files (`config.json`, `block-hashes.json`, `mcp-ledger.json` untouched).
+  The same holds for `aio preview`, non-TTY plan output and `aio init --dry-run`.
+- **Write guards** — consent gate above, backups before every modification,
+  hand-edit drift detection (FR4), malformed target configs reported as
+  `parse error` and never overwritten, rollback ledger for MCP entries.
 - **`gh` token** — read at call time into memory only; never logged or
   persisted.
 
 **Acceptance:** `test/safety.test.js` covers `--dry-run` (no writes);
 `test/relevance.test.js` covers trust-weighted ranking; `node scripts/eval-relevance.mjs`
 prints hit@8 (**20/20**, 100%) and hit@1 (**19/20**, 95%), MRR **0.97** —
-measured 2026-10-01; suite **52/52**.
+measured 2026-10-01; suite **79/79**.
 
 ## 5. Non-functional requirements
 
@@ -273,22 +295,27 @@ measured 2026-10-01; suite **52/52**.
 
 | Command | Behavior |
 |---|---|
-| `aio` | Full setup: scan → manifest → inject → MCP ensure → path fix → status table |
-| `aio status` | Read-only health report (state, manifest, repo/install counts, agent blocks) |
+| `aio` | Full setup: scan → manifest → inject → MCP ensure → status table. **Consent gate**: plan first — TTY asks `Proceed with these writes? [y/N] `, non-TTY → plan only, exit 0, nothing written; `--yes` writes silent |
+| `aio preview` | Plan-only setup (alias of `--dry-run`) that also shows the exact block that would be written |
+| `aio init [--copilot]` | Project scope: same gate; injects the block into `./AGENTS.md`; `--copilot` also writes `.github/copilot-instructions.md` (pointer only). Not reversed by `rollback` |
+| `aio status` | Read-only health report (state, manifest, agent blocks — hand-edited blocks flagged `injected*`) |
 | `aio ask "<prompt>"` | **Live search router**: GitHub (630M+ repos + `filename:SKILL.md` skills, 6.8M+ files) + npm (3M+) + crates (340K+) in parallel, 4 s/source; BM25 merge + source diversity + optional warm-Ollama rerank; every hit prints link + one-line function + `<src>` tag; `--json` (`stored: 0`) |
 | `aio borrow "<kw>"` | Optional live GitHub search for what you want cloned; `--get <owner/repo>` shallow-clone to `%TEMP%\aio-borrow` (24 h TTL, 1 GB disk guard); `--list` / `--clean` |
-| `aio doctor [--check\|--fix]` | Self-diagnosis: node / state / live sources / manifest-sync / agent blocks / Ollama; `--check` = CI gate, `--fix` = safe repair |
+| `aio doctor [--check\|--fix]` | Self-diagnosis: 9 checks (node / state / live sources / manifest / agent blocks / agents / gh auth / Ollama / MCP ledger), rows tagged `[ok]`/`[~~]`/`[!!]`; `--check` = CI gate, `--fix` = safe repair |
 | `aio evolve` | Pipeline: setup (manifest + blocks) → `doctor --check` → `npm test`; never commits |
 | `aio update` | Reinstall latest from npm → re-run setup automatically |
 | `aio rollback` | Remove injected block + reverse MCP additions from ledger |
 | `aio --help` | Usage + branding |
 | `aio --version` | Print package version |
 
-Options: `--repos <dir>` (repositories directory — optional, install plan
-only), `--json` (machine-readable output for `ask` / `borrow`). Environment
-overrides: `AIO_REPOS_DIR`, `AIO_STATE_DIR` (state dir, default `~/.aio`),
+Options: `--yes` (apply the setup plan without prompting — required for
+non-interactive writes), `--dry-run` (plan only, write nothing), `--copilot`
+(`aio init`: also write `.github/copilot-instructions.md`), `--json`
+(machine-readable output for `ask` / `borrow`). Environment overrides:
+`AIO_STATE_DIR` (state dir, default `~/.aio`),
 `AIO_OFFLINE=1`, `AIO_NO_GH=1`, `OLLAMA_HOST`, `AIO_OLLAMA_MODEL`,
-`AIO_NO_AI`. There is no `--home` flag and no `AIO_HOME` since v1.3.0.
+`AIO_NO_AI`. There is no `--home` flag, no `AIO_HOME` (since v1.3.0) and no
+`--repos` / `AIO_REPOS_DIR` (removed in v1.5.0).
 
 ## 7. Branding & documentation deliverables
 
@@ -310,14 +337,14 @@ overrides: `AIO_REPOS_DIR`, `AIO_STATE_DIR` (state dir, default `~/.aio`),
   and stats strips are embedded in `index.html` as well as the README.
 - **UI assets v2 — live pipeline** (2026-09-30, v1.3.0, finalised in 1.3.1) —
   same three SVGs re-rendered for the 100% live architecture, each verified via
-  headless Edge screenshots: `assets/aio-hero.svg` (version chip now `v1.4.1`,
+  headless Edge screenshots: `assets/aio-hero.svg` (version chip now `v1.5.0`,
   "LIVE — NO SEARCH STORAGE" panel, rows github 630M+ / npm 3M+ / crates 340K+ /
   skill files 6.8M+, ticker `$ prompt → aio ask → use → report ↗ → clean`;
   wordmark redrawn as constructed vector letterforms, no system fonts),
   `assets/flow.svg` (six-step live pipeline: parallel github/npm/crates/web
   lanes, top-8 + diversity, no catalog-miss branch; full-English labels + loop-wire
   `stroke-dasharray` fixed), `assets/aio-stats.svg` (630M+ · 3M+ · 340K+ ·
-  6.8M+ · 0 RESULTS KEPT · 52/52 TESTS, eyebrow "VERIFIED — LIVE CORPUS,
+  6.8M+ · 0 RESULTS KEPT · 79/79 TESTS, eyebrow "VERIFIED — LIVE CORPUS,
   FLOORS MEASURED 2026-09-30", chip "100% LIVE"), plus the new disclosure-card
   asset `assets/aio-disclosure.svg` (details in the next bullet). Figures are
   **verified floors, measured 2026-09-30** (sources in §4 FR11); the v1.2
@@ -327,6 +354,8 @@ overrides: `AIO_REPOS_DIR`, `AIO_STATE_DIR` (state dir, default `~/.aio`),
   github/npm/crates live, results ranked with the verify-before-run note, and
   the reply opens with the disclosure line; embedded in the README under the
   flow diagram.
+- **OG cover** `assets/og-cover.png` (added for v1.5.0) — 1200×630 social
+  card, generated from `scripts/og.html`.
 - **Disclosure card** `assets/aio-disclosure.svg` (added 2026-09-30 after a
   user evaluation) — FR6 disclosure card: terminal-style typewriter reveal of
   the usage line `[aio] Using [<name>](<url>) (<type>) — <function>`, link
@@ -413,6 +442,8 @@ Verified 2026-09-30 (v1.4.0): tests 45/45, doctor 0 issues / 0 warnings, eval hi
 
 Verified 2026-10-01 (v1.4.1): tests 52/52, doctor 0 issues / 0 warnings (incl. mcp-ledger check), eval hit@8 20/20 · hit@1 19/20 (95%) · MRR 0.97 (scripts/eval-relevance.mjs, 2026-10-01), evolve pipeline green, --dry-run writes nothing
 
+Verified 2026-10-01 (v1.5.0): tests **79/79**; `aio doctor --check` **0 issues, 0 warnings** (9 checks); consent gate verified (non-TTY → plan only, exit 0, nothing written; `--yes` applies); `--dry-run` / `aio preview` write nothing; hand-edit → `aio status` shows `injected*` → re-run keeps the edit in `backups/`.
+
 ## 10. Known limitations
 
 - **`aio ask` rerank needs a warm local Ollama.** The BM25 + source-diversity
@@ -424,8 +455,10 @@ Verified 2026-10-01 (v1.4.1): tests 52/52, doctor 0 issues / 0 warnings (incl. m
   skip the network call entirely.
 - **Live sources need network and can rate-limit.** Each source (GitHub, npm,
   crates) has a 4 s timeout and is skipped silently when it fails; GitHub
-  code search needs an authenticated `gh` (absent → skills lane returns `[]`),
-  `AIO_NO_GH=1` disables the `gh` subprocess, `AIO_OFFLINE=1` turns `aio ask`
+  code search needs an authenticated `gh` — without `gh` (or when `gh api`
+  fails) the skills lane lands in `errors[]` and is reported as a source
+  issue, never a silent empty answer, while `AIO_NO_GH=1` skips the lane
+  entirely; `AIO_OFFLINE=1` turns `aio ask`
   into an explicit offline message instead of a silent empty result.
 - **`aio borrow` needs network, `git`, and disk.** Live GitHub search
   rate-limits unauthenticated callers (403 → clear "rate limited" error;
@@ -465,3 +498,5 @@ Verified 2026-10-01 (v1.4.1): tests 52/52, doctor 0 issues / 0 warnings (incl. m
 | 2026-09-30 | v1.8 — aio 1.4.0: security pass — docs/THREATS.md threat model, trust-weighted ranking (65% relevance + 35% popularity), verify-before-run note, aio --dry-run, relevance eval hit@8 20/20, aioc alias (Adobe PATH conflict), claim precision (no search storage / instruction-level disclosure), 45/45 tests |
 
 | 2026-10-01 | v1.9 — aio 1.4.1: POSIX-safe paths (fileURLToPath), evolve = setup → doctor → tests (install-plan scan dropped — dev tooling, not shipped in the npm package), status strictly read-only, conditional global AGENTS block, ask error transparency (errors[], ok:false when every source fails), diversity identity fix (URL/name, ≤10 rows), default n=8, MCP rollback hardening (per-file try/catch; parse-error/missing ledger entries kept for retry), 30-day backup pruning, versioned UA, ranking eval hit@1 19/20 + MRR 0.97, 52/52 tests, test/ shipped in npm package, animation upgrade across all 5 SVG assets |
+
+| 2026-10-01 | v1.10 — aio 1.5.0: honest-review remediation (B-01–B-10; B-05 index.html nav `nth-child` rule fixed, B-06 index.html `og:image` → `assets/og-cover.png` at absolute URL https://mraihan-xxl.github.io/all-in-one/assets/og-cover.png), first-run consent gate (B-02: TTY plan + [y/N], non-TTY plan-only exit 0, --yes to apply, --dry-run/aio preview always plan), `aio init [--copilot]` project mode (./AGENTS.md official standard + .github/copilot-instructions.md pointer, same gate, not reversed by rollback), drift detection (C-02: block-hashes.json SHA-256 prefix, status `injected*` + stale note, hand-edit backed up before replace), shared target list (B-04: 6 agent files + Zed official path + conditional global), doctor = exactly 9 checks with [ok]/[~~]/[!!] tags incl. gh auth + MCP ledger (B-08/B-09), M-04 slim manifest (pointer + detected agents; rules live only in the block), B-03 update re-runs the fresh global bin with --yes, B-10 repos/install-plan/fixPaths tooling removed from src entirely (scanRepos, resolveReposDir, DEFAULT_REPOS_DIR, --repos, AIO_REPOS_DIR, reposDir, .aio-fixpaths), release.yml (tag v* → npm test → tag==version → npm publish via NPM_TOKEN secret → GH release) + eval.yml (daily cron relevance eval), assets/og-cover.png (1200×630, scripts/og.html), CHANGELOG.md shipped in package, 79/79 tests |

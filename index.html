@@ -7,7 +7,7 @@
 <meta name="description" content="aio writes the context blocks and manifest your AI coding agents read — one command, no slash-commands. Live search over GitHub (630M+ repos), npm and crates on every ask; zero bytes stored. Works with opencode, Claude Code, Codex, Gemini CLI, kimi, hermes, freebuff, jcode.">
 <meta property="og:title" content="aio — auto-connect your AI agents">
   <meta property="og:description" content="One command. Every agent. Live GitHub/npm/crates search on every ask, no search storage, disclosure built in.">
-<meta property="og:image" content="./assets/logo-tile.svg">
+<meta property="og:image" content="https://mraihan-xxl.github.io/all-in-one/assets/og-cover.png">
 <link rel="icon" type="image/svg+xml" href="./assets/logo-favicon.svg">
 <style>
   :root{
@@ -94,7 +94,7 @@
   @media(max-width:720px){
     .steps,.grid{grid-template-columns:1fr}
     .hero{padding:56px 0 48px}
-    nav a:nth-child(-n+1){display:none}
+    nav{gap:16px;font-size:13px}
   }
 </style>
 </head>
@@ -115,10 +115,11 @@
     <h1>Your agents already <em>know</em> everything.</h1>
     <p class="sub">aio writes the context blocks &amp; manifest that 8 agent CLIs read on every turn — wired in one command. On every prompt they run <code style="font-family:var(--mono)">aio ask</code>: a live search across GitHub (630M+ repos), npm (3M+) and crates (340K+), in parallel, every hit printed with link + one-line function — websites via your agent's own web search. Results are printed, then discarded: <strong>no search history is kept</strong> (aio does write its own manifest, agent blocks and timestamped backups).</p>
     <div class="cta">
-      <button class="cmd" id="cmd" title="Click to copy">npx aio-connect <span class="cp" id="cp">COPY</span></button>
+      <button class="cmd" id="cmd" title="Click to copy — preview first, then confirm">npx aio-connect --dry-run <span class="cp" id="cp">COPY</span></button>
       <a class="btn btn-primary" href="https://github.com/MRaihan-XXL/all-in-one">View on GitHub</a>
       <a class="btn btn-ghost" href="https://www.npmjs.com/package/aio-connect">npm package</a>
     </div>
+    <p class="sub" style="margin-top:14px;font-size:14px">Preview prints the plan and writes <strong>nothing</strong>. Apply it with <code style="font-family:var(--mono)">--yes</code> (or confirm the prompt in a terminal).</p>
     <div style="margin-top:44px">
       <img src="./assets/aio-hero.svg" width="100%" alt="aio — the everything connector for AI agents: live catalog across 630M+ github repos, 3M+ npm packages, 340K+ crates, 6.8M+ skill files; no search storage; live ask, borrow, doctor, evolve" style="display:block;border-radius:20px">
     </div>
@@ -139,7 +140,7 @@
   </div>
 
   <div style="max-width:1100px;margin:26px auto 0;padding:0 20px">
-    <img src="./assets/aio-stats.svg" width="100%" alt="Verified stats: 630M+ github repos, 3M+ npm packages, 340K+ crates, 6.8M+ skill files, no search storage, 52/52 tests pass" style="display:block;border-radius:20px">
+    <img src="./assets/aio-stats.svg" width="100%" alt="Verified stats: 630M+ github repos, 3M+ npm packages, 340K+ crates, 6.8M+ skill files, no search storage, 79/79 tests pass" style="display:block;border-radius:20px">
   </div>
 
   <section id="how">
@@ -159,15 +160,15 @@
       <div class="step">
         <div class="n">STEP 3 — USE</div>
         <h3>Every prompt is wired</h3>
-        <p>Agents read the manifest automatically and route to local tools first. Disclosure is enforced by the injected rule; compliance is model-dependent (see the FR6 probe).</p>
+        <p>Agents read the injected block automatically (the slim manifest just points to it) and route to local tools first. Disclosure is enforced by the injected rule; compliance is model-dependent (see the FR6 probe).</p>
       </div>
     </div>
   </section>
 
   <section>
     <h2>Usage, disclosed</h2>
-    <p class="lede">The moment an agent uses an entry from your manifest, its answer starts with a markdown link back to the source — attributable, auditable, first line, every time.</p>
-    <pre><span class="mu"># the rule aio writes into every agent + the manifest itself</span>
+    <p class="lede">The moment an agent uses an entry aio surfaced, its answer starts with a markdown link back to the source — attributable, auditable, first line, every time.</p>
+    <pre><span class="mu"># the rule aio writes into every agent block (the manifest only points to it)</span>
 <span class="hi">[aio] Using [&lt;name&gt;](&lt;url&gt;) (&lt;type&gt;) — &lt;function&gt;</span>
 
 <span class="mu"># real output, verbatim from a live agent session</span>
@@ -197,7 +198,7 @@
 </div>
 <script>
 document.getElementById('cmd').addEventListener('click',function(){
-  navigator.clipboard.writeText('npx aio-connect').then(function(){
+  navigator.clipboard.writeText('npx aio-connect --dry-run').then(function(){
     var e=document.getElementById('cp');e.textContent='COPIED';
     setTimeout(function(){e.textContent='COPY'},1400);
   });

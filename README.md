@@ -36,7 +36,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 52/52 tests">
+  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 79/79 tests">
 </p>
 
 ## ✨ What it does
@@ -48,7 +48,9 @@ packages**) and crates (**340K+ crates**), queried in parallel — all counts ar
 **verified floors, measured 2026-09-30**; websites go through your agent's
 own built-in web search. Results are printed, ranked and discarded — **no
 search history is stored** (aio's own files are the manifest, one block per
-agent file, timestamped backups and `config.json`, all listed in
+agent file, timestamped backups, `config.json`, the MCP rollback ledger
+`mcp-ledger.json` and the drift-hash list
+`block-hashes.json`, all listed in
 [docs/CONFIG.md](./docs/CONFIG.md)). The counts above are **the corpora aio
 can reach — the searchable universe, not aio's own size; ranking is not
 capped by them**:
@@ -60,17 +62,19 @@ prompt → aio ask (live: github ∥ npm ∥ crates) → top-8 + diversity (BM25
 ```
 
 > **Auth:** GitHub works unauthenticated at low rate; `gh auth login` (or `GH_TOKEN`)
-> unlocks the skills lane (code search requires auth — otherwise it returns `[]`) and
-> raises the rate limit. Details: [docs/CONFIG.md](./docs/CONFIG.md).
+> unlocks the skills lane (code search requires auth — without it the lane fails and
+> `aio ask` reports it as a source issue, never a silent empty lane; `AIO_NO_GH=1`
+> skips the lane entirely) and raises the rate limit. Details: [docs/CONFIG.md](./docs/CONFIG.md).
 
 | Command | What you get |
 |---|---|
-| `aio` | scan → slim manifest → inject the auto-use block into every agent — add `--dry-run` to preview every change, write nothing |
+| `aio` | scan → slim manifest → inject the auto-use block into every agent. **Consent gate**: prints the plan first — interactive → asks `Proceed with these writes? [y/N] `, non-TTY → plan only (exit 0, nothing written); `--yes` writes silent, `--dry-run`/`aio preview` = plan only |
+| `aio init [--copilot]` | **project scope**: inject the block into `./AGENTS.md` (official standard — Zed/Copilot/Cursor read it); `--copilot` also writes `.github/copilot-instructions.md` (pointer only). Same consent gate; not reversed by `rollback` |
 | `aio ask "csv ke chart"` | **live search** across GitHub (630M+ repos + public skills), npm (3M+ pkgs) and crates (340K+) in parallel (4 s per source), merge-ranked with BM25 + source diversity, blended 65% keyword relevance + 35% source popularity (stars/downloads/npm score); every hit prints **link + one-line function + `<github>`/`<npm>`/`<crates>` tag**; reranked by your local Ollama (qwen3) only when it is warm and fast; `--json` → `{…, stored: 0, hits}` (`stored: 0` = no search results stored) |
 | `aio borrow "etl tool"` | **optional ephemeral fetch** — `--get owner/repo` shallow-clones to temp (**24 h TTL**, auto-purged), `--list` inspects, `--clean` wipes it. Not a fallback for `ask`: use it when you actually need the files locally |
-| `aio doctor` | self-diagnosis: node · state · live sources · manifest ↔ agent blocks ↔ Ollama; `--fix` repairs, `--check` = CI gate |
+| `aio doctor` | **9 checks**, every row tagged `[ok]`/`[~~]`/`[!!]`: node · state · live sources · manifest · agent blocks · agents · gh auth · Ollama · MCP ledger; `--fix` repairs, `--check` = CI gate |
 | `aio evolve` | the whole self-upgrade pipeline in one run: setup (manifest+blocks) → doctor --check → npm test (never commits) |
-| `aio status` | read-only health report |
+| `aio status` | read-only health report — flags hand-edited blocks as `injected*` (drift) |
 | `aio update` / `aio rollback` | update from npm / remove everything aio injected |
 
 Example — real `aio ask` output, abridged (links + functions always included):
@@ -95,7 +99,15 @@ note: ranked by keyword match + source popularity — public results are unvette
 
 ```bash
 npm install -g aio-connect
+
+aio                      # interactive: prints the plan, then asks [y/N]
+aio --yes                # unattended: apply the plan without prompting
+aio --dry-run            # plan only — print every change, write nothing
+aio preview              # plan only — show the exact block that would be written
 ```
+
+> Writes are gated (B-02): no TTY and no `--yes` means **plan only, exit 0,
+> nothing written** — safe to pipe.
 
 > The npm name `aio` was taken — the package is **`aio-connect`**, and it ships
 > two binaries: **`aio` and `aioc`** (`aioc` is an alias). Adobe's App Builder
@@ -133,10 +145,13 @@ Changes: added chart.js, wired the data feed.
 - **No search history by design**: no `ai-tools.db`, no local catalog, no search
   history — `aio ask` results are printed and discarded (**zero search
   storage — results printed, never saved**), and the npm package ships no
-  database (`files` = bin, src, assets, docs). What aio *does* write: the
+  database (`files` = bin, src, test, assets, docs, README, CHANGELOG, LICENSE).
+  What aio *does* write: the
   manifest `~/.aio/aio-context.md`, one `AIO AUTO-CONTEXT` block per agent
-  file, timestamped backups under `~/.aio/backups/`, and `~/.aio/config.json`
-  — all listed in [docs/CONFIG.md](./docs/CONFIG.md).
+  file, timestamped backups under `~/.aio/backups/`, `~/.aio/config.json`,
+  `~/.aio/mcp-ledger.json` (which MCP entries aio added — read back by
+  `aio rollback`) and `~/.aio/block-hashes.json` (drift detection) — all
+  listed in [docs/CONFIG.md](./docs/CONFIG.md).
 - `aio borrow --get` clones into `%TEMP%/aio-borrow` with a **24-hour TTL** —
   the next run purges it, `--clean` wipes everything now.
 - CLI tools are consumed via `npx` / `uvx` — never installed permanently.
@@ -153,8 +168,12 @@ No telemetry; the only network calls are your explicit `ask`/`borrow`,
 
 ## 🕵️ Keeping it fresh
 
-- **New repo cloned?** Run `aio` — the manifest rebuilds from the fresh scan
-  (clones feed only the optional install plan; the catalog itself stays live).
+- **New agent installed?** Run `aio` — the manifest rebuilds and the block is
+  injected for the newly detected agent (the catalog itself stays live).
+- **Block edited by hand?** `aio status` flags it (`injected*` + stale note);
+  the next `aio` run reports `updated (hand-edit replaced — kept in backups/)`
+  — your edit stays in `~/.aio/backups/` (hash check via
+  `~/.aio/block-hashes.json`).
 - **Something drifted?** `aio doctor --fix` (or `--check` in CI).
 - **Full self-upgrade?** `aio evolve` runs setup (manifest+blocks) →
   doctor --check → npm test and prints the diff; committing stays your call.
@@ -170,6 +189,7 @@ No telemetry; the only network calls are your explicit `ask`/`borrow`,
 | `jcode` | `~/.jcode/AGENTS.md` (fallback `~/AGENTS.md`) | ✅ `~/.jcode/mcp.json` | PASS |
 | `codex` | `~/.codex/AGENTS.md` | ✅ `~/.codex/config.toml` | PASS |
 | `gemini` | `~/.gemini/GEMINI.md` | ✅ `~/.gemini/settings.json` | PASS |
+| `zed` | `%APPDATA%\Zed\AGENTS.md` (Windows) / `~/.config/zed/AGENTS.md` (POSIX) — skipped when no config dir yet | — | — (block target only) |
 | `freebuff` | `~/AGENTS.md` (fallback) | — | PASS |
 | `hermes` | `~/AGENTS.md` | — | PASS |
 
@@ -187,12 +207,14 @@ No telemetry; the only network calls are your explicit `ask`/`borrow`,
   `aio ask` output ends with:
   `note: ranked by keyword match + source popularity — public results are unvetted; verify before running npx/uvx or cloning (docs/THREATS.md).`
 - **`aio --dry-run`** — plan-only setup: prints exactly what would change
-  (block inject/update, MCP would-add, path repairs, manifest would-write)
-  and writes nothing. No backup, no state write.
-- **Writes are guarded** — timestamped backup of every touched file before
-  modification, malformed target configs reported as `parse error` and never
-  overwritten, rollback ledger for MCP entries (`aio rollback` reverses
-  exactly what aio added).
+  (block inject/update, MCP would-add, manifest would-write) and writes
+  **nothing**: no manifest, no block, no MCP entry, no backups, no state files
+  (`config.json`, `block-hashes.json` and `mcp-ledger.json` stay untouched).
+- **Writes are guarded** — first write requires consent (TTY `[y/N]` prompt or
+  explicit `--yes`; non-TTY defaults to read-only plan), then a timestamped
+  backup of every touched file before modification, malformed target configs
+  reported as `parse error` and never overwritten, rollback ledger for MCP
+  entries (`aio rollback` reverses exactly what aio added).
 - **`gh` token** — read at call time into memory only, never logged or
   persisted; authenticated requests also raise the GitHub rate limit.
 - **Packaging** — zero runtime dependencies, no install/postinstall scripts,
@@ -203,7 +225,7 @@ No telemetry; the only network calls are your explicit `ask`/`borrow`,
 ## 🛠 Development
 
 ```bash
-npm test             # node --test — 52 checks (live search, injection, borrow, doctor, …)
+npm test             # node --test — 79 checks (live search, injection, consent gate, drift, borrow, doctor, …)
 node bin/aio.js      # run from a checkout without installing
 node bin/aio.js ask "pdf ke word"
 node bin/aio.js doctor --check

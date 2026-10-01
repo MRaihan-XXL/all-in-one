@@ -38,15 +38,17 @@ is the authoritative diagram.
 
 | Command | Role |
 |---|---|
-| `aio` | one-time setup: scan → slim manifest → inject agent blocks (idempotent) |
-| `aio status` | read-only health report |
+| `aio` | one-time setup: scan → slim manifest → inject agent blocks (idempotent). **Consent gate**: prints the plan first — TTY asks `Proceed with these writes? [y/N] `, non-TTY → plan only, exit 0, nothing written; `--yes` writes silent |
+| `aio preview` / `aio --dry-run` | plan only — print exactly what would change (and the exact block), write nothing |
+| `aio init [--copilot]` | project scope — same gate; block into `./AGENTS.md`, `--copilot` adds the `.github/copilot-instructions.md` pointer |
+| `aio status` | read-only health report — hand-edited blocks flagged `injected*` (drift) |
 | `aio ask "<prompt>"` | step 2 — **live** search across GitHub (repos + skill files), npm and crates in parallel; link + function + source tag per hit; `--json` for machine-readable output (`stored: 0`) |
 | `aio borrow "<kw>"` | optional live GitHub search for what you want to **clone** — discovery itself is `ask`'s job, not a catalog-miss fallback |
 | `aio borrow --get <owner/repo>` | step 4 — shallow clone to temp, 24 h TTL |
 | `aio borrow --list` / `--clean` | step 6 — inspect / wipe temp clones |
-| `aio doctor [--check\|--fix]` | self-diagnosis: node · state · live sources · manifest-sync · agent blocks · Ollama; `--check` = CI gate |
+| `aio doctor [--check\|--fix]` | self-diagnosis — **9 checks**, rows tagged `[ok]`/`[~~]`/`[!!]`: node · state · live sources · manifest · agent blocks · agents · gh auth · Ollama · MCP ledger; `--check` = CI gate |
 | `aio evolve` | self-upgrade pipeline: setup (manifest + blocks) → `doctor --check` → `npm test`; never commits |
-| `aio update` / `aio rollback` | reinstall from npm / remove everything aio injected |
+| `aio update` / `aio rollback` | reinstall from npm (then re-runs setup with the fresh global copy) / remove everything aio injected |
 
 ## How the animation works
 
