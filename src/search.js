@@ -136,13 +136,57 @@ export async function aiRerank(query, hits) {
 
 /* ---------------- command helpers ---------------- */
 
+/** Source diversity: every answering source keeps ≥2 rows. Membership is tracked
+ *  by URL/name (ranked rows are copies — identity compare would duplicate).
+ *  Returns a capped COPY of the pool (caller's array is untouched). Exported for deterministic tests. */
+export function diversify(pool, entries, limit = 10) {
+  const out = [...pool];
+  const seen = new Set(out.map((h) => h.url || h.name));
+  for (const s of [...new Set(entries.map((e) => e.src))]) {
+    const best = entries.filter((e) => e.src === s);
+    while (out.filter((h) => h.src === s).length < 2 && out.length < limit) {
+      const next = best.find((e) => !seen.has(e.url || e.name));
+      if (!next) break;
+      seen.add(next.url || next.name);
+      out.push({ ...next, why: `top ${next.src} hit` });
+    }
+  }
+  return out;
+}
+
+/** Drop rows sharing a URL/name with an earlier row (repos ∩ skills overlap). */
+export function dedupe(hits) {
+  const seen = new Set();
+  return hits.filter((h) => {
+    const k = h.url || h.name;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+/** Human note per source failure — rate limits and dead networks must not masquerade as "no match". */
+function sourceErrorNote(errors) {
+  return errors.map((e) => {
+    const m = String(e.msg || '');
+    const kind = /403|401|rate|abuse/i.test(m)
+      ? 'rate-limited — set GH_TOKEN / `gh auth login`, or retry later'
+      : /timeout|abort|timed out/i.test(m)
+        ? 'timeout (4s budget)'
+        : /fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|EAI_AGAIN|network/i.test(m)
+          ? 'unreachable (network)'
+          : m.slice(0, 120);
+    return `      ${e.src}: ${kind}`;
+  });
+}
+
 /** `aio ask` → { ok, text, json }. Every hit carries url + function (item 3). */
 export async function runAsk({ query, json }) {
   if (!query || !query.trim()) {
     return { ok: false, text: 'usage: aio ask "<what you need>"\nexample: aio ask "csv ke chart interaktif"', json: null };
   }
   const t0 = Date.now();
-  const { entries, sources, web, offline } = await liveSearch(query);
+  const { entries, sources, errors = [], web, offline } = await liveSearch(query);
 
   if (offline) {
     return {
@@ -154,18 +198,10 @@ export async function runAsk({ query, json }) {
 
   // Merge-rank everything (source order carries stars/relevance; BM25 aligns to the query).
   const ranked = bm25Search(query, entries, 8);
-  const pool = (ranked.length ? ranked : entries.slice(0, 8)).map((h) =>
+  let pool = (ranked.length ? ranked : entries.slice(0, 8)).map((h) =>
     h.why ? h : { ...h, why: `source-ranked by ${h.src || 'live'}` }
   );
-  // Source diversity: every answering source keeps at least 2 rows (best first).
-  for (const s of [...new Set(entries.map((e) => e.src))]) {
-    const best = entries.filter((e) => e.src === s);
-    while (pool.filter((h) => h.src === s).length < 2 && pool.length < 10) {
-      const next = best.find((e) => !pool.includes(e));
-      if (!next) break;
-      pool.push({ ...next, why: `top ${next.src} hit` });
-    }
-  }
+  pool = dedupe(diversify(pool, entries, 10));
 
   // Rerank only if we are still inside the speed budget (warm Ollama, ≤3.5s).
   let ai = false;
@@ -182,24 +218,30 @@ export async function runAsk({ query, json }) {
     query,
     engine: ai ? `${engine} + ollama:${OLLAMA_MODEL}` : engine,
     sources,
+    errors,
     count: hits.length,
     stored: 0, // zero storage — results are never persisted
     hits,
   };
   if (json) return { ok: true, text: JSON.stringify(out, null, 2), json: out };
   if (!hits.length) {
+    const errBlock = errors.length ? `\n${sourceErrorNote(errors).join('\n')}\n` : '';
     return {
-      ok: true,
+      ok: errors.length ? false : true,
       json: out,
       text:
         `aio ask — "${query}" (${engine} · ${ms}s)\n` +
-        'No result from live sources. Refine keywords — or search the web with your own web-search tool' +
-        `${web ? ' (URL detected in the prompt)' : ''}.`,
+        errBlock +
+        (errors.length && !sources.length
+          ? 'Live sources failed — fix the issue above, then retry.'
+          : 'No result from live sources. Refine keywords — or search the web with your own web-search tool' +
+            `${web ? ' (URL detected in the prompt)' : ''}.`),
     };
   }
-  const lines = [`aio ask — "${query}" (${engine} · ${hits.length} hasil · ${ms}s${web ? ' · web → your web search' : ''})`, ''];
+  const lines = [`aio ask — "${query}" (${engine} · ${hits.length} results · ${ms}s${web ? ' · web → your web search' : ''})`, ''];
   lines.push('note: ranked by keyword match + source popularity — public results are unvetted;');
   lines.push('      verify before running npx/uvx or cloning (docs/THREATS.md).');
+  if (errors.length) lines.push(`source issues: ${errors.map((e) => e.src).join(', ')} — see --json errors[]`);
   hits.forEach((h, i) => {
     lines.push(`${i + 1}. ${h.name} [${h.type}] ${h.src ? `<${h.src}>` : ''} — ${h.func}`);
     if (h.meta) lines.push(`   ${h.meta}`);

@@ -5,9 +5,10 @@
 // npm score) that `search.js` blends into the final ranking (FR12).
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { getVersion } from './banner.js';
 
 const execFileP = promisify(execFile);
-const UA = { 'user-agent': 'aio-connect/1.3 (+https://github.com/MRaihan-XXL/all-in-one)' };
+const UA = { 'user-agent': `aio-connect/${getVersion()} (+https://github.com/MRaihan-XXL/all-in-one)` };
 const T = (ms) => AbortSignal.timeout(ms);
 
 /* ---------------- helpers ---------------- */
@@ -165,16 +166,16 @@ export function detectIntent(query = '') {
     skills: /\b(skill|skills|prompt|agent|cursor|awesome[- _]?skill|claude|gemini|opencode)\b/.test(s)
       ? stripUrl
       : null,
-    npmOnly: /\b(npm|node|package|library|dependency|react|vue|svelte|typescript|javascript)\b/.test(s),
   };
 }
 
 /**
  * Run every applicable source in parallel (allSettled, 4s budget each).
- * Returns { entries, sources } — sources = labels that answered.
- * NEVER persists anything.
+ * Returns { entries, sources, errors } — sources = labels that answered,
+ * errors = [{src, msg}] for failures (rate limit / network / timeout) so the
+ * caller can distinguish "source down" from "no match". NEVER persists anything.
  */
-export async function liveSearch(query, { n = 6 } = {}) {
+export async function liveSearch(query, { n = 8 } = {}) {
   if (process.env.AIO_OFFLINE === '1') return { entries: [], sources: [], offline: true };
   const it = detectIntent(query);
   const jobs = [];
@@ -184,7 +185,7 @@ export async function liveSearch(query, { n = 6 } = {}) {
     labels.push('github');
   }
   if (it.skills) {
-    jobs.push(ghSkills(it.skills, Math.min(n, 5)));
+    jobs.push(ghSkills(it.skills, Math.min(n, 6)));
     labels.push('skills');
   }
   if (it.npm) {
@@ -192,17 +193,22 @@ export async function liveSearch(query, { n = 6 } = {}) {
     labels.push('npm');
   }
   if (it.crates) {
-    jobs.push(cratesSearch(it.crates, 5));
+    jobs.push(cratesSearch(it.crates, Math.min(n, 6)));
     labels.push('crates');
   }
   const settled = await Promise.allSettled(jobs);
   const entries = [];
   const sources = [];
+  const errors = [];
   settled.forEach((r, i) => {
-    if (r.status === 'fulfilled' && Array.isArray(r.value) && r.value.length) {
-      entries.push(...r.value);
-      sources.push(labels[i]);
+    if (r.status === 'fulfilled') {
+      if (Array.isArray(r.value) && r.value.length) {
+        entries.push(...r.value);
+        sources.push(labels[i]);
+      }
+    } else {
+      errors.push({ src: labels[i], msg: String(r.reason?.message || r.reason || 'failed') });
     }
   });
-  return { entries, sources, web: it.web, offline: false };
+  return { entries, sources, errors, web: it.web, offline: false };
 }
