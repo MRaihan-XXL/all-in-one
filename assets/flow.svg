@@ -21,15 +21,18 @@
       .wireL{fill:none;stroke:#2E333B;stroke-width:1.5;stroke-dasharray:1400;stroke-dashoffset:1400;animation:draw 1.5s cubic-bezier(.32,.72,0,1) both}
       .chev{fill:none;stroke:#5A606A;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
       .pulse{fill:none;stroke:#FF4A1C;stroke-width:2.2;stroke-linecap:round;stroke-dasharray:5 95;stroke-dashoffset:100}
+      .march{fill:none;stroke:#FF4A1C;stroke-dasharray:4 3;animation:march 1.4s linear infinite}
       @keyframes draw{to{stroke-dashoffset:0}}
+      @keyframes march{to{stroke-dashoffset:-14}}
       @keyframes fadeIn{from{opacity:0}to{opacity:1}}
       @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
       @keyframes hl{0%{stroke:#2A2F37}2%{stroke:#FF4A1C}11%{stroke:#2A2F37}100%{stroke:#2A2F37}}
+      @keyframes tick{0%,100%{opacity:1}50%{opacity:.35}}
       .card{transform-box:fill-box;transform-origin:0 50%;animation:rise .85s cubic-bezier(.32,.72,0,1) both}
       .cardout{animation:hl 11.2s cubic-bezier(.45,0,.55,1) infinite}
       .ch{animation:fadeIn .45s ease both}
       .fd{animation:fadeIn .7s cubic-bezier(.32,.72,0,1) both}
-      @media (prefers-reduced-motion:reduce){.card,.ch,.fd{animation:none}.wire,.wireL{stroke-dashoffset:0;animation:none}.cardout{animation:none}}
+      @media (prefers-reduced-motion:reduce){.card,.ch,.fd,.march{animation:none}.wire,.wireL{stroke-dashoffset:0;animation:none}.cardout{animation:none}}
     </style>
   </defs>
 
@@ -39,7 +42,7 @@
   <!-- corner ticks -->
   <g stroke="#343A43" stroke-width="1.5" fill="none" class="fd" style="animation-delay:1s">
     <path d="M18 34 V18 H34"/><path d="M1166 18 H1182 V34"/>
-    <path d="M1182 486 V502 H1166"/><path d="M34 502 H18 V486"/>
+    <path d="M1182 586 V602 H1166"/><path d="M34 602 H18 V586"/>
   </g>
 
   <!-- header -->
@@ -91,7 +94,9 @@
     <path class="chev" d="M732 512 L738 518 L732 524"/>
     <path class="chev" d="M168 242 L174 236 L180 242"/>
   </g>
-  <text x="470" y="592" text-anchor="middle" class="mono fd" font-size="10.5" letter-spacing="1.6" fill="#4A505A" style="animation-delay:1.7s">THE LOOP CONTINUES — NEXT PROMPT</text>
+  <text x="470" y="592" text-anchor="middle" class="mono fd" font-size="10.5" letter-spacing="1.6" fill="#4A505A" style="animation-delay:1.7s">THE LOOP CONTINUES — NEXT PROMPT
+    <animate attributeName="fill" values="#4A505A;#FF4A1C;#4A505A" dur="5s" begin="2.5s" repeatCount="indefinite"/>
+  </text>
 
   <!-- ===== 01 user prompt ===== -->
   <g class="card" style="animation-delay:.15s">
@@ -172,7 +177,7 @@
     <rect class="bezel cardout" x="744.5" y="110.5" width="239" height="147" rx="14" style="animation-delay:3.2s"/>
     <rect class="core" x="750" y="116" width="228" height="136" rx="10"/>
     <text x="766" y="140" class="mono idx">03</text>
-    <text x="766" y="166" class="sans t">top-8 ranked</text>
+    <text x="766" y="166" class="sans t">top-8 + diversity</text>
     <g class="fd" style="animation-delay:1.1s">
       <circle cx="770" cy="188" r="2.5" fill="#FF4A1C"/>
       <text x="782" y="192" class="mono" font-size="10" fill="#9AA0A8">github + npm + crates merged</text>
@@ -190,7 +195,7 @@
     <text x="766" y="360" class="mono idx">04</text>
     <text x="766" y="388" class="sans t">use ephemerally</text>
     <text x="766" y="410" class="sans s">npx · uvx · copy — ephemeral, no permanent install</text>
-    <rect x="1002.5" y="372.5" width="112" height="21" rx="10.5" fill="none" stroke="#FF4A1C" stroke-opacity="0.55" stroke-dasharray="4 3"/>
+    <rect class="march" x="1002.5" y="372.5" width="112" height="21" rx="10.5" fill="none" stroke="#FF4A1C" stroke-opacity="0.55"/>
     <text x="1014" y="387" class="mono" font-size="9.5" letter-spacing="0.8" fill="#FF4A1C">± borrow --get</text>
   </g>
 

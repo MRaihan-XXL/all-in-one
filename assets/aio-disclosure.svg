@@ -67,8 +67,16 @@
 
     <!-- anatomy row -->
     <g class="fd" style="animation-delay:4.6s">
-      <text x="86" y="232" class="mono" font-size="10.5" letter-spacing="1.6" fill="#5A606A">NAME<tspan fill="#343A43"> ↗</tspan> URL<tspan fill="#343A43"> ↗</tspan> TYPE<tspan fill="#343A43"> ↗</tspan> ONE-LINE FUNCTION — LINKED, ATTRIBUTED, AUDITABLE</text>
+      <text x="86" y="232" class="mono" font-size="10.5" letter-spacing="1.6" fill="#5A606A">NAME<tspan fill="#343A43"> ↗</tspan> URL<tspan fill="#343A43"> ↗</tspan> TYPE<tspan fill="#343A43"> ↗</tspan> ONE-LINE FUNCTION — LINKED, ATTRIBUTED, AUDITABLE
+        <animate attributeName="fill" values="#5A606A;#FF4A1C;#5A606A" dur="6s" begin="5.6s" repeatCount="indefinite"/>
+      </text>
     </g>
+
+    <!-- CRT scanline sweep over the terminal -->
+    <rect x="70" y="150" width="1060" height="2" fill="#FF4A1C" opacity="0.09">
+      <animate attributeName="y" values="150;248;150" dur="7s" begin="2s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+      <animate attributeName="opacity" values="0;0.09;0.09;0" keyTimes="0;0.06;0.94;1" dur="7s" begin="2s" repeatCount="indefinite"/>
+    </rect>
   </g>
 
   <!-- footer micro -->
