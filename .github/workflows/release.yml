@@ -1,0 +1,46 @@
+name: Release
+
+# Push a `v*` tag → test gate → version guard → npm publish → GitHub Release.
+# Publish auth: NPM_TOKEN repo secret (chosen provenance path — most efficient).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # gh release create
+  id-token: write # npm OIDC-ready (provenance) — harmless alongside NPM_TOKEN
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      # zero runtime deps — no install step needed
+      - run: npm test
+      # tag must match package.json — a mistagged release never reaches npm
+      - name: Tag matches package.json version
+        run: |
+          node -e "
+            const p = require('./package.json');
+            const tag = process.env.GITHUB_REF_NAME.slice(1);
+            if (p.version !== tag) {
+              console.error('tag v' + tag + ' != package.json ' + p.version);
+              process.exit(1);
+            }
+            console.log('releasing aio-connect@' + p.version);
+          "
+      - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: GitHub Release (auto notes)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 ||
+          gh release create "$GITHUB_REF_NAME"
+          --title "aio v$(node -p "require('./package.json').version")"
+          --generate-notes

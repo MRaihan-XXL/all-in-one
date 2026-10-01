@@ -18,5 +18,10 @@ jobs:
         with:
           node-version: 22
       # zero runtime deps — no install step needed
+      # ubuntu runs the suite once via the coverage step (no double run)
       - run: npm test
+        if: matrix.os != 'ubuntu-latest'
+      - name: Coverage (reported, not gated)
+        if: matrix.os == 'ubuntu-latest'
+        run: node --test --experimental-test-coverage "test/*.js"
       - run: node bin/aio.js --help

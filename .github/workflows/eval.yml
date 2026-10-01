@@ -1,0 +1,24 @@
+name: Eval
+
+# Nightly relevance eval — `aio ask` against 20 golden queries, live sources.
+# Deterministic ranking (AIO_NO_AI=1: BM25 + trust, no Ollama); the network is the
+# only variable, so a red run means the live lanes degraded — worth a look, not a
+# blocker: this workflow never runs on PRs.
+on:
+  schedule:
+    - cron: '0 3 * * *' # nightly 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  relevance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Relevance eval (hit@8 / hit@1 / MRR)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # enables the skills lane (gh api)
+          AIO_NO_AI: '1'
+        run: node scripts/eval-relevance.mjs
