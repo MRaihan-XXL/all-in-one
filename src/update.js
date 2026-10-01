@@ -1,6 +1,26 @@
-// update.js — `aio update`: self-update from the public GitHub repo, then re-run setup
+// update.js — `aio update`: self-update from npm, then re-run setup with the
+// NEWLY installed copy (never the stale npx-cached binary — B-03).
 import os from 'node:os';
-import { spawnSync } from 'node:child_process';
+import path from 'node:path';
+import fs from 'node:fs';
+import { spawnSync, execFileSync } from 'node:child_process';
+
+/** Absolute path of the fresh global install (npm root -g + package bin). */
+export function globalBinPath(pkg = 'aio-connect') {
+  try {
+    const root = execFileSync('npm', ['root', '-g'], {
+      encoding: 'utf8',
+      shell: true,
+      timeout: 30000,
+      windowsHide: true,
+    }).trim();
+    const bin = path.join(root, pkg, 'bin', 'aio.js');
+    if (fs.existsSync(bin)) return bin;
+  } catch {
+    /* npm unavailable → report below */
+  }
+  return null;
+}
 
 export function runUpdate({ binPath }) {
   const pkg = 'aio-connect';
@@ -20,7 +40,16 @@ export function runUpdate({ binPath }) {
     process.exit(install.status ?? 1);
   }
 
+  // Re-run with the fresh global copy — NOT the running (possibly npx-cached) binPath.
+  const fresh = globalBinPath(pkg);
+  if (!fresh) {
+    console.error('[aio] update: fresh install not found under npm root -g — run `aio` manually.');
+    process.exit(1);
+  }
+  if (binPath && binPath !== fresh) {
+    console.log('[aio] note: you invoked the old copy (npx cache?) — use the global `aio` from now on.');
+  }
   console.log('[aio] Package updated — re-running setup with the new version ...');
-  const fresh = spawnSync(process.execPath, [binPath], { stdio: 'inherit' });
-  process.exit(fresh.status ?? 0);
+  const res = spawnSync(process.execPath, [fresh, '--yes'], { stdio: 'inherit' });
+  process.exit(res.status ?? 0);
 }

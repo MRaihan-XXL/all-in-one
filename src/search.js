@@ -223,11 +223,14 @@ export async function runAsk({ query, json }) {
     stored: 0, // zero storage — results are never persisted
     hits,
   };
-  if (json) return { ok: true, text: JSON.stringify(out, null, 2), json: out };
+  // ok = a source answered (even with 0 hits) OR nothing failed — the same rule
+  // for --json and text, so machine consumers never see a masked failure (B-01).
+  const ok = sources.length > 0 || errors.length === 0;
+  if (json) return { ok, text: JSON.stringify(out, null, 2), json: out };
   if (!hits.length) {
     const errBlock = errors.length ? `\n${sourceErrorNote(errors).join('\n')}\n` : '';
     return {
-      ok: errors.length ? false : true,
+      ok,
       json: out,
       text:
         `aio ask — "${query}" (${engine} · ${ms}s)\n` +
@@ -248,5 +251,5 @@ export async function runAsk({ query, json }) {
     lines.push(h.url ? `   ${h.url}` : '   (no public URL)');
     lines.push(`   why: ${h.why}`);
   });
-  return { ok: true, text: lines.join('\n'), json: out };
+  return { ok, text: lines.join('\n'), json: out };
 }

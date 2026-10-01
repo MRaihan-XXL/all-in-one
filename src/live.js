@@ -61,11 +61,19 @@ export function ghQuery(q) {
 
 /* ---------------- sources ---------------- */
 
-/** GitHub repository search — the whole public corpus (630M+ repos, Octoverse 2025). */
+/** GitHub repository search — the whole public corpus (630M+ repos, Octoverse 2025).
+ *  One silent retry on 429/503 honouring Retry-After (capped 1.5s) — rate limits
+ *  must not masquerade as "no match" (P-01). */
 export async function ghRepos(q, n = 6) {
   const gq = ghQuery(q);
   const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(gq)}&sort=stars&order=desc&per_page=${n}`;
-  const res = await fetch(url, { headers: await ghAuthHeaders(), signal: T(4000) });
+  let res = await fetch(url, { headers: await ghAuthHeaders(), signal: T(4000) });
+  if (res.status === 429 || res.status === 503) {
+    const ra = Number(res.headers.get('retry-after'));
+    const wait = Math.min((Number.isFinite(ra) && ra > 0 ? ra : 1) * 1000, 1500);
+    await new Promise((r) => setTimeout(r, wait));
+    res = await fetch(url, { headers: await ghAuthHeaders(), signal: T(4000) });
+  }
   if (!res.ok) throw new Error(`github ${res.status}`);
   const data = await res.json();
   return (data.items || []).map((r) => ({
@@ -81,32 +89,30 @@ export async function ghRepos(q, n = 6) {
 
 /**
  * Skills live discovery via GitHub code search (filename:SKILL.md) — 6.8M+ public
- * skill files (measured 2026-09-30). Needs `gh` (authenticated); absent → [].
+ * skill files (measured 2026-09-30). Disabled entirely under AIO_NO_GH (no job
+ * scheduled). A failed `gh api` call REJECTS — the lane must land in errors[],
+ * not fake "answered with 0 hits" (W1: a swallowed error would inflate sources[]).
  */
 export async function ghSkills(q, n = 6) {
   if (process.env.AIO_NO_GH === '1') return [];
   const codeQ = `filename:SKILL.md ${ghQuery(q)}`.trim();
   const api = `search/code?q=${encodeURIComponent(codeQ)}&per_page=${n}`;
-  try {
-    const { stdout } = await execFileP('gh', ['api', api], {
-      timeout: 4500,
-      maxBuffer: 1 << 20,
-      windowsHide: true,
-      env: { ...process.env, GH_PAGER: '' },
-    });
-    const data = JSON.parse(stdout);
-    return (data.items || []).map((f) => ({
-      type: 'skill',
-      name: f.repository.full_name,
-      url: f.repository.html_url,
-      func: `SKILL.md — ${f.path}`,
-      meta: 'public skill (github code search)',
-      src: 'github',
-      trust01: 0.5, // no popularity field in code search results → neutral prior
-    }));
-  } catch {
-    return [];
-  }
+  const { stdout } = await execFileP('gh', ['api', api], {
+    timeout: 4500,
+    maxBuffer: 1 << 20,
+    windowsHide: true,
+    env: { ...process.env, GH_PAGER: '' },
+  });
+  const data = JSON.parse(stdout);
+  return (data.items || []).map((f) => ({
+    type: 'skill',
+    name: f.repository.full_name,
+    url: f.repository.html_url,
+    func: `SKILL.md — ${f.path}`,
+    meta: 'public skill (github code search)',
+    src: 'github',
+    trust01: 0.5, // no popularity field in code search results → neutral prior
+  }));
 }
 
 /** npm registry search — 3M+ packages. */
@@ -163,9 +169,8 @@ export function detectIntent(query = '') {
     repos: stripUrl,
     npm: stripUrl,
     crates: /\b(rust|crate|cargo|crates\.io)\b/.test(s) ? stripUrl : null,
-    skills: /\b(skill|skills|prompt|agent|cursor|awesome[- _]?skill|claude|gemini|opencode)\b/.test(s)
-      ? stripUrl
-      : null,
+    // skills lane = scarce gh code-search quota → skill/prompt asks only (P-03)
+    skills: /\b(skills?|prompts?|awesome[- _]?skill)\b/.test(s) ? stripUrl : null,
   };
 }
 
@@ -184,7 +189,7 @@ export async function liveSearch(query, { n = 8 } = {}) {
     jobs.push(ghRepos(it.repos, n));
     labels.push('github');
   }
-  if (it.skills) {
+  if (it.skills && process.env.AIO_NO_GH !== '1') {
     jobs.push(ghSkills(it.skills, Math.min(n, 6)));
     labels.push('skills');
   }
@@ -202,10 +207,8 @@ export async function liveSearch(query, { n = 8 } = {}) {
   const errors = [];
   settled.forEach((r, i) => {
     if (r.status === 'fulfilled') {
-      if (Array.isArray(r.value) && r.value.length) {
-        entries.push(...r.value);
-        sources.push(labels[i]);
-      }
+      sources.push(labels[i]); // a lane that answered counts even with 0 hits (B-01)
+      if (Array.isArray(r.value) && r.value.length) entries.push(...r.value);
     } else {
       errors.push({ src: labels[i], msg: String(r.reason?.message || r.reason || 'failed') });
     }
