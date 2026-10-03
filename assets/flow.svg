@@ -28,9 +28,8 @@
       @keyframes fadeIn{from{opacity:0}to{opacity:1}}
       @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
       @keyframes hl{0%{stroke:#2A2F37}2%{stroke:#FF4A1C}11%{stroke:#2A2F37}100%{stroke:#2A2F37}}
-      @keyframes tick{0%,100%{opacity:1}50%{opacity:.35}}
       .card{transform-box:fill-box;transform-origin:0 50%;animation:rise .85s cubic-bezier(.32,.72,0,1) both}
-      .cardout{animation:hl 11.2s cubic-bezier(.45,0,.55,1) infinite}
+      .cardout{animation:hl 8s cubic-bezier(.45,0,.55,1) infinite}
       .gw{transform-box:fill-box;transform-origin:0 50%;animation:grow .8s cubic-bezier(.32,.72,0,1) both}
       .ch{animation:fadeIn .45s ease both}
       .fd{animation:fadeIn .7s cubic-bezier(.32,.72,0,1) both}
@@ -48,9 +47,9 @@
   </g>
 
   <!-- header -->
-  <text x="64" y="46" class="mono eyebrow">LIVE PIPELINE <tspan fill="#343A43">—</tspan> PROMPT → ASK → USE → REPORT → CLEAN</text>
+  <text x="64" y="46" class="mono eyebrow">LIVE PIPELINE <tspan fill="#343A43">—</tspan> PROMPT → ASK → USE → REPORT → CLEAN <tspan fill="#FF4A1C" font-weight="400">▌<animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.5;0.5;1" dur="1.06s" repeatCount="indefinite"/></tspan></text>
   <rect x="980" y="28" width="156" height="26" rx="13" fill="none" stroke="#FF4A1C" stroke-opacity="0.45" class="fd" style="animation-delay:.7s">
-    <animate attributeName="stroke-opacity" values="0.45;0.15;0.45" dur="3.2s" repeatCount="indefinite"/>
+    <animate attributeName="stroke-opacity" values="0.45;0.15;0.45" keyTimes="0;0.5;1" dur="8s" repeatCount="indefinite"/>
   </rect>
   <text x="1058" y="45" text-anchor="middle" class="mono fd" font-size="10" letter-spacing="1.4" fill="#FF4A1C" style="animation-delay:.7s">NO SEARCH STORAGE</text>
   <line x1="64" y1="62" x2="1136" y2="62" stroke="#21252C" class="fd" style="animation-delay:.15s"/>
@@ -89,17 +88,29 @@
     </path>
   </g>
 
-  <!-- chevrons -->
+  <!-- chevrons — each nudges forward inside ITS wire's comet window (8s master) -->
   <g class="ch" style="animation-delay:1.25s">
-    <path class="chev" d="M332 174 L338 180 L332 186"/>
-    <path class="chev" d="M732 178 L738 184 L732 190"/>
-    <path class="chev" d="M858 318 L864 324 L870 318"/>
-    <path class="chev" d="M598 464 L604 470 L610 464"/>
-    <path class="chev" d="M732 512 L738 518 L732 524"/>
-    <path class="chev" d="M168 242 L174 236 L180 242"/>
+    <path class="chev" d="M332 174 L338 180 L332 186">
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 0;3 0;0 0;0 0" keyTimes="0;0.07;0.115;0.16;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
+    </path>
+    <path class="chev" d="M732 178 L738 184 L732 190">
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 0;3 0;0 0;0 0" keyTimes="0;0.18;0.225;0.27;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
+    </path>
+    <path class="chev" d="M858 318 L864 324 L870 318">
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 3;0 0;0 0" keyTimes="0;0.30;0.345;0.39;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
+    </path>
+    <path class="chev" d="M598 464 L604 470 L610 464">
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 0;-3 0;0 0;0 0" keyTimes="0;0.44;0.50;0.56;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
+    </path>
+    <path class="chev" d="M732 512 L738 518 L732 524">
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 0;3 0;0 0;0 0" keyTimes="0;0.60;0.64;0.68;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
+    </path>
+    <path class="chev" d="M168 242 L174 236 L180 242">
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 -3;0 0;0 0" keyTimes="0;0.72;0.79;0.86;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
+    </path>
   </g>
   <text x="470" y="592" text-anchor="middle" class="mono fd" font-size="10.5" letter-spacing="1.6" fill="#4A505A" style="animation-delay:1.7s">THE LOOP CONTINUES — NEXT PROMPT
-    <animate attributeName="fill" values="#4A505A;#FF4A1C;#4A505A" dur="5s" begin="2.5s" repeatCount="indefinite"/>
+    <animate attributeName="fill" values="#4A505A;#4A505A;#FF4A1C;#FF4A1C;#4A505A" keyTimes="0;0.9;0.94;0.985;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
   </text>
 
   <!-- ===== 01 user prompt ===== -->
@@ -110,67 +121,76 @@
     <text x="86" y="188" class="sans t">User prompt</text>
     <text x="86" y="212" class="sans s">“I need an awesome X”</text>
     <rect x="242" y="200" width="8" height="14" fill="#FF4A1C">
-      <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.52;0.52;1" dur="1.3s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.52;0.52;1" dur="1.06s" repeatCount="indefinite"/>
     </rect>
   </g>
 
   <!-- ===== 02 aio ask — LIVE (parallel lanes) ===== -->
   <g class="card" style="animation-delay:.3s">
-    <rect class="bezel cardout" x="344.5" y="96.5" width="299" height="175" rx="14" style="animation-delay:1.6s"/>
+    <rect class="bezel cardout" x="344.5" y="96.5" width="299" height="175" rx="14" style="animation-delay:1.12s"/>
     <rect class="core" x="350" y="102" width="288" height="164" rx="10"/>
     <text x="366" y="126" class="mono idx">02</text>
     <text x="366" y="152" class="sans t">aio ask</text>
     <rect x="467.5" y="112.5" width="167" height="19" rx="9.5" fill="none" stroke="#FF4A1C" stroke-opacity="0.4"/>
     <text x="478" y="126" class="mono" font-size="9.5" letter-spacing="1.1" fill="#FF4A1C">LIVE · ADAPTIVE · ≤4s</text>
 
-    <!-- sheen sweep -->
+    <!-- sheen sweep — parked above/below the clip, sweeps once per 8s master
+         loop during card-02's live window (synced with the comets) -->
     <g clip-path="url(#askClip)">
       <rect x="350" y="96" width="288" height="34" fill="url(#askSheen)">
-        <animate attributeName="y" values="96;270;96" dur="4.2s" begin="1.5s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+        <animate attributeName="y" values="60;60;270;270" keyTimes="0;0.16;0.30;1" dur="8s" begin="1.4s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1;0 0 0 0"/>
       </rect>
     </g>
 
     <!-- lane: github -->
     <g>
-      <circle cx="370" cy="172" r="3" fill="#FF4A1C"/>
+      <circle cx="370" cy="172" r="3" fill="#FF4A1C">
+        <animate attributeName="opacity" values="0.55;0.55;1;0.55;0.55" keyTimes="0;0.17;0.27;0.42;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
+      </circle>
       <text x="382" y="176" class="mono lane">GITHUB</text>
       <line x1="452" y1="172" x2="626" y2="172" stroke="#1D2127" stroke-width="2"/>
       <rect x="452" y="170.5" width="24" height="3" rx="1.5" fill="#FF4A1C">
-        <animate attributeName="x" values="452;602;452" dur="3s" begin="1.6s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+        <animate attributeName="x" values="452;452;602;602;452;452" keyTimes="0;0.16;0.34;0.40;0.46;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
       </rect>
     </g>
     <!-- lane: npm -->
     <g>
-      <circle cx="370" cy="196" r="3" fill="#FF4A1C"/>
+      <circle cx="370" cy="196" r="3" fill="#FF4A1C">
+        <animate attributeName="opacity" values="0.55;0.55;1;0.55;0.55" keyTimes="0;0.21;0.31;0.46;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
+      </circle>
       <text x="382" y="200" class="mono lane">NPM</text>
       <line x1="452" y1="196" x2="626" y2="196" stroke="#1D2127" stroke-width="2"/>
       <rect x="452" y="194.5" width="24" height="3" rx="1.5" fill="#FF4A1C">
-        <animate attributeName="x" values="452;602;452" dur="3s" begin="1.9s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+        <animate attributeName="x" values="452;452;602;602;452;452" keyTimes="0;0.20;0.38;0.44;0.50;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
       </rect>
     </g>
     <!-- lane: crates -->
     <g>
-      <circle cx="370" cy="220" r="3" fill="#FF4A1C"/>
+      <circle cx="370" cy="220" r="3" fill="#FF4A1C">
+        <animate attributeName="opacity" values="0.55;0.55;1;0.55;0.55" keyTimes="0;0.25;0.35;0.50;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
+      </circle>
       <text x="382" y="224" class="mono lane">CRATES</text>
       <line x1="452" y1="220" x2="626" y2="220" stroke="#1D2127" stroke-width="2"/>
       <rect x="452" y="218.5" width="24" height="3" rx="1.5" fill="#FF4A1C">
-        <animate attributeName="x" values="452;602;452" dur="3s" begin="2.2s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+        <animate attributeName="x" values="452;452;602;602;452;452" keyTimes="0;0.24;0.42;0.48;0.54;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
       </rect>
     </g>
     <!-- lane: web → agent -->
     <g>
-      <circle cx="370" cy="244" r="3" fill="none" stroke="#5A606A"/>
+      <circle cx="370" cy="244" r="3" fill="none" stroke="#5A606A">
+        <animate attributeName="opacity" values="1;1;0.35;1;1" keyTimes="0;0.29;0.39;0.54;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
+      </circle>
       <text x="382" y="248" class="mono lane" fill="#5A606A">WEB → AGENT</text>
       <line x1="490" y1="244" x2="626" y2="244" stroke="#1D2127" stroke-width="2" stroke-dasharray="3 5"/>
       <rect x="490" y="242.5" width="24" height="3" rx="1.5" fill="none" stroke="#FF4A1C" stroke-opacity="0.7">
-        <animate attributeName="x" values="490;602;490" dur="3s" begin="2.5s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+        <animate attributeName="x" values="490;490;602;602;490;490" keyTimes="0;0.28;0.46;0.52;0.58;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
       </rect>
     </g>
   </g>
 
   <!-- ===== 03 ranked results ===== -->
   <g class="card" style="animation-delay:.45s">
-    <rect class="bezel cardout" x="744.5" y="110.5" width="239" height="147" rx="14" style="animation-delay:3.2s"/>
+    <rect class="bezel cardout" x="744.5" y="110.5" width="239" height="147" rx="14" style="animation-delay:2s"/>
     <rect class="core" x="750" y="116" width="228" height="136" rx="10"/>
     <text x="766" y="140" class="mono idx">03</text>
     <text x="766" y="166" class="sans t">top-8 + diversity</text>
@@ -189,7 +209,7 @@
 
   <!-- ===== 04 ephemeral use ===== -->
   <g class="card" style="animation-delay:.6s">
-    <rect class="bezel cardout" x="744.5" y="330.5" width="391" height="99" rx="14" style="animation-delay:4.8s"/>
+    <rect class="bezel cardout" x="744.5" y="330.5" width="391" height="99" rx="14" style="animation-delay:2.96s"/>
     <rect class="core" x="750" y="336" width="380" height="88" rx="10"/>
     <text x="766" y="360" class="mono idx">04</text>
     <text x="766" y="388" class="sans t">use ephemerally</text>
@@ -200,7 +220,7 @@
 
   <!-- ===== 05 report ===== -->
   <g class="card" style="animation-delay:.75s">
-    <rect class="bezel cardout" x="344.5" y="470.5" width="299" height="95" rx="14" style="animation-delay:6.4s"/>
+    <rect class="bezel cardout" x="344.5" y="470.5" width="299" height="95" rx="14" style="animation-delay:4.32s"/>
     <rect class="core" x="350" y="476" width="288" height="84" rx="10"/>
     <text x="366" y="500" class="mono idx">05</text>
     <text x="366" y="528" class="sans t">report every link</text>
@@ -209,10 +229,14 @@
 
   <!-- ===== 06 clean ===== -->
   <g class="card" style="animation-delay:.9s">
-    <rect class="bezel cardout" x="744.5" y="478.5" width="239" height="79" rx="14" style="animation-delay:8s"/>
+    <rect class="bezel cardout" x="744.5" y="478.5" width="239" height="79" rx="14" style="animation-delay:5.28s"/>
     <rect class="core" x="750" y="484" width="228" height="68" rx="10"/>
     <text x="766" y="506" class="mono idx">06</text>
     <text x="766" y="534" class="sans t">borrow --clean</text>
     <rect class="march" x="766" y="542" width="114" height="2" rx="1" stroke-opacity="0.65"/>
+    <!-- clean-check: draws itself as the loop comet reaches 06, resets at loop end -->
+    <path d="M936 504 l5 6 l10 -13" fill="none" stroke="#FF4A1C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100">
+      <animate attributeName="stroke-dashoffset" values="100;100;0;0" keyTimes="0;0.72;0.80;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
+    </path>
   </g>
 </svg>
