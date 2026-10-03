@@ -5,6 +5,7 @@ screenshots/
 TRACKING.md
 TOOLS-INDEX.md
 aio-context.md
+/.freebuff/
 *.env
 .env*
 

@@ -111,6 +111,22 @@ const opts = parseArgs(process.argv.slice(2));
 if (opts.flags.copilot && opts.command !== 'init') {
   console.error('[aio] --copilot only applies to `aio init` — ignoring');
 }
+// --dry-run is only honored by setup/init — warn elsewhere; REFUSE on the destructive
+// command so the flag can never be mistaken for a shield that doesn't exist (F3)
+if (opts.flags.dry && opts.command !== 'setup' && opts.command !== 'init' && opts.command !== 'help') {
+  if (opts.command === 'rollback') {
+    console.error('[aio] rollback cannot honor --dry-run — refusing to run; inspect first with `aio doctor`');
+    process.exit(1);
+  }
+  console.error('[aio] --dry-run only applies to `aio setup` / `aio init` — ignoring');
+}
+// unknown flags must never be silently dropped (F8); `ask` exempt — its query may look like a flag
+const KNOWN_FLAGS = new Set(['--get', '--json', '--clean', '--list', '--check', '--fix', '--dry-run', '--yes', '--show-block', '--copilot', '--help', '--version', '-h', '-v']);
+if (opts.command !== 'ask' && opts.command !== 'help' && opts.command !== 'version') {
+  for (const tok of opts.query.split(/\s+/).filter(Boolean)) {
+    if (tok.startsWith('--') && !KNOWN_FLAGS.has(tok.split('=')[0])) console.error(`[aio] unknown flag: ${tok} — ignoring`);
+  }
+}
 
 switch (opts.command) {
   case 'help':

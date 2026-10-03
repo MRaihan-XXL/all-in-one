@@ -5,7 +5,17 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-const { purgeExpired, borrowClean, runBorrow } = await import('../src/borrow.js');
+// src/borrow.js has NO env override for its product dir: BORROW_DIR is
+// path.join(os.tmpdir(), 'aio-borrow') computed AT IMPORT TIME. Point %TEMP% at
+// a throwaway dir before importing so runBorrow's purge/list/clean side effects
+// never touch the real %TEMP%\aio-borrow (tests-only scoping, src untouched).
+const REAL_TMP = os.tmpdir();
+const OWN_TMP = fs.mkdtempSync(path.join(REAL_TMP, 'aio-borrow-test-tmp-'));
+process.env.TEMP = OWN_TMP;
+process.env.TMP = OWN_TMP;
+process.env.TMPDIR = OWN_TMP;
+
+const { BORROW_DIR, purgeExpired, borrowClean, runBorrow } = await import('../src/borrow.js');
 
 function tmp() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'aio-borrow-test-'));
@@ -51,4 +61,9 @@ test('runBorrow --list: empty borrow dir reported cleanly', async () => {
   const r = await runBorrow({ list: true, json: true });
   assert.equal(r.ok, true);
   assert.ok(Array.isArray(r.json.items));
+  assert.equal(r.json.items.length, 0, 'scoped borrow dir starts empty — no real %TEMP% clones listed');
+  assert.ok(
+    BORROW_DIR.startsWith(OWN_TMP),
+    `BORROW_DIR scoped to the temp fixture, not the real %TEMP%: ${BORROW_DIR}`
+  );
 });

@@ -93,7 +93,7 @@
     </circle>
     <circle cx="336" cy="252" r="15" fill="#FF4A1C"/>
     <circle cx="336" cy="252" r="15" fill="none" stroke="#FF4A1C" stroke-width="1.5">
-      <animate attributeName="r" values="15;34" keyTimes="0;0.62" dur="8s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="15;34;15" keyTimes="0;0.62;1" dur="8s" repeatCount="indefinite"/>
       <animate attributeName="stroke-opacity" values="0.55;0;0;0.55" keyTimes="0;0.62;0.99;1" dur="8s" repeatCount="indefinite"/>
     </circle>
   </g>
@@ -119,7 +119,7 @@
       <animate attributeName="opacity" values="1;0.2;1" keyTimes="0;0.5;1" dur="8s" repeatCount="indefinite"/>
     </circle>
     <circle cx="712" cy="132" r="3.5" fill="none" stroke="#FF4A1C">
-      <animate attributeName="r" values="3.5;11" keyTimes="0;0.62" dur="8s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="3.5;11;3.5" keyTimes="0;0.62;1" dur="8s" repeatCount="indefinite"/>
       <animate attributeName="stroke-opacity" values="0.6;0;0;0.6" keyTimes="0;0.62;0.99;1" dur="8s" repeatCount="indefinite"/>
     </circle>
     <text x="1109" y="136" text-anchor="end" class="mono" font-size="10.5" letter-spacing="2.4" fill="#FF4A1C">LIVE — NO SEARCH STORAGE</text>

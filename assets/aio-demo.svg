@@ -46,7 +46,7 @@
       <animate attributeName="opacity" values="0.8;0.3;0.8" keyTimes="0;0.5;1" dur="8s" repeatCount="indefinite"/>
     </circle>
     <circle cx="96" cy="112" r="4.5" fill="none" stroke="#FF4A1C">
-      <animate attributeName="r" values="4.5;12" keyTimes="0;0.62" dur="8s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="4.5;12;4.5" keyTimes="0;0.62;1" dur="8s" repeatCount="indefinite"/>
       <animate attributeName="stroke-opacity" values="0.5;0;0;0.5" keyTimes="0;0.62;0.99;1" dur="8s" repeatCount="indefinite"/>
     </circle>
     <circle cx="114" cy="112" r="4.5" fill="#343A43"/>
@@ -90,8 +90,8 @@
 
     <!-- periodic highlight pass over the disclosure line (reading emphasis) -->
     <rect x="110" y="358" width="96" height="20" rx="4" fill="#FF4A1C" opacity="0">
-      <animate attributeName="x" values="110;900" keyTimes="0.08;0.60" dur="8s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1"/>
-      <animate attributeName="opacity" values="0;0.14;0.14;0" keyTimes="0;0.08;0.60;0.66" dur="8s" repeatCount="indefinite"/>
+      <animate attributeName="x" values="110;110;900;900" keyTimes="0;0.08;0.60;1" dur="8s" repeatCount="indefinite" calcMode="spline" keySplines="0 0 0 0;0.4 0 0.2 1;0 0 0 0"/>
+      <animate attributeName="opacity" values="0;0.14;0.14;0;0" keyTimes="0;0.08;0.60;0.66;1" dur="8s" repeatCount="indefinite"/>
     </rect>
 
     <!-- 4. disclosure + clean -->

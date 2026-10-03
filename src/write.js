@@ -243,7 +243,10 @@ export function ensureJsonEntry(file, key, entry, label, rootKey, create = false
   } else {
     return { target: path.basename(file), status: 'file not found — skipped' };
   }
-  const holder = rootKey ? (obj[rootKey] ||= {}) : obj;
+  if (rootKey && (obj[rootKey] === null || typeof obj[rootKey] !== 'object' || Array.isArray(obj[rootKey]))) {
+    obj[rootKey] = {}; // parseable-but-wrong-shape config (e.g. "mcpServers": "string") — rebuild, never TypeError
+  }
+  const holder = rootKey ? obj[rootKey] : obj;
   if (holder[key]) {
     // exact-shape match = aio's own entry → re-record it (self-healing ledger, S-01)
     if (!dry && JSON.stringify(holder[key]) === JSON.stringify(entry)) ledgerAdd(file, key);
@@ -358,8 +361,11 @@ export function removeMcpAdditions() {
         const esc = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const re = new RegExp(`\\n?\\[mcp_servers\\."?${esc}"?\\][^\\[]*`, 'g');
         const next = txt.replace(re, '');
-        if (next === txt) {
-          out.push({ target: path.basename(file), status: 'already gone' });
+        // no match, or partial removal (a nested `[` inside aio's table stopped the
+        // pattern) → honest status + ledger entry KEPT for retry; never write residue
+        if (next === txt || next.includes(key)) {
+          keep.push({ file, key });
+          out.push({ target: path.basename(file), status: 'unsupported layout — manual removal needed, ledger entry kept' });
           continue;
         }
         backup(file, 'rollback-mcp');
@@ -367,8 +373,10 @@ export function removeMcpAdditions() {
       } else if (file.endsWith('.jsonc')) {
         const re = new RegExp(`${JSON.stringify(key).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*\\{[^{}]*\\},?\\s*`, 'g');
         const next = txt.replace(re, '');
-        if (next === txt) {
-          out.push({ target: path.basename(file), status: 'already gone' });
+        // nested-object entry the flat pattern can't match → same honest contract
+        if (next === txt || next.includes(key)) {
+          keep.push({ file, key });
+          out.push({ target: path.basename(file), status: 'unsupported layout — manual removal needed, ledger entry kept' });
           continue;
         }
         backup(file, 'rollback-mcp');
@@ -388,7 +396,8 @@ export function removeMcpAdditions() {
           removed = true;
         }
         if (!removed) {
-          out.push({ target: path.basename(file), status: 'already gone' });
+          keep.push({ file, key });
+          out.push({ target: path.basename(file), status: 'unsupported layout — manual removal needed, ledger entry kept' });
           continue;
         }
         backup(file, 'rollback-mcp');
@@ -400,6 +409,7 @@ export function removeMcpAdditions() {
       out.push({ target: path.basename(file), status: `parse error — skipped, ledger entry kept (${String(e.message).slice(0, 60)})` });
     }
   }
+  fs.mkdirSync(STATE_DIR, { recursive: true }); // fresh machine: `aio rollback` before any state exists (F2)
   fs.writeFileSync(LEDGER, JSON.stringify(keep, null, 2));
   return out;
 }

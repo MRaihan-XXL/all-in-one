@@ -49,7 +49,7 @@
   <!-- header -->
   <text x="64" y="46" class="mono eyebrow">LIVE PIPELINE <tspan fill="#343A43">—</tspan> PROMPT → ASK → USE → REPORT → CLEAN <tspan fill="#FF4A1C" font-weight="400">▌<animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.5;0.5;1" dur="1.06s" repeatCount="indefinite"/></tspan></text>
   <rect x="980" y="28" width="156" height="26" rx="13" fill="none" stroke="#FF4A1C" stroke-opacity="0.45" class="fd" style="animation-delay:.7s">
-    <animate attributeName="stroke-opacity" values="0.45;0.15;0.45" keyTimes="0;0.5;1" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="stroke-opacity" values="0.45;0.15;0.45" keyTimes="0;0.5;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
   </rect>
   <text x="1058" y="45" text-anchor="middle" class="mono fd" font-size="10" letter-spacing="1.4" fill="#FF4A1C" style="animation-delay:.7s">NO SEARCH STORAGE</text>
   <line x1="64" y1="62" x2="1136" y2="62" stroke="#21252C" class="fd" style="animation-delay:.15s"/>
@@ -115,7 +115,7 @@
 
   <!-- ===== 01 user prompt ===== -->
   <g class="card" style="animation-delay:.15s">
-    <rect class="bezel cardout" x="64.5" y="130.5" width="219" height="99" rx="14" style="animation-delay:0s"/>
+    <rect class="bezel cardout" x="64.5" y="130.5" width="219" height="99" rx="14" style="animation-delay:1.4s"/>
     <rect class="core" x="70" y="136" width="208" height="88" rx="10"/>
     <text x="86" y="160" class="mono idx">01</text>
     <text x="86" y="188" class="sans t">User prompt</text>
@@ -127,7 +127,7 @@
 
   <!-- ===== 02 aio ask — LIVE (parallel lanes) ===== -->
   <g class="card" style="animation-delay:.3s">
-    <rect class="bezel cardout" x="344.5" y="96.5" width="299" height="175" rx="14" style="animation-delay:1.12s"/>
+    <rect class="bezel cardout" x="344.5" y="96.5" width="299" height="175" rx="14" style="animation-delay:2.52s"/>
     <rect class="core" x="350" y="102" width="288" height="164" rx="10"/>
     <text x="366" y="126" class="mono idx">02</text>
     <text x="366" y="152" class="sans t">aio ask</text>
@@ -190,7 +190,7 @@
 
   <!-- ===== 03 ranked results ===== -->
   <g class="card" style="animation-delay:.45s">
-    <rect class="bezel cardout" x="744.5" y="110.5" width="239" height="147" rx="14" style="animation-delay:2s"/>
+    <rect class="bezel cardout" x="744.5" y="110.5" width="239" height="147" rx="14" style="animation-delay:3.4s"/>
     <rect class="core" x="750" y="116" width="228" height="136" rx="10"/>
     <text x="766" y="140" class="mono idx">03</text>
     <text x="766" y="166" class="sans t">top-8 + diversity</text>
@@ -209,7 +209,7 @@
 
   <!-- ===== 04 ephemeral use ===== -->
   <g class="card" style="animation-delay:.6s">
-    <rect class="bezel cardout" x="744.5" y="330.5" width="391" height="99" rx="14" style="animation-delay:2.96s"/>
+    <rect class="bezel cardout" x="744.5" y="330.5" width="391" height="99" rx="14" style="animation-delay:4.36s"/>
     <rect class="core" x="750" y="336" width="380" height="88" rx="10"/>
     <text x="766" y="360" class="mono idx">04</text>
     <text x="766" y="388" class="sans t">use ephemerally</text>
@@ -220,7 +220,7 @@
 
   <!-- ===== 05 report ===== -->
   <g class="card" style="animation-delay:.75s">
-    <rect class="bezel cardout" x="344.5" y="470.5" width="299" height="95" rx="14" style="animation-delay:4.32s"/>
+    <rect class="bezel cardout" x="344.5" y="470.5" width="299" height="95" rx="14" style="animation-delay:5.72s"/>
     <rect class="core" x="350" y="476" width="288" height="84" rx="10"/>
     <text x="366" y="500" class="mono idx">05</text>
     <text x="366" y="528" class="sans t">report every link</text>
@@ -229,7 +229,7 @@
 
   <!-- ===== 06 clean ===== -->
   <g class="card" style="animation-delay:.9s">
-    <rect class="bezel cardout" x="744.5" y="478.5" width="239" height="79" rx="14" style="animation-delay:5.28s"/>
+    <rect class="bezel cardout" x="744.5" y="478.5" width="239" height="79" rx="14" style="animation-delay:6.68s"/>
     <rect class="core" x="750" y="484" width="228" height="68" rx="10"/>
     <text x="766" y="506" class="mono idx">06</text>
     <text x="766" y="534" class="sans t">borrow --clean</text>

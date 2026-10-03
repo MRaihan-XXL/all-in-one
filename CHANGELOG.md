@@ -4,6 +4,35 @@ All notable changes to `aio-connect` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **cli** — `aio init --copilot` backs up an existing
+  `.github/copilot-instructions.md` before replacing it (previous content
+  kept in `~/.aio/backups/`); the dry-run line discloses this.
+- **cli** — `rollback --dry-run` refuses to run (a destructive command cannot
+  honor the flag); unknown flags warn instead of being silently dropped
+  (`ask` exempt — its query may look like a flag); `--dry-run` outside
+  setup/init warns.
+- **write** — rollback ledger write creates the state dir on fresh machines
+  (no ENOENT); unsupported config layouts report honestly and keep the ledger
+  entry (no false "already gone"); partial TOML removal is never written.
+- **status** — installed agent with a missing instruction file is now an
+  issue (parity with doctor); truncated block (start marker without end)
+  classified as no-block → issue.
+- **setup** — parseable-but-wrong-shape config root (e.g.
+  `"mcpServers": "string"`) rebuilt instead of throwing TypeError.
+- **assets** — all five SVGs: keyTimes spec compliance (first=0, last=1 per
+  SMIL 5.10), flow CSS/SMIL phase alignment (+1.4s), shared 8s master
+  timeline + 1.06s caret — all post-tag (commit `cdc4886` + follow-up);
+  npm 1.5.0 ships pre-sync assets.
+
+### Changed
+
+- **tests** — status/doctor hermetic: mocked `homedir` + `AIO_NO_GH`, no
+  real-home or `gh` subprocess dependence (suite remains **79/79**).
+
 ## [1.5.0] - 2026-10-01
 
 ### Added
@@ -71,6 +100,9 @@ post-review fix-batch tests, e.g. the B1 dry-state regression net).
   `scanRepos`, `resolveReposDir`, `DEFAULT_REPOS_DIR`, `--repos`,
   `AIO_REPOS_DIR`.
 - POSIX-safe paths via `fileURLToPath` maintained across the new modules.
+- **Backup filenames** — two backups written in the same millisecond get a
+  de-dup suffix (`_1`, `_2`, …) instead of overwriting each other (CI ubuntu
+  race); prune/rollback only count/read names (`src/write.js` `backup()`).
 
 ### Removed
 

@@ -6,7 +6,7 @@
 // setup: TTY → plan + y/N; non-TTY → plan only; --yes writes.
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildBlock, injectBlock } from './write.js';
+import { buildBlock, injectBlock, backup } from './write.js';
 import { STATE_DIR } from './paths.js';
 import { getVersion } from './banner.js';
 
@@ -39,15 +39,17 @@ export async function runInit(opts = {}) {
     const copilotFile = path.join(cwd, '.github', 'copilot-instructions.md');
     const existed = fs.existsSync(copilotFile);
     if (dry) {
-      results.push({ label: '.github/copilot-instructions.md', status: existed ? 'would update (dry-run)' : 'would inject (dry-run)', file: copilotFile });
+      results.push({ label: '.github/copilot-instructions.md', status: existed ? 'would update (dry-run; existing content backed up on write)' : 'would inject (dry-run)', file: copilotFile });
     } else {
       const dir = path.dirname(copilotFile);
       const cur = existed ? fs.readFileSync(copilotFile, 'utf8') : '';
       const next = pointerBody() + '\n';
       if (cur !== next) {
         fs.mkdirSync(dir, { recursive: true });
+        // never destroy pre-existing team content silently (F1) — copy first, then replace
+        if (existed) backup(copilotFile, 'init-copilot');
         fs.writeFileSync(copilotFile, next);
-        results.push({ label: '.github/copilot-instructions.md', status: existed ? 'updated (pointer)' : 'injected (pointer)', file: copilotFile });
+        results.push({ label: '.github/copilot-instructions.md', status: existed ? 'updated (pointer; previous backed up)' : 'injected (pointer)', file: copilotFile });
       } else {
         results.push({ label: '.github/copilot-instructions.md', status: 'unchanged', file: copilotFile });
       }

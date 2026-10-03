@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 process.env.AIO_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-doctor-state-'));
+process.env.AIO_NO_GH = '1'; // no gh subprocess in tests (gh auth status would hit the network)
 const { runChecks, runDoctor } = await import('../src/doctor.js');
 const { STATE_DIR } = await import('../src/paths.js');
 const { BLOCK_START, BLOCK_END } = await import('../src/write.js');
@@ -36,8 +37,33 @@ function json(body) {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
 }
 
+/**
+ * Isolated home for detectAgents/blockTargets inside runChecks — never the real
+ * machine: temp dir, inert PATH (no hermes/freebuff binary → globalWanted only
+ * from ~/AGENTS.md below), APPDATA pointed at an absent dir (win32 zed target
+ * dropped). `withBlock` wires ~/AGENTS.md with the block for the healthy path.
+ */
+function hermeticHome(t, { withBlock = false } = {}) {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-doctor-home-'));
+  if (withBlock) fs.writeFileSync(path.join(home, 'AGENTS.md'), `${BLOCK_START}\nmocked\n${BLOCK_END}\n`);
+  const savedPath = process.env.PATH;
+  const savedAppData = process.env.APPDATA;
+  process.env.PATH = '';
+  process.env.APPDATA = path.join(home, 'AppData', 'Roaming'); // absent on purpose → zed never installed
+  t.mock.method(os, 'homedir', () => home);
+  t.after(() => {
+    if (savedPath === undefined) delete process.env.PATH;
+    else process.env.PATH = savedPath;
+    if (savedAppData === undefined) delete process.env.APPDATA;
+    else process.env.APPDATA = savedAppData;
+    fs.rmSync(home, { recursive: true, force: true });
+  });
+  return home;
+}
+
 test('runChecks: returns structured checks (levels + ids), never throws', async (t) => {
   const net = mockNet(t);
+  hermeticHome(t);
   fs.rmSync(MANIFEST, { force: true });
   const r = await runChecks({});
   assert.ok(Array.isArray(r.checks) && r.checks.length >= 6, 'at least 6 checks');
@@ -52,10 +78,15 @@ test('runChecks: returns structured checks (levels + ids), never throws', async 
   assert.ok(r.checks.some((c) => c.id === 'agent blocks'), 'agent blocks check exists');
   assert.equal(typeof r.ok, 'boolean');
   assert.equal(net.mock.callCount(), 2, 'github + ollama probed once each');
+  // gh lane: AIO_NO_GH=1 skips `gh auth status` — must still be reported, as [ok]/[~~] only
+  const gh = r.checks.find((c) => c.id === 'gh auth');
+  assert.ok(gh, 'gh auth check exists');
+  assert.match(gh.text, /^\[(ok|~~)\] gh auth/, 'gh lane tagged ok/warn, never bad');
 });
 
 test('runChecks: fixture state (no manifest) → manifest bad + ok=false', async (t) => {
   mockNet(t);
+  hermeticHome(t);
   fs.rmSync(MANIFEST, { force: true });
   const r = await runChecks({});
   assert.ok(r.issues >= 1);
@@ -66,6 +97,7 @@ test('runChecks: fixture state (no manifest) → manifest bad + ok=false', async
 
 test('runDoctor: report text + exit 1 when issues exist', async (t) => {
   mockNet(t);
+  hermeticHome(t);
   fs.rmSync(MANIFEST, { force: true });
   const r = await runDoctor({});
   assert.match(r.text, /aio doctor/);
@@ -84,13 +116,10 @@ test('runChecks: AIO_OFFLINE=1 + fresh slim manifest → ok=true (deterministic,
     throw new Error(`network must not be touched in offline mode: ${input}`);
   });
   fs.writeFileSync(MANIFEST, SLIM_MANIFEST); // fresh mtime → not stale
-  // Hermetic agent env: temp home whose ~/AGENTS.md carries the block, so
-  // globalWanted (hermes/freebuff on the real PATH, or ~/AGENTS.md existing)
-  // can never turn the "agent blocks" check into [!!] missing: global.
-  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-doctor-home-'));
-  fs.writeFileSync(path.join(home, 'AGENTS.md'), `${BLOCK_START}\nmocked\n${BLOCK_END}\n`);
-  t.mock.method(os, 'homedir', () => home);
-  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  // Hermetic agent env: temp home whose ~/AGENTS.md carries the block (and an
+  // inert PATH/APPDATA), so globalWanted and the win32 zed target can never
+  // turn the "agent blocks" check into [!!] missing: <label>.
+  hermeticHome(t, { withBlock: true });
 
   const r = await runChecks({});
   const live = r.checks.find((c) => c.id === 'live');

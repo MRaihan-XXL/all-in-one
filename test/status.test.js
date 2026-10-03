@@ -23,6 +23,30 @@ const SLIM_MANIFEST = [
   '',
 ].join('\n');
 
+/**
+ * Isolated home for runStatus — blockTargets must see ONLY fixture state, never
+ * the real machine: temp dir, inert PATH (detectAgents finds no hermes/freebuff
+ * → globalWanted false → no global target), APPDATA pointed at an absent dir
+ * (win32 zed target → n/a). Every target lands on the n/a path: missing file +
+ * config dir absent → no issue (src/status.js), so ok===true is machine-independent.
+ */
+function mockHome(t) {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-status-home-'));
+  const savedPath = process.env.PATH;
+  const savedAppData = process.env.APPDATA;
+  process.env.PATH = '';
+  process.env.APPDATA = path.join(home, 'AppData', 'Roaming'); // absent on purpose → zed n/a
+  t.mock.method(os, 'homedir', () => home);
+  t.after(() => {
+    if (savedPath === undefined) delete process.env.PATH;
+    else process.env.PATH = savedPath;
+    if (savedAppData === undefined) delete process.env.APPDATA;
+    else process.env.APPDATA = savedAppData;
+    fs.rmSync(home, { recursive: true, force: true });
+  });
+  return home;
+}
+
 test('blockState: missing / no block / injected', () => {
   assert.equal(blockState(path.join(tmp, 'nope.md')), 'missing');
   const plain = path.join(tmp, 'plain.md');
@@ -35,6 +59,7 @@ test('blockState: missing / no block / injected', () => {
 
 test('runStatus: healthy — fresh slim live manifest in STATE_DIR', (t) => {
   t.mock.method(console, 'log', () => {}); // keep test output clean
+  mockHome(t); // scan the isolated fixture home, never the real one
   fs.writeFileSync(MANIFEST, SLIM_MANIFEST); // fresh mtime → not stale
   t.after(() => fs.rmSync(MANIFEST, { force: true }));
 
@@ -44,15 +69,18 @@ test('runStatus: healthy — fresh slim live manifest in STATE_DIR', (t) => {
   assert.ok(manifestLine && manifestLine.includes(MANIFEST), `manifest line points at ${MANIFEST}`);
   assert.match(out, /live architecture \(no search storage\)/, 'slim manifest → live architecture line');
   assert.match(out, /agents/, 'agents section present');
-  // opencode row must exist in one of the known states — n/a on machines where
-  // ~/.config/opencode is absent (e.g. clean CI runners), never a bare gap.
-  assert.match(out, /opencode\s+(injected\*?|missing|n\/a|no block)/, 'target list from shared blockTargets');
-  assert.ok(!r.issues.some((i) => i.includes('manifest')), r.issues.join('; '));
+  // every target in the fixture home is fresh/missing with its config dir
+  // absent → the n/a path (never a bare gap, never an issue)
+  for (const label of ['opencode', 'claude', 'kimi', 'jcode', 'codex', 'gemini', 'zed']) {
+    assert.match(out, new RegExp(`^  ${label}\\s+n/a\\b`, 'm'), `${label}: absent in fixture home → n/a`);
+  }
+  assert.ok(!r.issues.length, r.issues.join('; '));
   assert.equal(r.ok, true, r.issues.join('; '));
 });
 
 test('runStatus: manifest missing → issue reported', (t) => {
   t.mock.method(console, 'log', () => {});
+  mockHome(t);
   fs.rmSync(MANIFEST, { force: true });
 
   const r = runStatus({});
@@ -63,6 +91,7 @@ test('runStatus: manifest missing → issue reported', (t) => {
 
 test('runStatus: legacy manifest (no live marker) → issue reported', (t) => {
   t.mock.method(console, 'log', () => {});
+  mockHome(t);
   fs.writeFileSync(MANIFEST, '# ctx\n## REPOS (3)\n');
   t.after(() => fs.rmSync(MANIFEST, { force: true }));
 

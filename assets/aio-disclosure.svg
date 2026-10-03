@@ -46,7 +46,7 @@
       <animate attributeName="opacity" values="0.8;0.3;0.8" keyTimes="0;0.5;1" dur="8s" repeatCount="indefinite"/>
     </circle>
     <circle cx="90" cy="124" r="4" fill="none" stroke="#FF4A1C">
-      <animate attributeName="r" values="4;11" keyTimes="0;0.62" dur="8s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="4;11;4" keyTimes="0;0.62;1" dur="8s" repeatCount="indefinite"/>
       <animate attributeName="stroke-opacity" values="0.5;0;0;0.5" keyTimes="0;0.62;0.99;1" dur="8s" repeatCount="indefinite"/>
     </circle>
     <circle cx="106" cy="124" r="4" fill="#2A2F37"/>
@@ -71,7 +71,7 @@
     <!-- link underline sweep, after the reveal -->
     <rect x="193" y="202" width="0" height="2.5" rx="1.25" fill="#FF4A1C" class="fd" style="animation-delay:4.4s" opacity="0.8">
       <animate attributeName="width" values="0;552" dur=".7s" begin="4.4s" fill="freeze"/>
-      <animate attributeName="opacity" values="0.8;0.8;0.35;0.8" keyTimes="0;0.78;0.84;0.90" dur="8s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.8;0.8;0.35;0.8;0.8" keyTimes="0;0.78;0.84;0.90;1" dur="8s" repeatCount="indefinite"/>
     </rect>
 
     <!-- anatomy row -->

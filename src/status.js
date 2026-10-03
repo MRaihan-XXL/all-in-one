@@ -3,13 +3,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { CONFIG_FILE, STATE_DIR } from './paths.js';
-import { BLOCK_START, blockEdited } from './write.js';
+import { BLOCK_START, BLOCK_END, blockEdited } from './write.js';
 import { blockTargets } from './targets.js';
 
 /** injected | no block | missing — for one agent instruction file. */
 export function blockState(file) {
   if (!fs.existsSync(file)) return 'missing';
-  return fs.readFileSync(file, 'utf8').includes(BLOCK_START) ? 'injected' : 'no block';
+  const txt = fs.readFileSync(file, 'utf8');
+  if (!txt.includes(BLOCK_START)) return 'no block';
+  // truncated block (start marker, no end) is NOT healthy — classify as no block → issue
+  return txt.includes(BLOCK_END) ? 'injected' : 'no block';
 }
 
 export function runStatus(opts = {}) {
@@ -36,6 +39,8 @@ export function runStatus(opts = {}) {
     let s = blockState(file);
     // agent never installed (no config dir, no file) → not a problem, show n/a (N9)
     if (s === 'missing' && dir && !fs.existsSync(dir)) s = 'n/a';
+    // installed agent but instruction file is gone → same state doctor calls [!!]
+    else if (s === 'missing') issues.push(`${label}: instruction file missing — run \`aio\` to re-inject`);
     // C-02 drift: block exists but was edited outside aio → show it, refresh via `aio`
     if (s === 'injected' && blockEdited(file)) s = 'injected*';
     if (s === 'no block') issues.push(`${label}: file exists but has no aio block — run \`aio\``);
