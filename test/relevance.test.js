@@ -2,6 +2,7 @@
 // ALL network is mocked: zero real fetch.
 process.env.AIO_NO_GH = '1'; // ghSkills skips execFile — no shell in tests
 process.env.AIO_NO_AI = '1'; // deterministic: BM25/trust order, no Ollama
+process.env.AIO_RATE = '0'; // ghRepos → ghThrottle: no spacing sleep in tests (7.5s/call otherwise)
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

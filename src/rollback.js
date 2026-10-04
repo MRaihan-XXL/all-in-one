@@ -1,6 +1,7 @@
 // rollback.js — `aio rollback`: surgically undo everything setup did (FR7)
 import os from 'node:os';
 import { stripBlock, removeMcpAdditions } from './write.js';
+import { removeSkillAdditions } from './skill.js';
 import { blockTargets } from './targets.js';
 import { BACKUP_DIR } from './paths.js';
 
@@ -25,6 +26,14 @@ export function runRollback() {
   if (!mcp.length) console.log('  [x] none on record — nothing to remove');
   for (const r of mcp) {
     console.log(`  [${r.status === 'removed' ? 'x' : ' '}] ${r.target.padEnd(26)} ${r.status}`);
+  }
+
+  console.log('\nInstalled skills (only byte-identical aio installs)');
+  const skills = removeSkillAdditions();
+  if (!skills.length) console.log('  [x] none on record — nothing to remove');
+  for (const r of skills) {
+    const done = r.status === 'removed' || r.status === 'already gone';
+    console.log(`  [${done ? 'x' : ' '}] ${r.target.padEnd(26)} ${r.status}`);
   }
 
   console.log(`\nRemoved ${removed} context block(s).`);

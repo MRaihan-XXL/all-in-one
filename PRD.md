@@ -4,7 +4,7 @@
 |---|---|
 | **Product** | `aio` — All-In-One auto-connect layer for AI coding agents |
 | **Package** | `aio-connect` (npm registry; GitHub repo `MRaihan-XXL/all-in-one`) |
-| **Version** | 1.5.0 |
+| **Version** | 1.6.0 (2026-10-05; supersedes 1.5.0) |
 | **Status** | Approved for implementation |
 | **License** | GPL-3.0 |
 | **Docs language** | English (international) |
@@ -232,8 +232,8 @@ code search `total_count` = 6,832,128; npm packages **3M+** — npm's official
 figure (unchanged).
 
 **Acceptance:** `aio ask --json` reports `stored: 0` (asserted in the test
-suite) and there is no catalog file to write — `npm test` **79/79** as of
-2026-10-01.
+suite) and there is no catalog file to write — `npm test` **206/206** as of
+2026-10-05.
 
 ### FR12 — Security & trust
 - **Threat model** — `docs/THREATS.md` documents assets, trust boundaries,
@@ -262,7 +262,7 @@ suite) and there is no catalog file to write — `npm test` **79/79** as of
 **Acceptance:** `test/safety.test.js` covers `--dry-run` (no writes);
 `test/relevance.test.js` covers trust-weighted ranking; `node scripts/eval-relevance.mjs`
 prints hit@8 (**20/20**, 100%) and hit@1 (**19/20**, 95%), MRR **0.97** —
-measured 2026-10-01; suite **79/79**.
+measured 2026-10-01; suite **206/206**.
 
 ## 5. Non-functional requirements
 
@@ -344,7 +344,7 @@ non-interactive writes), `--dry-run` (plan only, write nothing), `--copilot`
   `assets/flow.svg` (six-step live pipeline: parallel github/npm/crates/web
   lanes, top-8 + diversity, no catalog-miss branch; full-English labels + loop-wire
   `stroke-dasharray` fixed), `assets/aio-stats.svg` (630M+ · 3M+ · 340K+ ·
-  6.8M+ · 0 RESULTS KEPT · 79/79 TESTS, eyebrow "VERIFIED — LIVE CORPUS,
+  6.8M+ · 0 RESULTS KEPT · 206/206 TESTS, eyebrow "VERIFIED — LIVE CORPUS,
   FLOORS MEASURED 2026-09-30", chip "100% LIVE"), plus the new disclosure-card
   asset `assets/aio-disclosure.svg` (details in the next bullet). Figures are
   **verified floors, measured 2026-09-30** (sources in §4 FR11); the v1.2
@@ -500,3 +500,5 @@ Verified 2026-10-01 (v1.5.0): tests **79/79**; `aio doctor --check` **0 issues, 
 | 2026-10-01 | v1.9 — aio 1.4.1: POSIX-safe paths (fileURLToPath), evolve = setup → doctor → tests (install-plan scan dropped — dev tooling, not shipped in the npm package), status strictly read-only, conditional global AGENTS block, ask error transparency (errors[], ok:false when every source fails), diversity identity fix (URL/name, ≤10 rows), default n=8, MCP rollback hardening (per-file try/catch; parse-error/missing ledger entries kept for retry), 30-day backup pruning, versioned UA, ranking eval hit@1 19/20 + MRR 0.97, 52/52 tests, test/ shipped in npm package, animation upgrade across all 5 SVG assets |
 
 | 2026-10-01 | v1.10 — aio 1.5.0: honest-review remediation (B-01–B-10; B-05 index.html nav `nth-child` rule fixed, B-06 index.html `og:image` → `assets/og-cover.png` at absolute URL https://mraihan-xxl.github.io/all-in-one/assets/og-cover.png), first-run consent gate (B-02: TTY plan + [y/N], non-TTY plan-only exit 0, --yes to apply, --dry-run/aio preview always plan), `aio init [--copilot]` project mode (./AGENTS.md official standard + .github/copilot-instructions.md pointer, same gate, not reversed by rollback), drift detection (C-02: block-hashes.json SHA-256 prefix, status `injected*` + stale note, hand-edit backed up before replace), shared target list (B-04: 6 agent files + Zed official path + conditional global), doctor = exactly 9 checks with [ok]/[~~]/[!!] tags incl. gh auth + MCP ledger (B-08/B-09), M-04 slim manifest (pointer + detected agents; rules live only in the block), B-03 update re-runs the fresh global bin with --yes, B-10 repos/install-plan/fixPaths tooling removed from src entirely (scanRepos, resolveReposDir, DEFAULT_REPOS_DIR, --repos, AIO_REPOS_DIR, reposDir, .aio-fixpaths), release.yml (tag v* → npm test → tag==version → npm publish via NPM_TOKEN secret → GH release) + eval.yml (daily cron relevance eval), assets/og-cover.png (1200×630, scripts/og.html), CHANGELOG.md shipped in package, 79/79 tests |
+
+| 2026-10-05 | v1.11 — aio 1.6.0 scope: `aio skill add <owner/repo\|url> [--file <path\|dir>] [--name <n>] [--dry-run]` (raw.githubusercontent HEAD, 3 layout candidates → `~/.agents/skills/<name>/SKILL.md`, sha256-claimed in `skills-ledger.json`; `skill list` / `skill remove` refuse user-owned skills; rollback removes only byte-identical aio installs), `aio completion bash\|zsh\|fish\|pwsh`, `aio doctor --json` (9 checks as `{schemaVersion:1, version, mode, ok, issues, warns, checks[]}`) + `schemaVersion: 1` on `ask --json`/`borrow --json` (bump only on breaking shape; additive fields free), standalone binaries + installers (`aio-windows-x64.exe`, `aio-linux-x64`, `aio-linux-arm64`, `aio-darwin-x64`, `aio-darwin-arm64` + `SHA256SUMS` + cosign-signed `SHA256SUMS.sig`; download-then-run `install.ps1`/`install.sh` with sha256 verification, scoop manifest; binary caveats: evolve needs source/npm, update needs npm, doctor reports the embedded bun build), GitHub search rate budget (`gh-rate.json` timestamps only — 8/min unauth, 25/min with GH token, `AIO_RATE`/`AIO_RATE=0`), `AIO_QUIET=1`/`AIO_NO_BANNER=1` + `NO_COLOR=1`, FR6 rule 0 (`FIRST LINE RULE` repeating the disclosure line before rule 1 — kimi retest pending, no new compliance claim), release.yml hardening (tag must be the `origin/main` tip, per-OS binary smoke, asset upload, cosign signs after upload), uninstall order documented (rollback first, then `npm rm -g`), `CONTRIBUTING.md` + `ROADMAP.md` added, tests 206/206, coverage gate 90/80/85 |

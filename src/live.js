@@ -5,11 +5,47 @@
 // npm score) that `search.js` blends into the final ranking (FR12).
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import fs from 'node:fs';
+import path from 'node:path';
 import { getVersion } from './banner.js';
+import { STATE_DIR } from './paths.js';
 
 const execFileP = promisify(execFile);
 const UA = { 'user-agent': `aio-connect/${getVersion()} (+https://github.com/MRaihan-XXL/all-in-one)` };
 const T = (ms) => AbortSignal.timeout(ms);
+
+/* ---- GitHub search rate budget (P5) ---------------------------------------
+   Unauthenticated GitHub search allows 10 req/min — an agent calling `aio ask`
+   per prompt hits 403 quickly and the failure masquerades as "source down".
+   We space GitHub search calls ACROSS processes via a timestamp-only file
+   (no queries, no results — zero search storage; this is a clock, not history).
+   Defaults: 8 calls/min unauthenticated, 25 with a token (API cap: 30).
+   AIO_RATE=n overrides the budget; AIO_RATE=0 disables spacing entirely. */
+const RATE_FILE = path.join(STATE_DIR, 'gh-rate.json');
+
+export async function ghThrottle() {
+  if (process.env.AIO_RATE === '0') return;
+  const t = await ghToken(); // cached after the first call
+  const perMin = Number(process.env.AIO_RATE) > 0 ? Number(process.env.AIO_RATE) : t ? 25 : 8;
+  const gap = 60000 / perMin;
+  let last = 0;
+  try {
+    last = JSON.parse(fs.readFileSync(RATE_FILE, 'utf8')).last || 0;
+  } catch {
+    /* first run or no state — no wait */
+  }
+  const since = Date.now() - last;
+  if (last && since < gap) {
+    // cap the wait — better an honest 403 than an unbounded stall
+    await new Promise((r) => setTimeout(r, Math.min(gap - since, 8000)));
+  }
+  try {
+    fs.mkdirSync(STATE_DIR, { recursive: true });
+    fs.writeFileSync(RATE_FILE, JSON.stringify({ last: Date.now() }));
+  } catch {
+    /* read-only home — spacing degrades to in-process only */
+  }
+}
 
 /* ---------------- helpers ---------------- */
 
@@ -67,6 +103,7 @@ export function ghQuery(q) {
 export async function ghRepos(q, n = 6) {
   const gq = ghQuery(q);
   const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(gq)}&sort=stars&order=desc&per_page=${n}`;
+  await ghThrottle();
   let res = await fetch(url, { headers: await ghAuthHeaders(), signal: T(4000) });
   if (res.status === 429 || res.status === 503) {
     const ra = Number(res.headers.get('retry-after'));
@@ -97,6 +134,7 @@ export async function ghSkills(q, n = 6) {
   if (process.env.AIO_NO_GH === '1') return [];
   const codeQ = `filename:SKILL.md ${ghQuery(q)}`.trim();
   const api = `search/code?q=${encodeURIComponent(codeQ)}&per_page=${n}`;
+  await ghThrottle();
   const { stdout } = await execFileP('gh', ['api', api], {
     timeout: 4500,
     maxBuffer: 1 << 20,

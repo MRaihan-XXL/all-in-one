@@ -20,7 +20,7 @@ export async function runSetup(opts = {}) {
   const home = os.homedir();
   const dry = !!opts.dryRun; // FR12: plan only — no manifest, blocks, MCP, state writes
 
-  if (Number(process.versions.node.split('.')[0]) < 22) {
+  if (Number(process.versions.node.split('.')[0]) < 22 && !process.versions.bun) {
     console.error(`[aio] warning: Node ${process.versions.node} detected — Node >= 22 recommended`);
   }
 

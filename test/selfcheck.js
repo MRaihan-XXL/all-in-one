@@ -89,3 +89,30 @@ test('banner: strict grid — every ART row same width, no crooked letters', () 
   }
   assert.ok(banner().includes('all-in-one v'), 'branded tagline present');
 });
+
+/** Save/restore an env var around `fn` — banner() reads env at call time. */
+function withEnv(name, value, fn) {
+  const prev = process.env[name];
+  process.env[name] = value;
+  try {
+    fn();
+  } finally {
+    if (prev === undefined) delete process.env[name];
+    else process.env[name] = prev;
+  }
+}
+
+test('banner: AIO_QUIET=1 → empty string', () => {
+  withEnv('AIO_QUIET', '1', () => {
+    assert.equal(banner(), '', 'quiet mode prints nothing at all');
+  });
+  assert.ok(banner().includes('all-in-one v'), 'env restored → banner back');
+});
+
+test('banner: NO_COLOR=1 → no ANSI escape sequences', () => {
+  withEnv('NO_COLOR', '1', () => {
+    const b = banner();
+    assert.ok(b.includes('all-in-one v'), 'content still there');
+    assert.ok(!b.includes('\x1b'), 'no ESC bytes when NO_COLOR is set');
+  });
+});

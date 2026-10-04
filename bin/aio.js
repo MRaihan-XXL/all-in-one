@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // aio — all-in-one: auto-connect your AI agents to repos, tools, skills & sites
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { banner, getVersion } from '../src/banner.js';
 
@@ -29,6 +30,12 @@ const HELP = `
     aio borrow "<keywords>"      Live GitHub search for what you need cloned
       aio borrow --get <owner/repo>   shallow-clone to temp (24h TTL, then purged)
       aio borrow --list | --clean     inspect / wipe temp clones
+    aio skill add <owner/repo|url> [--file <path|dir>] [--name <n>] [--dry-run]
+                                 Install a public SKILL.md into ~/.agents/skills
+                                 (shared by 40+ agents; ledgered for rollback)
+      aio skill list | remove <name>  inspect / remove installed skills (only
+                                 byte-identical aio installs are ever removed)
+    aio completion <shell>       Print shell completion script (bash|zsh|fish|pwsh)
     aio doctor [--check|--fix]   Self-diagnosis; --fix = safe auto-repair,
                                  --check = CI gate (exit 1 on issues)
     aio evolve                   Self-upgrade pipeline: setup → doctor → tests
@@ -44,13 +51,16 @@ const HELP = `
                                   write nothing (diff-first review)
     --show-block                 With the plan, print the exact block content
                                   (also what aio preview shows)
-    --json                       Machine-readable output (ask / borrow)
+    --file <path|dir>            skill add: install from a local SKILL.md or dir
+    --name <name>                skill add: override the installed skill name
+    --json                       Machine-readable output (ask / borrow / doctor)
     -h, --help                   This help
     -v, --version                Version
 
   Environment
     AIO_OFFLINE=1, AIO_NO_GH=1, AIO_STATE_DIR, GH_TOKEN, OLLAMA_HOST,
-    AIO_OLLAMA_MODEL, AIO_NO_AI=1
+    AIO_OLLAMA_MODEL, AIO_NO_AI=1, AIO_RATE=<calls/min|0> (GitHub search
+    budget; 0 disables spacing), AIO_QUIET=1 (no banner), NO_COLOR=1
 
   Note
     aioc is an alias of the same binary — Adobe's App Builder CLI (@adobe/aio)
@@ -76,6 +86,8 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--get') opts.flags.get = argv[++i] ?? null;
+    else if (a === '--file') opts.flags.file = argv[++i] ?? null;
+    else if (a === '--name') opts.flags.name = argv[++i] ?? null;
     else if (a === '--json') opts.flags.json = true;
     else if (a === '--clean') opts.flags.clean = true;
     else if (a === '--list') opts.flags.list = true;
@@ -90,7 +102,7 @@ function parseArgs(argv) {
   const cmd = rest[0];
   opts.query = rest.slice(1).join(' ');
   if (
-    ['update', 'rollback', 'setup', 'status', 'ask', 'borrow', 'doctor', 'evolve', 'init'].includes(cmd)
+    ['update', 'rollback', 'setup', 'status', 'ask', 'borrow', 'skill', 'completion', 'doctor', 'evolve', 'init'].includes(cmd)
   ) {
     opts.command = cmd;
   } else if (cmd === 'preview') {
@@ -106,14 +118,33 @@ function parseArgs(argv) {
   return opts;
 }
 
-const opts = parseArgs(process.argv.slice(2));
+// Launch styles disagree on argv layout: `node bin/aio.js <args>` carries the
+// script path at [1]; a bun --compile binary carries its VIRTUAL main-module
+// path (B:/~BUN/root/<outfile>) at [1]; only after that come the real args.
+// Detect the script token instead of assuming an index — a fixed slice(2)
+// silently drops the FIRST argument of a binary (`aio.exe --yes` → no --yes).
+// POSIX npm/npx invoke through a SYMLINK (node_modules/.bin/aio): argv[1] is
+// the symlink path and node does NOT realpath it — resolve before matching,
+// or every Linux/macOS npm/npx launch dies as `unknown command: /usr/local/bin/aio`.
+const rawArgs = process.argv.slice(1);
+let scriptTok = rawArgs[0] || '';
+// /i: win32 filesystems are case-insensitive — node will happily LOAD bin\AIO.JS,
+// so the match must accept it too (realpath does not re-case on win32).
+if (scriptTok && !/(^|[/\\])aio\.js$/i.test(scriptTok) && !scriptTok.includes('~BUN/root/')) {
+  try {
+    scriptTok = fs.realpathSync(scriptTok);
+  } catch { /* not a filesystem path (flag/bare word) — leave untouched */ }
+}
+const invokedAsScript =
+  scriptTok && (/(^|[/\\])aio\.js$/i.test(scriptTok) || scriptTok.includes('~BUN/root/'));
+const opts = parseArgs(invokedAsScript ? rawArgs.slice(1) : rawArgs);
 // --copilot only has meaning for `aio init` — never silently swallow it elsewhere (N2)
 if (opts.flags.copilot && opts.command !== 'init') {
   console.error('[aio] --copilot only applies to `aio init` — ignoring');
 }
-// --dry-run is only honored by setup/init — warn elsewhere; REFUSE on the destructive
+// --dry-run is only honored by setup/init/skill — warn elsewhere; REFUSE on the destructive
 // command so the flag can never be mistaken for a shield that doesn't exist (F3)
-if (opts.flags.dry && opts.command !== 'setup' && opts.command !== 'init' && opts.command !== 'help') {
+if (opts.flags.dry && opts.command !== 'setup' && opts.command !== 'init' && opts.command !== 'help' && opts.command !== 'skill') {
   if (opts.command === 'rollback') {
     console.error('[aio] rollback cannot honor --dry-run — refusing to run; inspect first with `aio doctor`');
     process.exit(1);
@@ -121,7 +152,7 @@ if (opts.flags.dry && opts.command !== 'setup' && opts.command !== 'init' && opt
   console.error('[aio] --dry-run only applies to `aio setup` / `aio init` — ignoring');
 }
 // unknown flags must never be silently dropped (F8); `ask` exempt — its query may look like a flag
-const KNOWN_FLAGS = new Set(['--get', '--json', '--clean', '--list', '--check', '--fix', '--dry-run', '--yes', '--show-block', '--copilot', '--help', '--version', '-h', '-v']);
+const KNOWN_FLAGS = new Set(['--get', '--file', '--name', '--json', '--clean', '--list', '--check', '--fix', '--dry-run', '--yes', '--show-block', '--copilot', '--help', '--version', '-h', '-v']);
 if (opts.command !== 'ask' && opts.command !== 'help' && opts.command !== 'version') {
   for (const tok of opts.query.split(/\s+/).filter(Boolean)) {
     if (tok.startsWith('--') && !KNOWN_FLAGS.has(tok.split('=')[0])) console.error(`[aio] unknown flag: ${tok} — ignoring`);
@@ -177,18 +208,50 @@ switch (opts.command) {
     process.exit(r.ok ? 0 : 1);
     break;
   }
+  case 'skill': {
+    try {
+      const { skillAdd, skillList, skillRemove } = await import('../src/skill.js');
+      const words = opts.query.trim().split(/\s+/).filter(Boolean);
+      const action = words[0];
+      const target = words.slice(1).join(' ');
+      let r;
+      if (action === 'list') r = skillList();
+      else if (action === 'remove') r = skillRemove({ target });
+      else if (action === 'add' || action === undefined) {
+        r = await skillAdd({ target, file: opts.flags.file, name: opts.flags.name, dry: !!opts.flags.dry });
+      } else r = { ok: false, text: `[aio] skill: unknown subcommand "${action}" — use add | list | remove` };
+      console.log(r.text);
+      process.exit(r.ok ? 0 : 1);
+    } catch (e) {
+      console.error(`[aio] skill failed: ${e.message}`);
+      process.exit(1);
+    }
+    break;
+  }
+  case 'completion': {
+    const { completion } = await import('../src/completion.js');
+    const r = completion(opts.query.trim().split(/\s+/)[0] || '');
+    console.log(r.text);
+    process.exit(r.ok ? 0 : 1);
+    break;
+  }
   case 'doctor': {
     const { runDoctor } = await import('../src/doctor.js');
-    const r = await runDoctor({ check: opts.flags.check, fix: opts.flags.fix });
+    const r = await runDoctor({ check: opts.flags.check, fix: opts.flags.fix, json: opts.flags.json });
     console.log(r.text);
     process.exit(r.exit);
     break;
   }
   case 'evolve': {
-    const { runEvolve } = await import('../src/evolve.js');
-    const r = await runEvolve({});
-    console.log(r.text);
-    process.exit(r.exit);
+    try {
+      const { runEvolve } = await import('../src/evolve.js');
+      const r = await runEvolve({});
+      console.log(r.text);
+      process.exit(r.exit);
+    } catch (e) {
+      console.error(`[aio] evolve failed: ${e.message}`);
+      process.exit(1);
+    }
     break;
   }
   case 'init': {

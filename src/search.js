@@ -215,6 +215,7 @@ export async function runAsk({ query, json }) {
   const engine = sources.length ? `live: ${sources.join('+')}` : 'live: no source answered';
   const ms = ((Date.now() - t0) / 1000).toFixed(1);
   const out = {
+    schemaVersion: 1, // machine consumers pin to this — bump only on breaking shape change
     query,
     engine: ai ? `${engine} + ollama:${OLLAMA_MODEL}` : engine,
     sources,

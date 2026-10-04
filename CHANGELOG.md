@@ -6,6 +6,84 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-05
+
+### Added
+
+- **`aio skill add <owner/repo|url> [--file <path|dir>] [--name <n>]
+  [--dry-run]`** — downloads a public `SKILL.md` (raw.githubusercontent `HEAD`,
+  3 layout candidates: `SKILL.md`, `<name>/SKILL.md`,
+  `.agents/skills/<name>/SKILL.md`) into
+  `~/.agents/skills/<name>/SKILL.md`, the agentskills.io shared layout read by
+  40+ agents; `--file` installs a local file or directory instead. Idempotent
+  (already-installed-by-aio → no-op), and aio only claims skills it wrote —
+  sha256 recorded in `~/.aio/skills-ledger.json`. Companion commands
+  `aio skill list` and `aio skill remove <name>` (refuses user-owned skills);
+  pre-existing user skills are never touched by add, remove or rollback.
+- **`aio completion bash|zsh|fish|pwsh`** — prints a shell completion script
+  (`src/completion.js`, static command/flag lists: offline-safe, works inside
+  the compiled binary).
+- **`aio doctor --json`** — machine output
+  `{schemaVersion: 1, version, mode, ok, issues, warns, checks: [{level, id,
+  detail}]}` over the same 9 checks. `aio ask --json` and `aio borrow --json`
+  now also carry `schemaVersion: 1` — a contract: bump only on a breaking
+  shape change, additive fields are free.
+- **Standalone binaries (no Node required)** — release assets
+  `aio-windows-x64.exe`, `aio-linux-x64`, `aio-linux-arm64`, `aio-darwin-x64`,
+  `aio-darwin-arm64` plus `SHA256SUMS`, `aio-scoop.json`, `install.ps1` and
+  `install.sh`. Both installers are download-then-run and sha256-verify the
+  asset against `SHA256SUMS` before it lands — nothing remote is piped into a
+  shell. Windows: `iwr …/install.ps1 -OutFile install.ps1` then
+  `powershell -ExecutionPolicy Bypass -File install.ps1` (installs to
+  `%LOCALAPPDATA%\Programs\aio`, adds the user PATH); Linux/macOS:
+  `curl -fsSL -o /tmp/aio-install.sh …/install.sh` then
+  `sh /tmp/aio-install.sh` (installs to `~/.local/bin`); scoop:
+  `scoop install .\aio-scoop.json`.
+- **GitHub search rate budget (P5)** — `aio` spaces GitHub search calls across
+  processes via `~/.aio/gh-rate.json` (timestamps only — no queries, no
+  results; zero search storage preserved). Defaults 8 calls/min
+  unauthenticated, 25/min with a `GH_TOKEN`; `AIO_RATE=<n>` overrides,
+  `AIO_RATE=0` disables spacing.
+
+### Changed
+
+- **Disclosure rule 0 (FR6 strengthening)** — the injected block now opens
+  with `0. FIRST LINE RULE (non-negotiable …)` repeating the exact
+  `[aio] Using [<name>](<url>) (<type>) — <function>` line before rule 1, for
+  agents that skim later rules. Honest status: retest against kimi is pending
+  — no new compliance claim until measured.
+- **Quiet/color env** — `AIO_QUIET=1` (or `AIO_NO_BANNER=1`) suppresses the
+  banner; `NO_COLOR=1` disables ANSI colors (the banner already prints
+  colorless when piped).
+- **Binary caveats documented** — `aio evolve` needs a source/npm install and
+  prints an honest error in a standalone binary; `aio update` still goes
+  through npm (needs `npm`); `aio doctor`'s node check reports the embedded
+  bun runtime for binaries.
+- **Uninstall order documented** — `aio rollback` first, then
+  `npm rm -g aio-connect` (or delete the binary); removing the tool first
+  orphans blocks, MCP and skills ledger entries.
+- **tests** — status/doctor hermetic: mocked `homedir` + `AIO_NO_GH`, no
+  real-home or `gh` subprocess dependence.
+- **tests + coverage gate** — suite **79/79 → 206/206** (+27, then +89, then
+  +11 review regressions: CLI spawn-level tests closing the
+  `rollback --dry-run` gap, then the skill/consent/borrow/write/search/doctor
+  coverage push);
+  `npm run test:coverage` now enforces `--test-coverage-lines=90
+  --test-coverage-branches=80 --test-coverage-functions=85` and exits
+  non-zero below them (actual: 98.53% lines / 88.05% branches / 98.30%
+  functions).
+- **Pre-merge review hardening** — POSIX symlink launch fix (realpath argv
+  detection — npm/npx on Linux/macOS); npm publish moved **after** binaries +
+  signing (publish-once safety); cosign `--bundle SHA256SUMS.bundle`
+  (verify-blob now possible → docs/THREATS.md); `install.ps1` null-user-PATH
+  crash + `install.sh` PATH-hint interpolation; `aio skill remove`/rollback
+  now unlink `SKILL.md` only (user sibling files survive); `http://` refused +
+  HTML content-types refused + ledger never stores URL credentials;
+  `doctor --json` gains optional `fix:{attempted,ok,error}`; completion words
+  gain `setup`/`completion`/`version`; borrow age clamp (no `-0.0h`).
+- **Note** — the symlink test skips where creating symlinks needs admin
+  rights; CI executes it, so CI runs the full 206/206.
+
 ### Fixed
 
 - **cli** — `aio init --copilot` backs up an existing
@@ -28,10 +106,17 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   timeline + 1.06s caret — all post-tag (commit `cdc4886` + follow-up);
   npm 1.5.0 ships pre-sync assets.
 
-### Changed
+### Security
 
-- **tests** — status/doctor hermetic: mocked `homedir` + `AIO_NO_GH`, no
-  real-home or `gh` subprocess dependence (suite remains **79/79**).
+- **Release CI hardening** — `release.yml` now checks out with
+  `fetch-depth: 0` and **fails when the pushed tag is not the `origin/main`
+  tip** (a stale tag ships yesterday's code — the v1.5.0 incident), builds all
+  5 binaries and smoke-tests each one on the OS that can run it (`--version`,
+  `preview`, `completion bash`, `skill list`; the cross-built `aio-darwin-x64`
+  and `aio-linux-arm64` are not executed — tracked in `ROADMAP.md`), uploads
+  `SHA256SUMS` / `aio-scoop.json` / `install.ps1` / `install.sh`, then cosign
+  keyless-signs `SHA256SUMS` (`SHA256SUMS.sig`) — signing runs *after* upload
+  so a signing outage never blocks the binaries.
 
 ## [1.5.0] - 2026-10-01
 
@@ -149,7 +234,10 @@ Older releases (1.1.x era): see `PRD.md` §11 Revision history.
 ### Release process
 
 1. Bump `package.json` `version` (and the banner/asset chips if shown).
-2. Commit, then tag the same value: `git tag v1.5.0`.
-3. Push the tag — `release.yml` runs `npm test`, refuses a tag that does not
-   equal `package.json` version, publishes to npm (`secrets.NPM_TOKEN`) and
-   creates the GitHub Release.
+2. Commit, then tag the same value: `git tag v1.6.0`.
+3. Push the tag — `release.yml` fails unless the tag **is the `origin/main`
+   tip**, runs `npm test`, refuses a tag that does not equal `package.json`
+   version, publishes to npm (`secrets.NPM_TOKEN`), creates the GitHub
+   Release, then builds + smoke-tests the 5 standalone binaries and uploads
+   `SHA256SUMS`, `SHA256SUMS.sig` (cosign), `aio-scoop.json`, `install.ps1`
+   and `install.sh`.

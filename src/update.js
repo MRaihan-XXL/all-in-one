@@ -50,6 +50,10 @@ export function runUpdate({ binPath }) {
     console.log('[aio] note: you invoked the old copy (npx cache?) — use the global `aio` from now on.');
   }
   console.log('[aio] Package updated — re-running setup with the new version ...');
-  const res = spawnSync(process.execPath, [fresh, '--yes'], { stdio: 'inherit' });
-  process.exit(res.status ?? 0);
+  // source/npm → re-run via the node that hosts us; compiled binary → its
+  // embedded runtime can't execute a JS file, so use the PATH node (npm's host).
+  const nodeBin = /node(\.exe)?$/i.test(process.execPath) ? process.execPath : 'node';
+  const res = spawnSync(nodeBin, [fresh, '--yes'], { stdio: 'inherit' });
+  // spawn failure (res.error) must not read as success via `status ?? 0`
+  process.exit(res.error ? 1 : res.status ?? 0);
 }

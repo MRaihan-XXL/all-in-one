@@ -1,6 +1,7 @@
 // ask.test.js — `aio ask` live router. ALL network is mocked: zero real fetch.
 process.env.AIO_NO_GH = '1'; // ghSkills skips execFile — no shell in tests
 process.env.AIO_NO_AI = '1'; // deterministic: BM25/source order, no Ollama
+process.env.AIO_RATE = '0'; // ghRepos → ghThrottle: no spacing sleep in tests (7.5s/call otherwise)
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -111,4 +112,20 @@ test('runAsk: empty query → usage, ok=false', async () => {
   const missing = await runAsk({ json: false });
   assert.equal(missing.ok, false);
   assert.match(missing.text, /usage: aio ask/);
+  assert.equal(missing.json, null);
+});
+
+test('runAsk: every source fails → --json text still parses, schemaVersion===1 (payload contract)', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () => {
+    throw new Error('fetch failed: ECONNREFUSED');
+  });
+
+  const r = await runAsk({ query: 'csv toolkit', json: true });
+
+  assert.equal(r.ok, false, 'no source answered → not ok');
+  const p = JSON.parse(r.text); // machine consumers parse r.text, not r.json
+  assert.equal(p.schemaVersion, 1, 'schemaVersion pinned to 1');
+  assert.deepEqual(p, r.json, 'text and json payloads agree');
+  assert.equal(p.stored, 0, 'zero storage even on failure');
+  assert.ok(p.errors.length > 0, 'failures surfaced in the payload');
 });

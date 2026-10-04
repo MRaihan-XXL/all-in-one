@@ -36,7 +36,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 79/79 tests">
+  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 206/206 tests">
 </p>
 
 ## ✨ What it does
@@ -49,8 +49,10 @@ packages**) and crates (**340K+ crates**), queried in parallel — all counts ar
 own built-in web search. Results are printed, ranked and discarded — **no
 search history is stored** (aio's own files are the manifest, one block per
 agent file, timestamped backups, `config.json`, the MCP rollback ledger
-`mcp-ledger.json` and the drift-hash list
-`block-hashes.json`, all listed in
+`mcp-ledger.json`, the drift-hash list
+`block-hashes.json`, the GitHub rate clock `gh-rate.json` (one call timestamp,
+no queries/results) and `skills-ledger.json` (written only after an explicit
+`aio skill add`), all listed in
 [docs/CONFIG.md](./docs/CONFIG.md)). The counts above are **the corpora aio
 can reach — the searchable universe, not aio's own size; ranking is not
 capped by them**:
@@ -70,12 +72,15 @@ prompt → aio ask (live: github ∥ npm ∥ crates) → top-8 + diversity (BM25
 |---|---|
 | `aio` | scan → slim manifest → inject the auto-use block into every agent. **Consent gate**: prints the plan first — interactive → asks `Proceed with these writes? [y/N] `, non-TTY → plan only (exit 0, nothing written); `--yes` writes silent, `--dry-run`/`aio preview` = plan only |
 | `aio init [--copilot]` | **project scope**: inject the block into `./AGENTS.md` (official standard — Zed/Copilot/Cursor read it); `--copilot` also writes `.github/copilot-instructions.md` (pointer only). Same consent gate; not reversed by `rollback` |
-| `aio ask "csv ke chart"` | **live search** across GitHub (630M+ repos + public skills), npm (3M+ pkgs) and crates (340K+) in parallel (4 s per source), merge-ranked with BM25 + source diversity, blended 65% keyword relevance + 35% source popularity (stars/downloads/npm score); every hit prints **link + one-line function + `<github>`/`<npm>`/`<crates>` tag**; reranked by your local Ollama (qwen3) only when it is warm and fast; `--json` → `{…, stored: 0, hits}` (`stored: 0` = no search results stored) |
+| `aio ask "csv ke chart"` | **live search** across GitHub (630M+ repos + public skills), npm (3M+ pkgs) and crates (340K+) in parallel (4 s per source), merge-ranked with BM25 + source diversity, blended 65% keyword relevance + 35% source popularity (stars/downloads/npm score); every hit prints **link + one-line function + `<github>`/`<npm>`/`<crates>` tag**; reranked by your local Ollama (qwen3) only when it is warm and fast; `--json` → `{schemaVersion: 1, …, stored: 0, hits}` (`stored: 0` = no search results stored) |
 | `aio borrow "etl tool"` | **optional ephemeral fetch** — `--get owner/repo` shallow-clones to temp (**24 h TTL**, auto-purged), `--list` inspects, `--clean` wipes it. Not a fallback for `ask`: use it when you actually need the files locally |
-| `aio doctor` | **9 checks**, every row tagged `[ok]`/`[~~]`/`[!!]`: node · state · live sources · manifest · agent blocks · agents · gh auth · Ollama · MCP ledger; `--fix` repairs, `--check` = CI gate |
+| `aio skill add <owner/repo\|url>` | **install a public `SKILL.md`** into `~/.agents/skills/<name>/SKILL.md` (the agentskills.io shared layout read by 40+ agents). Tries 3 locations on `raw.githubusercontent.com/…/HEAD` (`SKILL.md`, `<name>/SKILL.md`, `.agents/skills/<name>/SKILL.md`); `--file <path\|dir>` installs a local file instead; `--name <n>` overrides the name; `--dry-run` prints the target and writes nothing. Idempotent, sha256-recorded in `~/.aio/skills-ledger.json`; never touches skills it did not write |
+| `aio skill list` / `aio skill remove <name>` | inspect installed skills (`[x] … aio` = aio-installed, `yours` = not tracked by aio's ledger) and remove one — `remove` refuses skills aio never wrote, so a user-owned skill stays yours |
+| `aio completion bash\|zsh\|fish\|pwsh` | print a shell completion script to stdout (static command/flag list — works offline and inside the compiled binary); add it to `~/.bashrc` / `~/.zshrc` / `~/.config/fish/completions/aio.fish` / `$PROFILE` as the script header says |
+| `aio doctor` | **9 checks**, every row tagged `[ok]`/`[~~]`/`[!!]`: node · state · live sources · manifest · agent blocks · agents · gh auth · Ollama · MCP ledger; `--fix` repairs, `--check` = CI gate, `--json` = machine output `{schemaVersion: 1, version, mode, ok, issues, warns, checks[]}` |
 | `aio evolve` | the whole self-upgrade pipeline in one run: setup (manifest+blocks) → doctor --check → npm test (never commits) |
 | `aio status` | read-only health report — flags hand-edited blocks as `injected*` (drift) |
-| `aio update` / `aio rollback` | update from npm / remove everything aio injected |
+| `aio update` / `aio rollback` | update from npm / remove everything aio injected (blocks, MCP ledger entries, and only byte-identical aio-installed skills) |
 
 Example — real `aio ask` output, abridged (links + functions always included):
 
@@ -95,11 +100,66 @@ note: ranked by keyword match + source popularity — public results are unvette
    why: BM25 keyword match (#2) + trust high
 ```
 
-## 📦 Install
+## Why aio — vs the alternatives
+
+Three things people usually compare aio against, and what each one actually
+covers:
+
+| | **aio** | `gh skill install` | a plain `AGENTS.md` file | built-in web search |
+|---|---|---|---|---|
+| What it covers | live search **and** the wiring: block injection, disclosure rule, safety net | skills distribution only — copies one skill into the shared layout | static instructions you paste yourself | whatever the agent's own search returns |
+| Catalog | none — GitHub (**630M+ repos** + `filename:SKILL.md` skills), npm (**3M+**), crates (**340K+**) queried per prompt, ranked (BM25 + source popularity) | n/a — one skill, copied once | only what was written down; stale as soon as the ecosystem moves | general web; no GitHub/npm/crates structure, no ranking contract |
+| Storage | **zero search storage** — results printed and discarded | files on disk (the point of the tool) | one static file | agent-dependent |
+| Freshness | re-run `aio` rebuilds the manifest and blocks; hand-edits are detected (`injected*`) and backed up | re-run by hand | edit by hand | always live by nature |
+| Safety net | consent gate before any write, timestamped backups, `aio doctor`, `aio rollback`, MCP/skills ledgers | none | none | none |
+
+`gh skill install` is **not a competitor** — it complements aio. Both use the
+same shared skills layout (`~/.agents/skills/<name>/SKILL.md`, read by 40+
+agents); `aio skill add` is the same install done with aio's ledger on top, so
+`aio rollback` can take back exactly what it wrote.
+
+Three properties the alternatives do not combine:
+
+1. **Live search, zero search storage.** Every prompt searches GitHub, npm and
+   crates in parallel; results are printed, ranked and discarded — no local
+   catalog, no search history, nothing to go stale.
+2. **Mandatory usage-disclosure contract.** The injected block requires the
+   first line of any reply that used an aio-surfaced entry to be
+   `[aio] Using [<name>](<url>) (<type>) — <function>`, plus a final report
+   listing every repo/tool/site as a markdown link. Instruction-level and
+   model-dependent — measured per agent below, never claimed unconditionally.
+3. **Safety net for the writes.** Nothing is written without consent (TTY
+   `[y/N]` or `--yes`; non-TTY = plan only), every touched file is backed up
+   first, `aio doctor` diagnoses, `aio rollback` reverses, and ledgers record
+   exactly what aio added.
+
+## Quickstart (30 seconds)
 
 ```bash
-npm install -g aio-connect
+npx -y aio-connect           # zero-install: runs the latest published release
+                             # → prints the plan, then asks [y/N]
+npx -y aio-connect --yes     # same, without the prompt (writes immediately)
+# restart your agent so it re-reads its instruction file, then:
+npx -y aio-connect ask "pdf to word converter"
+```
 
+`npx` needs no install step and always runs the latest release — the right way
+to try aio. Keep reading for a permanent `aio` on your PATH.
+
+## 📦 Install
+
+Four channels; pick one.
+
+| Channel | Command | Notes |
+|---|---|---|
+| **npm global** | `npm install -g aio-connect` | needs **Node.js ≥ 22**; puts `aio` (+ alias `aioc`) on PATH; zero runtime dependencies |
+| **npx (trial)** | `npx -y aio-connect` | zero-install, always the latest release; not on PATH — prefix every command, and npx needs the registry once while online |
+| **Standalone binary** (no Node) | see below | one executable per platform from the [GitHub release](https://github.com/MRaihan-XXL/all-in-one/releases), sha256-verified |
+| **scoop** (Windows) | see below | installs the Windows binary through scoop |
+
+After any channel that puts `aio` on PATH:
+
+```bash
 aio                      # interactive: prints the plan, then asks [y/N]
 aio --yes                # unattended: apply the plan without prompting
 aio --dry-run            # plan only — print every change, write nothing
@@ -109,11 +169,76 @@ aio preview              # plan only — show the exact block that would be writ
 > Writes are gated (B-02): no TTY and no `--yes` means **plan only, exit 0,
 > nothing written** — safe to pipe.
 
-> The npm name `aio` was taken — the package is **`aio-connect`**, and it ships
-> two binaries: **`aio` and `aioc`** (`aioc` is an alias). Adobe's App Builder
-> CLI (`@adobe/aio`) also owns the binary name `aio` on PATH — if both are
-> installed globally, use `aioc` for this tool, or run via `npx aio-connect`.
-> Requires **Node.js ≥ 22** (zero runtime dependencies).
+**Standalone binaries** — release assets `aio-windows-x64.exe`,
+`aio-linux-x64`, `aio-linux-arm64`, `aio-darwin-x64`, `aio-darwin-arm64`, next
+to `SHA256SUMS` and the cosign-signed `SHA256SUMS.sig`.
+
+Windows (download-then-run; nothing is piped into a shell):
+
+```powershell
+iwr https://github.com/MRaihan-XXL/all-in-one/releases/latest/download/install.ps1 -OutFile install.ps1
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+Installs to `%LOCALAPPDATA%\Programs\aio` and adds it to your user PATH.
+
+Linux / macOS:
+
+```bash
+curl -fsSL -o /tmp/aio-install.sh https://github.com/MRaihan-XXL/all-in-one/releases/latest/download/install.sh
+sh /tmp/aio-install.sh
+```
+
+Installs to `~/.local/bin` (override with `BIN_DIR`). Both installers verify
+the binary against the release's `SHA256SUMS` before it lands — a mismatch
+aborts with nothing installed.
+
+scoop: download `aio-scoop.json` from the release page, then
+
+```powershell
+scoop install .\aio-scoop.json
+```
+
+> **Binary caveats, stated plainly:**
+> - `aio evolve` needs a source or npm install (it runs `npm test` from the
+>   checkout) — the standalone binary prints an honest error instead of
+>   half-running the pipeline.
+> - `aio update` still goes through npm, so it needs `npm` on the machine.
+> - `aio doctor` reports the embedded runtime in the node check
+>   (`v<node> (supported: >= 22, bun <version> build)`) — that is the
+>   compiled runtime, not an installed Node.
+
+> **Uninstall order (real trap):** always run **`aio rollback` FIRST**, then
+> `npm rm -g aio-connect` (or delete the binary). Removing the package first
+> orphans what it wrote — the injected blocks, the MCP ledger entries and the
+> skills ledger stay behind with no tool left to reverse them.
+
+The npm name `aio` was taken — the package is **`aio-connect`**, and it ships
+two binaries: **`aio` and `aioc`** (`aioc` is an alias). Adobe's App Builder
+CLI (`@adobe/aio`) also owns the binary name `aio` on PATH — if both are
+installed globally, use `aioc` for this tool, or run via `npx aio-connect`.
+The binary and installer channels need no Node at all.
+
+### Environment variables
+
+| Variable | Effect |
+|---|---|
+| `AIO_RATE=<calls/min\|0>` | GitHub search budget: default **8 calls/min** unauthenticated, **25/min** once a GitHub token is available (`gh auth login` / `GH_TOKEN`); `0` disables spacing entirely. Spacing is shared across processes via `~/.aio/gh-rate.json` (timestamps only) |
+| `AIO_QUIET=1` (or `AIO_NO_BANNER=1`) | no banner |
+| `NO_COLOR=1` | no ANSI colors (the banner is already colorless when piped) |
+| `AIO_OFFLINE=1` | `aio ask` short-circuits with an explicit offline message; `skill add` refuses remote installs |
+| `AIO_NO_GH=1` | skip the GitHub skills lane entirely |
+| `AIO_STATE_DIR` | move the state dir off `~/.aio` |
+| `GH_TOKEN` / `gh auth login` | authenticated GitHub search (raises the rate budget, enables the skills lane) |
+| `OLLAMA_HOST`, `AIO_OLLAMA_MODEL`, `AIO_NO_AI=1` | optional local rerank for `aio ask` (warm only) |
+
+### `--json` and the `schemaVersion` contract
+
+`aio ask --json`, `aio borrow --json` and `aio doctor --json` all emit
+`"schemaVersion": 1`. Machine consumers pin to that number: aio bumps it **only
+on a breaking shape change**, and new fields are added without a bump —
+parse what you need, ignore the rest. `doctor --json` returns
+`{schemaVersion, version, mode, ok, issues, warns, checks: [{level, id, detail}]}`.
 
 ## 🤖 Honesty is the product
 
@@ -150,8 +275,11 @@ Changes: added chart.js, wired the data feed.
   manifest `~/.aio/aio-context.md`, one `AIO AUTO-CONTEXT` block per agent
   file, timestamped backups under `~/.aio/backups/`, `~/.aio/config.json`,
   `~/.aio/mcp-ledger.json` (which MCP entries aio added — read back by
-  `aio rollback`) and `~/.aio/block-hashes.json` (drift detection) — all
-  listed in [docs/CONFIG.md](./docs/CONFIG.md).
+  `aio rollback`), `~/.aio/block-hashes.json` (drift detection),
+  `~/.aio/gh-rate.json` (GitHub rate clock — a single `last` call timestamp,
+  no queries and no results) and `~/.aio/skills-ledger.json` (name, path,
+  sha256 and source of each skill — written **only after an explicit
+  `aio skill add`**) — all listed in [docs/CONFIG.md](./docs/CONFIG.md).
 - `aio borrow --get` clones into `%TEMP%/aio-borrow` with a **24-hour TTL** —
   the next run purges it, `--clean` wipes everything now.
 - CLI tools are consumed via `npx` / `uvx` — never installed permanently.
@@ -163,8 +291,10 @@ Short version: one `AIO AUTO-CONTEXT` block per agent instruction file, the
 generated `aio-context.md`, MCP entries *only if missing*, and a timestamped
 backup of every touched file under `~/.aio/backups/` first. `aio rollback`
 reverses exactly what aio added — your own config is never touched.
-No telemetry; the only network calls are your explicit `ask`/`borrow`,
-`doctor`'s reachability probe, and the agent's own.
+The one other opt-in writer is `aio skill add`: a single `SKILL.md` under
+`~/.agents/skills/` plus its `skills-ledger.json` entry.
+No telemetry; the only network calls are your explicit `ask`/`borrow`/
+`skill add`, `doctor`'s reachability probe, and the agent's own.
 
 ## 🕵️ Keeping it fresh
 
@@ -196,6 +326,10 @@ No telemetry; the only network calls are your explicit `ask`/`borrow`,
 > **FR6** = free-form prompt probe: the agent must open its reply with the
 > manifest's disclosure line. kimi quotes the rule but does not apply it
 > after 9 attempts — model/harness-dependent, not a packaging bug.
+> v1.6.0 strengthens the block with a **rule 0** (`0. FIRST LINE RULE
+> (non-negotiable …)`) that repeats the exact disclosure line before rule 1,
+> aimed at agents that skim later rules; **the kimi retest is still pending** —
+> the matrix above is unchanged until it is measured again.
 
 ## 🛡 Security
 
@@ -217,20 +351,39 @@ No telemetry; the only network calls are your explicit `ask`/`borrow`,
   entries (`aio rollback` reverses exactly what aio added).
 - **`gh` token** — read at call time into memory only, never logged or
   persisted; authenticated requests also raise the GitHub rate limit.
+- **Skill installs are ledger-scoped** — `aio skill add` writes only
+  `~/.agents/skills/<name>/SKILL.md` (name sanitized, path-traversal guarded)
+  and records its sha256 in `~/.aio/skills-ledger.json`; `aio skill remove`
+  and `aio rollback` delete a skill only while it is still byte-identical to
+  what aio wrote — hand-modified or pre-existing skills are never touched.
+- **Release integrity (v1.6.0)** — the installers download first and verify
+  against the release's `SHA256SUMS` before anything lands (a mismatch aborts
+  with nothing installed; no remote script is piped into a shell); `SHA256SUMS`
+  is cosign keyless-signed (`SHA256SUMS.sig`); the release workflow refuses a
+  tag that is not the tip of `main`, then builds all 5 binaries and
+  smoke-tests the ones the build OS can execute (`aio-darwin-x64` and
+  `aio-linux-arm64` are cross-built and not yet smoked — see
+  [ROADMAP.md](./ROADMAP.md)).
 - **Packaging** — zero runtime dependencies, no install/postinstall scripts,
   npm publish behind 2FA/EOTP.
-- Known gaps, stated plainly: releases are not signed, and disclosure is
-  instruction-level (model-dependent), not technically enforced.
+- Known gaps, stated plainly: the release binaries are not individually
+  signed (only `SHA256SUMS` carries a cosign signature; npm provenance is not
+  configured yet), and disclosure is instruction-level (model-dependent), not
+  technically enforced.
 
 ## 🛠 Development
 
 ```bash
-npm test             # node --test — 79 checks (live search, injection, consent gate, drift, borrow, doctor, …)
+npm test             # node --test — 206 tests (live search, injection, consent gate, drift, borrow, doctor, …)
+npm run test:coverage # same suite with node's built-in coverage
 node bin/aio.js      # run from a checkout without installing
 node bin/aio.js ask "pdf ke word"
 node bin/aio.js doctor --check
-node scripts/eval-relevance.mjs   # live 20-query golden set → hit@8 = 20/20 (100%), hit@1 = 19/20 (95%), MRR 0.97, measured 2026-10-01
+node scripts/eval-relevance.mjs   # from a repo checkout (scripts/ ships in the repo, not the npm tarball): live 20-query golden set → hit@8 = 20/20 (100%), hit@1 = 19/20 (95%), MRR 0.97, measured 2026-10-01
 ```
+
+Contribution workflow and conventions: **[CONTRIBUTING.md](./CONTRIBUTING.md)**.
+Planned work: **[ROADMAP.md](./ROADMAP.md)**.
 
 ## 🎨 Brand kit
 

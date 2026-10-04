@@ -127,7 +127,8 @@ function listBorrowed() {
     .filter((d) => d.isDirectory())
     .map((d) => {
       const full = path.join(BORROW_DIR, d.name);
-      const ageH = ((Date.now() - fs.statSync(full).mtimeMs) / 3600000).toFixed(1);
+      // clamp: file mtime can sit a hair ahead of Date.now() (clock skew) — never render "age -0.0h"
+      const ageH = (Math.max(0, Date.now() - fs.statSync(full).mtimeMs) / 3600000).toFixed(1);
       return { name: d.name, path: full, ageH };
     });
 }
@@ -141,7 +142,7 @@ export async function runBorrow({ query, get, clean, list, json }) {
     const txt =
       `aio borrow --clean — ${r.n} clone(s) removed, ${fmtBytes(r.freed)} freed from ${r.dir}` +
       (purged.length ? `\nTTL purge: ${purged.length} expired (>24h): ${purged.join(', ')}` : '');
-    return { ok: true, text: txt, json: { ...r, purged } };
+    return { ok: true, text: txt, json: { schemaVersion: 1, ...r, purged } };
   }
 
   if (list) {
@@ -150,7 +151,7 @@ export async function runBorrow({ query, get, clean, list, json }) {
       ? `aio borrow --list — ${items.length} temp clone(s) in ${BORROW_DIR}\n` +
         items.map((i) => `- ${i.name} — age ${i.ageH}h — ${i.path}`).join('\n')
       : `aio borrow — nothing borrowed (dir: ${BORROW_DIR})`;
-    return { ok: true, text: txt, json: { items } };
+    return { ok: true, text: txt, json: { schemaVersion: 1, items } };
   }
 
   if (get) {
@@ -161,7 +162,7 @@ export async function runBorrow({ query, get, clean, list, json }) {
         `path: ${r.path}\n` +
         'use it now; auto-purged after 24h (or `aio borrow --clean`).\n' +
         `free disk: ${fmtBytes(freeBytes(BORROW_DIR))}`;
-      return { ok: true, text: txt, json: { ...r, url: `https://github.com/${get}` } };
+      return { ok: true, text: txt, json: { schemaVersion: 1, ...r, url: `https://github.com/${get}` } };
     } catch (e) {
       return { ok: false, text: `[aio] borrow --get failed: ${e.message}`, json: null };
     }
@@ -181,7 +182,7 @@ export async function runBorrow({ query, get, clean, list, json }) {
 
   try {
     const hits = await ghSearch(query);
-    const out = { query, count: hits.length, hits, purged };
+    const out = { schemaVersion: 1, query, count: hits.length, hits, purged };
     if (json) return { ok: true, text: JSON.stringify(out, null, 2), json: out };
     if (!hits.length) {
       return { ok: true, json: out, text: `aio borrow — "${query}": no GitHub result. Refine keywords or check https://github.com/search` };

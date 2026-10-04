@@ -1,6 +1,9 @@
 name: Release
 
-# Push a `v*` tag → test gate → version guard → npm publish → GitHub Release.
+# Push a `v*` tag → test gate → version guard → GitHub Release → binaries
+# (compile + smoke) → checksums/signature → and ONLY THEN npm publish.
+# npm versions are publish-once: a binary/signing failure must never strand a
+# half-release on the registry (publish is the LAST job, needs: binary+finalize).
 # Publish auth: NPM_TOKEN repo secret (chosen provenance path — most efficient).
 on:
   push:
@@ -15,6 +18,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # full history — the tag==main guard below needs origin/main
+      # the tag must BE the tip of main — a stale tag ships yesterday's code (v1.5.0 incident).
+      # exact-tip check: a concurrent main push right after tagging fails closed
+      # (false "stale tag") — recoverable by retagging current main.
+      - name: Tag is main tip
+        run: |
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+            echo "::error::tag $GITHUB_REF_NAME is NOT the origin/main tip — the tag points at old code. Retag current main (delete this tag first, it never reached npm)."
+            echo "tagged: $(git rev-parse --short HEAD)  main: $(git rev-parse --short origin/main)"
+            git log --oneline -3 HEAD..origin/main
+            exit 1
+          fi
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -33,9 +49,6 @@ jobs:
             }
             console.log('releasing aio-connect@' + p.version);
           "
-      - run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: GitHub Release (auto notes)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -44,3 +57,122 @@ jobs:
           gh release create "$GITHUB_REF_NAME"
           --title "aio v$(node -p "require('./package.json').version")"
           --generate-notes
+
+  # ---- standalone binaries: no Node required on the user's machine ----
+  # bun --compile keeps native ESM (import.meta.url / JSON imports intact).
+  # Every binary is smoke-tested on its own OS before it can ship.
+  binary:
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            build: 'bun build --compile --outfile aio-windows-x64.exe ./bin/aio.js'
+            smoke: './aio-windows-x64.exe'
+            asset: aio-windows-x64.exe
+          - os: ubuntu-latest
+            build: > # intel macs + linux arm64: cross-compile (bun official)
+              bun build --compile --outfile aio-linux-x64 ./bin/aio.js &&
+              bun build --compile --target=bun-darwin-x64 --outfile aio-darwin-x64 ./bin/aio.js &&
+              bun build --compile --target=bun-linux-arm64 --outfile aio-linux-arm64 ./bin/aio.js
+            smoke: './aio-linux-x64'
+            asset: |
+              aio-linux-x64
+              aio-darwin-x64
+              aio-linux-arm64
+          - os: macos-14
+            build: 'bun build --compile --outfile aio-darwin-arm64 ./bin/aio.js'
+            smoke: './aio-darwin-arm64'
+            asset: aio-darwin-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Compile
+        shell: bash
+        run: ${{ matrix.build }}
+      - name: Smoke (argv layout differs from `node bin/aio.js` — this catches it)
+        shell: bash
+        run: |
+          chmod +x ${{ matrix.smoke }}
+          ${{ matrix.smoke }} --version
+          ${{ matrix.smoke }} preview >/dev/null
+          ${{ matrix.smoke }} completion bash >/dev/null
+          ${{ matrix.smoke }} skill list >/dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.os }}
+          path: ${{ matrix.asset }}
+          if-no-files-found: error
+
+  # ---- checksums + scoop manifest + installer scripts + signature ----
+  finalize:
+    needs: binary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5 # pin node for the scoop-manifest JSON guard below
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: SHA256SUMS + scoop manifest + installer scripts
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          cd dist
+          # explicit list, never a glob — a rerun must not sum its own SHA256SUMS
+          sha256sum aio-linux-x64 aio-linux-arm64 aio-darwin-x64 aio-darwin-arm64 aio-windows-x64.exe > SHA256SUMS
+          V="${VERSION#v}"
+          WINHASH=$(sha256sum aio-windows-x64.exe | cut -d' ' -f1)
+          BASE="https://github.com/${GITHUB_REPOSITORY}/releases/download/${VERSION}"
+          cat > aio-scoop.json <<EOF
+          {
+            "version": "${V}",
+            "description": "aio - auto-connect every AI agent to LIVE search (GitHub/npm/crates), zero search storage",
+            "homepage": "https://github.com/MRaihan-XXL/all-in-one",
+            "license": "GPL-3.0",
+            "architecture": {
+              "64bit": {
+                "url": "${BASE}/aio-windows-x64.exe",
+                "hash": "${WINHASH}"
+              }
+            },
+            "bin": [["aio-windows-x64.exe", "aio"]]
+          }
+          EOF
+          node -e "JSON.parse(require('fs').readFileSync('aio-scoop.json','utf8'))" # a broken manifest must fail here, not at scoop install
+          cd ..
+          cp scripts/install.ps1 scripts/install.sh dist/
+      - name: Upload assets to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+      - name: Sign SHA256SUMS (cosign keyless) — after upload so a signing outage never blocks the binaries
+        uses: sigstore/cosign-installer@v3
+      # --bundle: keyless verify-blob needs the cert+signature TOGETHER (docs/THREATS.md)
+      - name: cosign sign-blob
+        run: cd dist && cosign sign-blob --yes --output-signature SHA256SUMS.sig --bundle SHA256SUMS.bundle SHA256SUMS
+      - name: Upload signature
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/SHA256SUMS.sig dist/SHA256SUMS.bundle --clobber
+
+  # ---- npm publish LAST: publish-once versions must never precede the gate ----
+  publish:
+    needs: [binary, finalize]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,13 +1,8 @@
 // banner.js — aio CLI branding (logo + wordmark + version)
-import fs from 'node:fs';
+import pkg from '../package.json' with { type: 'json' };
 
 export function getVersion() {
-  try {
-    const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
-    return pkg.version || '0.0.0';
-  } catch {
-    return '0.0.0';
-  }
+  return pkg.version || '0.0.0';
 }
 
 // Strict grid: each glyph is a fixed width, joined with single spaces — every
@@ -24,7 +19,8 @@ export const ART = GLYPHS.A.map((row, i) => `${row} ${GLYPHS.I[i]} ${GLYPHS.O[i]
 const RAMP = [52, 94, 135, 167, 180, 203];
 
 export function banner() {
-  const color = Boolean(process.stdout.isTTY);
+  if (process.env.AIO_QUIET || process.env.AIO_NO_BANNER) return '';
+  const color = Boolean(process.stdout.isTTY) && !process.env.NO_COLOR;
   const dim = color ? '\x1b[2m' : '';
   const accent = color ? '\x1b[38;5;203m' : '';
   const cyan = color ? '\x1b[38;5;80m' : '';

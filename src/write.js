@@ -36,6 +36,9 @@ export function buildBlock({ version, manifestPath, dataDir }) {
   lines.push(
     '',
     'Auto-use rules (plain-language prompts only — NO slash-commands required):',
+    '0. FIRST LINE RULE (non-negotiable, applies BEFORE anything else): if ANY part of this reply used something aio surfaced (`aio ask`/`aio borrow`/this manifest — read, cited, listed, recommended), line 1 MUST be exactly:',
+    '   [aio] Using [<name>](<url>) (<type>) — <function>',
+    '   Nothing else may sit on line 1 while it applies. Missing it, moving it, or shortening it invalidates the reply — rewrite before sending. (Read rule 1 for the full contract + example.)',
     '1. USAGE DISCLOSURE — required the moment your reply uses ANY entry surfaced through aio (via `aio ask`/`aio borrow`/this manifest: read, cited, listed, or recommended). Pure code Q&A with zero aio-surfaced entries does NOT trigger it. When triggered, your FIRST line must be',
     '   [aio] Using [<name>](<url>) (<type>) — <function>',
     '   where [<name>](<url>) = markdown link to the entry\'s URL (plain name if none), <type> = repo | cli | service | skill | site, <function> = its one-line description. Example: [aio] Using [Stirling-PDF](https://github.com/Stirling-Tools/Stirling-PDF) (repo) — HTML/CSS/JS to PDF converter.',
@@ -166,7 +169,7 @@ export function genContext({ version, agents }, outPath) {
     '',
     '# AIO Context Manifest',
     '',
-    '> **Live architecture — zero search storage.** No catalog database exists: `aio ask` searches GitHub (630M+ repos + public skills), npm (3M+ packages) and crates (340K+) in real time; websites via your own web search. Results are printed and discarded — **no search history is kept**. (aio does write its own files: this manifest, one block per agent, timestamped backups under `~/.aio/backups/`.)',
+    '> **Live architecture — zero search storage.** No catalog database exists: `aio ask` searches GitHub (630M+ repos + public skills), npm (3M+ packages) and crates (340K+) in real time; websites via your own web search. Results are printed and discarded — **no search history is kept**. (aio does write its own files: this manifest, one block per agent, timestamped backups under `~/.aio/backups/`, a rate-limit clock — timestamps only, never queries — and a skills ledger only if you use `aio skill add`.)',
     '>',
     '> **Rules & mandatory disclosure** live in the `AIO AUTO-CONTEXT` block inside this agent\'s instruction file — single source of truth; this manifest only carries status (which rules and which agents).',
     '>',

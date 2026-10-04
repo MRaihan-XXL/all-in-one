@@ -12,9 +12,11 @@ import { BLOCK_START, ledgerList, ledgerFile } from './write.js';
 import { blockTargets } from './targets.js';
 import { getVersion } from './banner.js';
 
-/** Absolute path to the CLI entry — fileURLToPath (POSIX + Windows + spaces-safe). */
+/** CLI entry for re-spawning: source/npm install → bin/aio.js; a compiled
+ *  binary has no sibling script file → the executable IS the CLI. */
 export function aioBinPath() {
-  return fileURLToPath(new URL('../bin/aio.js', import.meta.url));
+  const p = fileURLToPath(new URL('../bin/aio.js', import.meta.url));
+  return fs.existsSync(p) ? p : process.execPath;
 }
 
 function line(level, id, detail) {
@@ -59,11 +61,13 @@ export async function runChecks(opts = {}) {
   // Kick off the three probes together, then report in stable order (P-02).
   const [live, ollama, gh] = await Promise.all([probeLive(), probeOllama(), probeGhAuth()]);
 
-  // 1. Node — supported line is >= 22 (package engines); older runs are unsupported (B-08)
+  // 1. Node — supported line is >= 22 (package engines); older runs are unsupported (B-08).
+  //    A compiled binary embeds its runtime and also passes via process.versions.bun.
   const major = Number(process.versions.node.split('.')[0]);
+  const supported = major >= 22 || !!process.versions.bun;
   checks.push(
-    major >= 22
-      ? line('ok', 'node', `v${process.versions.node} (supported: >= 22)`)
+    supported
+      ? line('ok', 'node', `v${process.versions.node} (supported: >= 22${process.versions.bun ? `, bun ${process.versions.bun} build` : ''})`)
       : major >= 18
         ? line('warn', 'node', `v${process.versions.node} — runs, but unsupported; install Node >= 22`)
         : line('bad', 'node', `v${process.versions.node} — Node >= 22 required`)
@@ -181,33 +185,68 @@ export async function runChecks(opts = {}) {
   return { checks, issues, warns, ok: issues === 0 };
 }
 
+/** Machine-readable doctor output (schemaVersion:1 — same contract as ask/borrow).
+ *  `fix` (optional): { attempted, ok, error? } — machine consumers must be able to
+ *  tell that a fix ran (or failed) without parsing human text. */
+function doctorJson(checks, { mode, ok, issues, warns, fix = null }) {
+  return JSON.stringify(
+    {
+      schemaVersion: 1,
+      version: getVersion(),
+      mode,
+      ok,
+      issues,
+      warns,
+      ...(fix ? { fix } : {}),
+      checks: checks.map((c) => ({ level: c.level, id: c.id, detail: c.detail })),
+    },
+    null,
+    2
+  );
+}
+
 /** `aio doctor` command. */
 export async function runDoctor(opts = {}) {
   const { checks, issues, warns, ok } = await runChecks(opts);
+  const mode = opts.check ? 'check' : opts.fix ? 'fix' : 'doctor';
   const header = `aio doctor — v${getVersion()} ${opts.check ? '(check mode)' : opts.fix ? '(fix mode)' : ''}`;
   const body = checks.map((c) => c.text).join('\n');
   let fixNote = '';
+  let fixOutcome = null;
   if (opts.fix && !ok) {
     // Safe fix = re-run the idempotent setup (regen manifest + reinject blocks).
     // --yes: the fix itself is the consent (non-TTY gate would stop at the plan).
     try {
-      execFileSync(process.execPath, [aioBinPath(), '--yes'], {
+      const bin = aioBinPath();
+      // source/npm → re-run via node with the script path; compiled binary →
+      // argv already starts at [1] (no script token), so pass flags directly.
+      const spawn = bin === process.execPath ? [bin, ['--yes']] : [process.execPath, [bin, '--yes']];
+      execFileSync(spawn[0], spawn[1], {
         stdio: 'ignore',
         timeout: 120000,
       });
       fixNote = '\nfix: setup re-run complete — re-check:\n';
       const after = await runChecks(opts);
       fixNote += after.checks.map((c) => c.text).join('\n');
+      const fixed = { ok: after.ok, exit: after.ok ? 0 : 1 };
+      fixOutcome = { attempted: true, ok: after.ok };
+      if (opts.json) {
+        return { ...fixed, text: doctorJson(after.checks, { mode, ok: after.ok, issues: after.issues, warns: after.warns, fix: fixOutcome }) };
+      }
       return {
         ok: after.ok,
         text: `${header}\n${body}${fixNote}\nafter fix: ${after.issues} issue(s), ${after.warns} warning(s)`,
-        exit: after.ok ? 0 : 1,
+        exit: fixed.exit,
       };
     } catch (e) {
       fixNote = `\nfix failed: ${e.message}`;
+      fixOutcome = { attempted: true, ok: false, error: e.message };
     }
   }
   const summary = `${issues} issue(s), ${warns} warning(s)`;
   const hint = !ok ? `\n→ run \`aio doctor --fix\` (regenerate manifest + agent blocks) or \`aio --yes\` directly.` : '';
+  if (opts.json) {
+    return { ok, text: doctorJson(checks, { mode, ok, issues, warns, fix: fixOutcome }), exit: ok ? 0 : 1 };
+  }
   return { ok, text: `${header}\n${body}${fixNote}\n${summary}${hint}`, exit: ok ? 0 : 1 };
 }

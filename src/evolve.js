@@ -24,6 +24,17 @@ function step(name, file, args = []) {
 
 /** `aio evolve` command → { ok, text, exit }. */
 export async function runEvolve(opts = {}) {
+  // A compiled binary (or a partial install) has no package.json/test/ next to
+  // itself — the pipeline would re-exec the wrong binary. Fail honestly instead.
+  if (!fs.existsSync(path.join(ROOT, 'package.json')) || !fs.existsSync(path.join(ROOT, 'test'))) {
+    return {
+      ok: false,
+      exit: 1,
+      text:
+        `aio evolve — self-test pipeline needs a source checkout (looked in ${ROOT}).\n` +
+        'Binary build: install the npm package (`npm i -g aio-connect`) or clone the repo, then run `aio evolve` there.',
+    };
+  }
   const results = [];
 
   // 1. Regenerate manifest + reinject agent blocks (idempotent).

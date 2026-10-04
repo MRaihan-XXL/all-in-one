@@ -9,6 +9,7 @@ import path from 'node:path';
 
 const state = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-bundle-'));
 process.env.AIO_STATE_DIR = state;
+process.env.AIO_RATE = '0'; // any inherited CLI spawn must never sleep on ghThrottle spacing
 
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const repoRoot = fileURLToPath(new URL('../', import.meta.url));

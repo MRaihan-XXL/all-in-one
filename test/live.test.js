@@ -1,6 +1,9 @@
 // live.test.js — src/live.js: detectIntent routing unit + liveSearch integration (fetch mocked).
 process.env.AIO_NO_GH = '1'; // ghSkills skips execFile — no shell in tests
 process.env.AIO_NO_AI = '1';
+// ghRepos/ghSkills call ghThrottle(): without this the default 8/min budget waits
+// ~7.5s per call against a stale gh-rate.json — that alone made the suite ~22s.
+process.env.AIO_RATE = '0';
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,7 +11,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-const { detectIntent, liveSearch, ghSkills } = await import('../src/live.js');
+// ghThrottle's clock file lives in STATE_DIR — isolate it (read at import time by
+// paths.js, so it must precede the src import) so tests never touch ~/.aio.
+process.env.AIO_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-live-state-'));
+
+const { detectIntent, liveSearch, ghSkills, ghThrottle } = await import('../src/live.js');
+const { STATE_DIR } = await import('../src/paths.js');
+
+const RATE_FILE = path.join(STATE_DIR, 'gh-rate.json');
 
 function json(body) {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
@@ -137,4 +147,33 @@ test('ghSkills: gh api failure REJECTS (errors[] path, never a fake empty answer
   });
 
   await assert.rejects(ghSkills('awesome cursor skill'), /ENOENT/, 'gh failure must reject, not return []');
+});
+
+test('ghThrottle: AIO_RATE=300 spaces calls (~200ms) + rewrites the clock; AIO_RATE=0 disables both', async (t) => {
+  const prevRate = process.env.AIO_RATE;
+  t.after(() => {
+    if (prevRate === undefined) delete process.env.AIO_RATE;
+    else process.env.AIO_RATE = prevRate;
+    fs.rmSync(RATE_FILE, { force: true });
+  });
+
+  // AIO_RATE=300 → gap = 60000/300 = 200ms (the file default is 8/min = 7.5s);
+  // a clock stamped "just now" forces the full wait before the call may proceed.
+  process.env.AIO_RATE = '300';
+  fs.mkdirSync(STATE_DIR, { recursive: true });
+  fs.writeFileSync(RATE_FILE, JSON.stringify({ last: Date.now() }));
+  const t0 = Date.now();
+  await ghThrottle();
+  const elapsed = Date.now() - t0;
+  assert.ok(elapsed >= 150, `expected ~200ms spacing, waited ${elapsed}ms`);
+  const clock = JSON.parse(fs.readFileSync(RATE_FILE, 'utf8'));
+  assert.ok(clock.last >= t0, `clock file rewritten with a fresh stamp (${clock.last} >= ${t0})`);
+
+  // AIO_RATE=0 → no spacing at all: returns immediately and writes nothing.
+  process.env.AIO_RATE = '0';
+  fs.rmSync(RATE_FILE, { force: true });
+  const t1 = Date.now();
+  await ghThrottle();
+  assert.ok(Date.now() - t1 < 50, `no wait under AIO_RATE=0 (${Date.now() - t1}ms)`);
+  assert.equal(fs.existsSync(RATE_FILE), false, 'no clock file written under AIO_RATE=0');
 });

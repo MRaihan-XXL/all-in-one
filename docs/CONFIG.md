@@ -66,6 +66,73 @@ always plan-only. Every write is preceded by a file backup to
 The six agent files, Zed and the conditional global all come from one shared
 list (`src/targets.js`) used by setup, status, rollback and doctor (B-04).
 
+### `aio skill add` (skills, v1.6.0)
+
+`aio skill add <owner/repo|url> [--file <path|dir>] [--name <n>] [--dry-run]`
+is opt-in — it runs only when you ask for it and writes exactly two things:
+
+| Target | What happens | Reversed by `aio rollback`? |
+|---|---|---|
+| `~/.agents/skills/<name>/SKILL.md` | one file, name sanitized (`[a-z0-9._-]`, path-traversal guarded). Remote install fetches `raw.githubusercontent.com/<owner>/<repo>/HEAD` and tries 3 locations (`SKILL.md`, `<name>/SKILL.md`, `.agents/skills/<name>/SKILL.md`); `--file` reads a local file or directory (`<dir>/SKILL.md`) instead; `AIO_OFFLINE=1` disables the remote fetch | **yes** — only while still byte-identical (sha256 match) |
+| `~/.aio/skills-ledger.json` | `{name, file, sha, source}` per skill aio installed — appended only after a successful write | entry dropped with the skill |
+
+`aio skill remove <name>` deletes the same directory only when aio wrote it;
+a skill aio no longer claims (pre-existing, or hand-modified since aio
+installed it) is refused with `remove manually: <path>` for a modified skill
+and `present (not installed by aio) — skipped: <path>` when it is not ours.
+Skills aio never wrote are never touched by add, remove or rollback.
+
+### Rate budget (GitHub search, `gh-rate.json`)
+
+GitHub search allows ~10 unauthenticated calls/min, so `aio` spaces its search
+calls **across processes** with a shared clock file:
+
+| File | Contents | Why it is safe |
+|---|---|---|
+| `~/.aio/gh-rate.json` | `{ "last": <epoch ms> }` — one timestamp | a clock, not history: no queries, no results, no search storage |
+
+- Defaults: **8 calls/min** unauthenticated, **25/min** once a GitHub token is
+  available (`gh auth login` / `GH_TOKEN`; API cap: 30).
+- `AIO_RATE=<n>` overrides calls-per-minute; `AIO_RATE=0` disables spacing.
+- The wait is capped at 8 s (an honest 403 beats an unbounded stall); a
+  read-only home degrades to in-process spacing only.
+
+### Output control (`AIO_QUIET`, `NO_COLOR`)
+
+| Variable | Effect |
+|---|---|
+| `AIO_QUIET=1` or `AIO_NO_BANNER=1` | no banner printed (any value counts as set) |
+| `NO_COLOR=1` | no ANSI colors; the banner is already colorless when stdout is not a TTY |
+
+### Machine-readable output (`--json`, `schemaVersion`)
+
+`aio ask --json`, `aio borrow --json` and `aio doctor --json` all emit
+`"schemaVersion": 1` at the top level. Contract: consumers pin to the number;
+aio bumps it **only** when the shape breaks, and new fields are added without
+a bump — parse what you need, ignore the rest.
+
+`aio doctor --json` returns exactly
+`{schemaVersion, version, mode, ok, issues, warns, checks: [{level, id, detail}]}`
+where `mode` is `doctor` | `check` | `fix` and `level` is `ok` | `warn` | `bad`
+(the same 9 checks the text report prints).
+
+### Install channels (binaries)
+
+| Channel | Needs Node | Notes |
+|---|---|---|
+| `npm install -g aio-connect` | yes (>= 22) | `aio` + alias `aioc` on PATH |
+| `npx -y aio-connect` | yes (resolved by npx) | trial: latest release, not on PATH |
+| `install.ps1` / `install.sh` | no | standalone bun-compiled binary, sha256-verified against the release `SHA256SUMS` before it lands; Windows → `%LOCALAPPDATA%\Programs\aio` (+ user PATH), POSIX → `~/.local/bin` (override `BIN_DIR`) |
+| `scoop install .\aio-scoop.json` | no | Windows binary via the release-generated manifest |
+
+Standalone-binary caveats: `aio evolve` needs a source/npm checkout (the
+binary prints an honest error instead); `aio update` still shells out to npm;
+`aio doctor` reports the embedded bun runtime in the node check.
+
+**Uninstall order:** `aio rollback` **first**, then `npm rm -g aio-connect`
+(or delete the binary). Removing the tool first leaves blocks, MCP ledger
+entries and skills with nothing to reverse them.
+
 ### Drift detection (`injected*`)
 
 After each inject the block's hash is recorded (row 17). On later runs:
@@ -146,7 +213,14 @@ the manifest exists — see *`aio init`* above.
 2. removes MCP entries recorded in `~/.aio/mcp-ledger.json` — i.e. only the
    entries aio itself created. Pre-existing entries (configured by you or by
    the agent) are never touched.
-3. keeps `~/.aio/backups/` as a safety net.
+3. removes the skills recorded in `~/.aio/skills-ledger.json` — **only** while
+   the file on disk is still byte-identical (sha256) to what aio wrote. A
+   hand-modified skill is reported `modified by hand — kept (yours now)` and
+   stays; a skill with no ledger entry (pre-existing, or installed by another
+   tool) is never touched. Ledger entries whose path does not resolve inside
+   `~/.agents/skills/` are refused (`ledger entry invalid — kept (manual
+   review)`) — a tampered ledger cannot delete outside the skills root.
+4. keeps `~/.aio/backups/` as a safety net.
 
 Files written by `aio init` (`./AGENTS.md`, `.github/copilot-instructions.md`)
 are **not** touched by rollback — they belong to the repository.
@@ -165,6 +239,8 @@ are **not** touched by rollback — they belong to the repository.
 | agent ignores the manifest | check the block exists: search `aio:auto-config` in its instruction file |
 | want a clean machine | `aio rollback` (backups in `~/.aio/backups/`) |
 | update to latest rules | `aio update` |
+| `skill: SKILL.md not found … (tried 3 locations)` | the repo has no `SKILL.md` at the root, `<name>/` or `.agents/skills/<name>/` — pass `--file <path\|dir>` or `--name <n>`; `AIO_OFFLINE=1` disables remote installs by design |
+| uninstalling | **`aio rollback` first**, then `npm rm -g aio-connect` (or delete the binary) — the reverse order leaves blocks, MCP and skills ledger entries orphaned |
 
 ### Node version warning → install Node ≥ 22
 `[aio] warning: Node … detected — Node >= 22 recommended` (src/setup.js):
