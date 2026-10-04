@@ -36,7 +36,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 206/206 tests">
+  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 209/209 tests">
 </p>
 
 ## ✨ What it does
@@ -374,7 +374,7 @@ No telemetry; the only network calls are your explicit `ask`/`borrow`/
 ## 🛠 Development
 
 ```bash
-npm test             # node --test — 206 tests (live search, injection, consent gate, drift, borrow, doctor, …)
+npm test             # node --test — 209 tests (live search, injection, consent gate, drift, borrow, doctor, …)
 npm run test:coverage # same suite with node's built-in coverage
 node bin/aio.js      # run from a checkout without installing
 node bin/aio.js ask "pdf ke word"

@@ -64,16 +64,18 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   orphans blocks, MCP and skills ledger entries.
 - **tests** — status/doctor hermetic: mocked `homedir` + `AIO_NO_GH`, no
   real-home or `gh` subprocess dependence.
-- **tests + coverage gate** — suite **79/79 → 206/206** (+27, then +89, then
-  +11 review regressions: CLI spawn-level tests closing the
-  `rollback --dry-run` gap, then the skill/consent/borrow/write/search/doctor
-  coverage push);
+- **tests + coverage gate** — suite **79/79 → 209/209** (+27, then +89, then
+  +14 (review regressions + bun-virtual argv): CLI spawn-level tests closing
+  the `rollback --dry-run` gap, then the
+  skill/consent/borrow/write/search/doctor coverage push);
   `npm run test:coverage` now enforces `--test-coverage-lines=90
   --test-coverage-branches=80 --test-coverage-functions=85` and exits
-  non-zero below them (actual: 98.53% lines / 88.05% branches / 98.30%
+  non-zero below them (actual: 98.68% lines / 88.80% branches / 98.31%
   functions).
 - **Pre-merge review hardening** — POSIX symlink launch fix (realpath argv
-  detection — npm/npx on Linux/macOS); npm publish moved **after** binaries +
+  detection — npm/npx on Linux/macOS); both bun `--compile` virtual argv
+  markers (`~BUN/root/` windows + `/$bunfs/root/` posix) recognized — POSIX
+  smoke caught the gap; npm publish moved **after** binaries +
   signing (publish-once safety); cosign `--bundle SHA256SUMS.bundle`
   (verify-blob now possible → docs/THREATS.md); `install.ps1` null-user-PATH
   crash + `install.sh` PATH-hint interpolation; `aio skill remove`/rollback
@@ -82,7 +84,7 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `doctor --json` gains optional `fix:{attempted,ok,error}`; completion words
   gain `setup`/`completion`/`version`; borrow age clamp (no `-0.0h`).
 - **Note** — the symlink test skips where creating symlinks needs admin
-  rights; CI executes it, so CI runs the full 206/206.
+  rights; CI executes it, so CI runs the full 209/209.
 
 ### Fixed
 

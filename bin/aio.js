@@ -120,23 +120,26 @@ function parseArgs(argv) {
 
 // Launch styles disagree on argv layout: `node bin/aio.js <args>` carries the
 // script path at [1]; a bun --compile binary carries its VIRTUAL main-module
-// path (B:/~BUN/root/<outfile>) at [1]; only after that come the real args.
+// path at [1]; only after that come the real args.
 // Detect the script token instead of assuming an index — a fixed slice(2)
 // silently drops the FIRST argument of a binary (`aio.exe --yes` → no --yes).
 // POSIX npm/npx invoke through a SYMLINK (node_modules/.bin/aio): argv[1] is
 // the symlink path and node does NOT realpath it — resolve before matching,
 // or every Linux/macOS npm/npx launch dies as `unknown command: /usr/local/bin/aio`.
+// bun's virtual path differs per platform (release smoke caught this):
+//   windows: B:/~BUN/root/<outfile>    posix: /$bunfs/root/<outfile>
+const BUN_VIRTUAL = (p) => p.includes('~BUN/root/') || p.includes('/$bunfs/root/');
 const rawArgs = process.argv.slice(1);
 let scriptTok = rawArgs[0] || '';
 // /i: win32 filesystems are case-insensitive — node will happily LOAD bin\AIO.JS,
 // so the match must accept it too (realpath does not re-case on win32).
-if (scriptTok && !/(^|[/\\])aio\.js$/i.test(scriptTok) && !scriptTok.includes('~BUN/root/')) {
+if (scriptTok && !/(^|[/\\])aio\.js$/i.test(scriptTok) && !BUN_VIRTUAL(scriptTok)) {
   try {
     scriptTok = fs.realpathSync(scriptTok);
   } catch { /* not a filesystem path (flag/bare word) — leave untouched */ }
 }
 const invokedAsScript =
-  scriptTok && (/(^|[/\\])aio\.js$/i.test(scriptTok) || scriptTok.includes('~BUN/root/'));
+  scriptTok && (/(^|[/\\])aio\.js$/i.test(scriptTok) || BUN_VIRTUAL(scriptTok));
 const opts = parseArgs(invokedAsScript ? rawArgs.slice(1) : rawArgs);
 // --copilot only has meaning for `aio init` — never silently swallow it elsewhere (N2)
 if (opts.flags.copilot && opts.command !== 'init') {

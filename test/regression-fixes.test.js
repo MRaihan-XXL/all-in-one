@@ -2,6 +2,9 @@
 //   1. bin/aio.js argv detection: argv[1] is realpathSync'd BEFORE the `aio.js`
 //      match, so an npm/npx SYMLINK launch (`node_modules/.bin/aio` → bin/aio.js)
 //      dispatches instead of dying as `unknown command: <link>`.
+//      1b. BOTH bun --compile virtual main-module markers stay recognized
+//      (windows `B:/~BUN/root/<out>`, posix `/$bunfs/root/<out>`) — the POSIX
+//      release smoke died as `unknown command: /$bunfs/root/<out>` (CI blocker).
 //   2. `skill remove` / rollback unlink SKILL.md only + rmdir-if-empty — a user's
 //      sibling files (and their directory) must survive an aio removal.
 //   3. http:// targets refused before any fetch.
@@ -15,7 +18,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -139,6 +142,65 @@ test('bin argv detection: symlink launch realpath-resolves to aio.js (npm/npx st
     /^aio /,
     `version line, not "unknown command: ${link}":\n${viaLink.stdout}\n${viaLink.stderr}`
   );
+});
+
+/* ---------------- 1b. bun --compile virtual argv markers ---------------- */
+
+const BIN_URL = pathToFileURL(BIN).href;
+
+/**
+ * Launch the CLI the way a `bun --compile` binary does: argv[1] is the VIRTUAL
+ * main-module token (NOT a real path, never realpath-able), the real args follow,
+ * then the CLI module is imported. `node -e` payload → plain argv array, no shell
+ * (so `$bunfs` can never be interpolated away by a shell).
+ */
+function spawnVirtual(scriptTok, ...realArgs) {
+  const script = [
+    `process.argv[1]=${JSON.stringify(scriptTok)}`,
+    ...realArgs.map((a, i) => `process.argv[${i + 2}]=${JSON.stringify(a)}`),
+    `await import(${JSON.stringify(BIN_URL)})`,
+  ].join(';');
+  const r = spawnSync(process.execPath, ['-e', script], {
+    env: ENV,
+    cwd: REPO,
+    encoding: 'utf8',
+    timeout: 60000,
+    windowsHide: true,
+    shell: false,
+  });
+  assert.ifError(r.error);
+  return { status: r.status, stdout: String(r.stdout ?? ''), stderr: String(r.stderr ?? '') };
+}
+
+test('bun --compile virtual argv (posix): /$bunfs/root/<bin> token + --version → exit 0, stdout ^aio ', () => {
+  const r = spawnVirtual('/$bunfs/root/aio-darwin-arm64', '--version');
+
+  assert.equal(r.status, 0, `posix virtual marker must dispatch as script:\n${r.stdout}\n${r.stderr}`);
+  assert.match(
+    r.stdout.trim().split('\n')[0],
+    /^aio \d/,
+    `version line, not "unknown command: /$bunfs/root/aio-darwin-arm64":\n${r.stdout}\n${r.stderr}`
+  );
+});
+
+test('bun --compile virtual argv (windows): B:/~BUN/root/<bin> token + --version → exit 0', () => {
+  const r = spawnVirtual('B:/~BUN/root/aio-windows-x64.exe', '--version');
+
+  assert.equal(r.status, 0, `windows virtual marker must dispatch as script:\n${r.stdout}\n${r.stderr}`);
+  assert.match(
+    r.stdout.trim().split('\n')[0],
+    /^aio \d/,
+    `version line, not "unknown command: B:/~BUN/root/aio-windows-x64.exe":\n${r.stdout}\n${r.stderr}`
+  );
+});
+
+test('bun --compile virtual argv negative control: non-virtual token → unknown command, exit 1', () => {
+  // Same shape, but no virtual marker and not an existing path: realpath ENOENT →
+  // the token is left as-is and parsed as the COMMAND (nothing may swallow it).
+  const r = spawnVirtual('some-random-token', '--version');
+
+  assert.equal(r.status, 1, `non-virtual token must NOT dispatch as script:\n${r.stdout}\n${r.stderr}`);
+  assert.match(r.stderr, /unknown command: some-random-token/, `stderr reports the bad command:\n${r.stderr}`);
 });
 
 /* ---------------- 2. skill remove keeps user files ---------------- */
