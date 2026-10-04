@@ -1,8 +1,9 @@
 // coverage-update.test.js — src/update.js: globalBinPath (npm missing / root hit /
 // no bin) and runUpdate's post-install lanes (fresh-not-found, note, re-run).
-// npm is faked by a temp dir prepended to PATH (a batch file that just echoes a
-// root) — zero network, zero installs; process.exit is mocked to a sentinel throw
-// so runUpdate's fatal paths are observable without killing the test process.
+// npm is faked by a temp dir prepended to PATH (a shim that just echoes a root —
+// npm.cmd for cmd.exe on win32, a shebang script for sh on POSIX) — zero network,
+// zero installs; process.exit is mocked to a sentinel throw so runUpdate's fatal
+// paths are observable without killing the test process.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -11,7 +12,7 @@ import path from 'node:path';
 
 const ORIG_PATH = process.env.PATH;
 
-/** Temp "npm root -g": npm.cmd echoes `root`, optionally hosting bin/aio.js. */
+/** Temp "npm root -g": a fake `npm` on PATH echoes `root`, optionally hosting bin/aio.js. */
 function fakeNpm(withBin) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-upd-'));
   const root = path.join(dir, 'node_modules');
@@ -20,7 +21,15 @@ function fakeNpm(withBin) {
     fs.mkdirSync(path.join(root, 'aio-connect', 'bin'), { recursive: true });
     fs.writeFileSync(path.join(root, 'aio-connect', 'bin', 'aio.js'), 'process.exit(0);\n');
   }
-  fs.writeFileSync(path.join(dir, 'npm.cmd'), `@echo ${root}\n`);
+  if (process.platform === 'win32') {
+    // cmd.exe (shell:true) resolves npm.cmd via PATHEXT — the shim never needs +x.
+    fs.writeFileSync(path.join(dir, 'npm.cmd'), `@echo ${root}\n`);
+  } else {
+    // sh (shell:true) resolves `npm` by name and needs a shebang + execute bit.
+    const npmPath = path.join(dir, 'npm');
+    fs.writeFileSync(npmPath, `#!/bin/sh\necho ${root}\n`);
+    fs.chmodSync(npmPath, 0o755);
+  }
   return { dir, root };
 }
 
