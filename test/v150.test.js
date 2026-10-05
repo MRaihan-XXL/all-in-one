@@ -29,6 +29,9 @@ function tempHome() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'aio-v150-home-'));
 }
 
+// mirrors write.js hashKey — block-hashes keys are lowercased on win32 (6f)
+const hk = (f) => (process.platform === 'win32' ? path.resolve(f).toLowerCase() : path.resolve(f));
+
 /** Fresh temp fixture file with the given content. */
 function fixture(prefix, name, content) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -242,7 +245,7 @@ test('stripBlock: prunes the stored hash — block gone, blockEdited false', () 
   assert.equal(currentBlock(file), null, 'block gone from the file');
   assert.equal(blockEdited(file), false, 'no block → no drift');
   const stored = JSON.parse(fs.readFileSync(path.join(STATE_DIR, 'block-hashes.json'), 'utf8'));
-  assert.equal(stored[path.resolve(file)], undefined, 'stale drift entry pruned from block-hashes.json');
+  assert.equal(stored[hk(file)], undefined, 'stale drift entry pruned from block-hashes.json');
 });
 
 /* ---------------- 3b. src/write.js buildBlock manifest pointer (W4) ---------------- */

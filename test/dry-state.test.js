@@ -18,6 +18,8 @@ const { STATE_DIR } = await import('../src/paths.js');
 
 const LEDGER = path.join(STATE_DIR, 'mcp-ledger.json'); // self-healing MCP ledger (S-01)
 const HASHES = path.join(STATE_DIR, 'block-hashes.json'); // drift hash (C-02)
+// mirrors write.js hashKey — block-hashes keys are lowercased on win32 (6f)
+const hk = (f) => (process.platform === 'win32' ? path.resolve(f).toLowerCase() : path.resolve(f));
 
 /** Fresh temp fixture file with the given content. */
 function fixture(prefix, name, content) {
@@ -101,7 +103,7 @@ test('B1: injectBlock unchanged branch — dry run neither creates nor modifies 
   assert.equal(injectBlock(file, 'BODY', 't').status, 'unchanged');
   assert.ok(fs.existsSync(HASHES), 'real run records the missing hash entry');
   const stored = readJson(HASHES);
-  assert.ok(stored[path.resolve(file)], `hash entry present for ${path.resolve(file)}`);
+  assert.ok(stored[hk(file)], `hash entry present for ${hk(file)}`);
   assert.equal(Object.keys(stored).length, 1, 'exactly one file tracked');
 });
 
@@ -109,10 +111,10 @@ test('B1: injectBlock unchanged branch — dry run neither creates nor modifies 
 
 test('stripBlock: file without a block but with a stale hash entry → entry pruned', () => {
   const file = fixture('aio-dry-strip-', 'AGENTS.md', '# rules — no block here\n');
-  fs.writeFileSync(HASHES, JSON.stringify({ [path.resolve(file)]: '0123456789abcdef' }, null, 2));
+  fs.writeFileSync(HASHES, JSON.stringify({ [hk(file)]: '0123456789abcdef' }, null, 2));
 
   assert.equal(stripBlock(file), 'absent');
-  assert.equal(readJson(HASHES)[path.resolve(file)], undefined, 'stale drift key pruned');
+  assert.equal(readJson(HASHES)[hk(file)], undefined, 'stale drift key pruned');
   assert.ok(fs.existsSync(file), 'the file itself is left alone');
 });
 
@@ -120,8 +122,8 @@ test('stripBlock: nonexistent path with a stale hash entry → entry pruned', ()
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-dry-gone-'));
   const gone = path.join(dir, 'AGENTS.md'); // never created
   assert.equal(fs.existsSync(gone), false, 'precondition: file absent');
-  fs.writeFileSync(HASHES, JSON.stringify({ [path.resolve(gone)]: 'fedcba9876543210' }, null, 2));
+  fs.writeFileSync(HASHES, JSON.stringify({ [hk(gone)]: 'fedcba9876543210' }, null, 2));
 
   assert.equal(stripBlock(gone), 'absent');
-  assert.equal(readJson(HASHES)[path.resolve(gone)], undefined, 'stale drift key pruned for a missing file');
+  assert.equal(readJson(HASHES)[hk(gone)], undefined, 'stale drift key pruned for a missing file');
 });

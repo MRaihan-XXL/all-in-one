@@ -15,7 +15,6 @@ const AGENTS = [
   { name: 'codex', dirHint: '.codex' },
   { name: 'gemini', dirHint: '.gemini' },
 ];
-export const AGENT_NAMES = AGENTS.map((a) => a.name);
 
 function pathDirs() {
   return (process.env.PATH || '')

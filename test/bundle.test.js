@@ -15,8 +15,9 @@ const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.ur
 const repoRoot = fileURLToPath(new URL('../', import.meta.url));
 const { STATE_DIR, CONFIG_FILE, readState, writeState } = await import('../src/paths.js');
 
-test('package ships bin/src/assets/docs — no legacy catalog artifacts', () => {
-  for (const d of ['bin', 'src', 'assets', 'docs']) assert.ok(pkg.files.includes(d), `${d} in files`);
+test('package ships bin/src/docs — no test/ or assets/ payload (7b tarball trim)', () => {
+  for (const d of ['bin', 'src', 'docs']) assert.ok(pkg.files.includes(d), `${d} in files`);
+  for (const d of ['test', 'assets']) assert.ok(!pkg.files.includes(d), `${d} not shipped`);
   assert.ok(!pkg.files.some((f) => f.includes('ai-tools.db')), 'ai-tools.db no longer shipped');
   assert.equal(fs.existsSync(new URL('../src/catalog.js', import.meta.url)), false, 'src/catalog.js removed');
   assert.equal(fs.existsSync(new URL('../ai-tools.db', import.meta.url)), false, 'no db in package root');

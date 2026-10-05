@@ -24,14 +24,16 @@ function line(level, id, detail) {
   return { level, id, detail, text: `${tag} ${id.padEnd(14)} ${detail}` };
 }
 
-/** All network/subprocess probes in parallel (P-02) — results consumed in order. */
+/** All network/subprocess probes in parallel (P-02) — results consumed in order.
+ *  A non-2xx rate_limit answer (403/429) is kept as its own status so the report
+ *  can say "rate-limited" instead of a misleading "unreachable" (6d). */
 function probeLive() {
   if (process.env.AIO_OFFLINE === '1') return Promise.resolve({ ok: true, offline: true });
   return fetch('https://api.github.com/rate_limit', {
     headers: { 'user-agent': `aio-connect/${getVersion()}` },
     signal: AbortSignal.timeout(3000),
   })
-    .then((res) => (res.ok ? { ok: true } : Promise.reject(new Error(`HTTP ${res.status}`))))
+    .then((res) => (res.ok ? { ok: true } : { ok: false, status: res.status, msg: `HTTP ${res.status}` }))
     .catch((e) => ({ ok: false, msg: e.message }));
 }
 
@@ -54,7 +56,7 @@ function probeGhAuth() {
 }
 
 /** Run all checks. Returns { checks, issues, warns, ok } — always 9 checks (B-09). */
-export async function runChecks(opts = {}) {
+export async function runChecks() {
   const home = os.homedir();
   const checks = [];
 
@@ -62,15 +64,17 @@ export async function runChecks(opts = {}) {
   const [live, ollama, gh] = await Promise.all([probeLive(), probeOllama(), probeGhAuth()]);
 
   // 1. Node — supported line is >= 22 (package engines); older runs are unsupported (B-08).
+  //    Load floor >= 20.10: below it aio never loaded at all (6e), so only those are "bad".
   //    A compiled binary embeds its runtime and also passes via process.versions.bun.
-  const major = Number(process.versions.node.split('.')[0]);
+  const [major, minor] = process.versions.node.split('.').map(Number);
+  const loads = major > 20 || (major === 20 && minor >= 10);
   const supported = major >= 22 || !!process.versions.bun;
   checks.push(
     supported
       ? line('ok', 'node', `v${process.versions.node} (supported: >= 22${process.versions.bun ? `, bun ${process.versions.bun} build` : ''})`)
-      : major >= 18
-        ? line('warn', 'node', `v${process.versions.node} — runs, but unsupported; install Node >= 22`)
-        : line('bad', 'node', `v${process.versions.node} — Node >= 22 required`)
+      : loads
+        ? line('warn', 'node', `v${process.versions.node} — runs, but unsupported; install Node >= 22 (load floor: >= 20.10)`)
+        : line('bad', 'node', `v${process.versions.node} — Node >= 22 required (load floor: Node >= 20.10)`)
   );
 
   // 2. State
@@ -87,7 +91,13 @@ export async function runChecks(opts = {}) {
       ? line('ok', 'live', 'AIO_OFFLINE=1 — live search intentionally disabled')
       : live.ok
         ? line('ok', 'live', 'github reachable — ask searches GitHub + npm + crates (no search storage)')
-        : line('warn', 'live', `github unreachable (${live.msg}) — aio ask will still try npm/crates`)
+        : line(
+            'warn',
+            'live',
+            live.status === 403 || live.status === 429
+              ? `rate-limited (HTTP ${live.status}) — gh auth login / GH_TOKEN — aio ask will still try npm/crates`
+              : `github unreachable (${live.msg}) — aio ask will still try npm/crates`
+          )
   );
 
   // 4. Manifest freshness
@@ -207,13 +217,16 @@ function doctorJson(checks, { mode, ok, issues, warns, fix = null }) {
 
 /** `aio doctor` command. */
 export async function runDoctor(opts = {}) {
-  const { checks, issues, warns, ok } = await runChecks(opts);
+  const { checks, issues, warns, ok } = await runChecks();
   const mode = opts.check ? 'check' : opts.fix ? 'fix' : 'doctor';
   const header = `aio doctor — v${getVersion()} ${opts.check ? '(check mode)' : opts.fix ? '(fix mode)' : ''}`;
   const body = checks.map((c) => c.text).join('\n');
   let fixNote = '';
   let fixOutcome = null;
-  if (opts.fix && !ok) {
+  // --check is read-only by contract: --fix never spawns under it, only notes the conflict (6c)
+  if (opts.fix && opts.check) {
+    fixNote = '\n--fix ignored under --check (read-only mode)';
+  } else if (opts.fix && !ok) {
     // Safe fix = re-run the idempotent setup (regen manifest + reinject blocks).
     // --yes: the fix itself is the consent (non-TTY gate would stop at the plan).
     try {
@@ -221,12 +234,14 @@ export async function runDoctor(opts = {}) {
       // source/npm → re-run via node with the script path; compiled binary →
       // argv already starts at [1] (no script token), so pass flags directly.
       const spawn = bin === process.execPath ? [bin, ['--yes']] : [process.execPath, [bin, '--yes']];
+      // pipe stderr (6i): a fix that fails must show WHY, not a bare "Command failed"
       execFileSync(spawn[0], spawn[1], {
-        stdio: 'ignore',
+        stdio: ['ignore', 'ignore', 'pipe'],
         timeout: 120000,
+        encoding: 'utf8',
       });
       fixNote = '\nfix: setup re-run complete — re-check:\n';
-      const after = await runChecks(opts);
+      const after = await runChecks();
       fixNote += after.checks.map((c) => c.text).join('\n');
       const fixed = { ok: after.ok, exit: after.ok ? 0 : 1 };
       fixOutcome = { attempted: true, ok: after.ok };
@@ -239,8 +254,11 @@ export async function runDoctor(opts = {}) {
         exit: fixed.exit,
       };
     } catch (e) {
-      fixNote = `\nfix failed: ${e.message}`;
-      fixOutcome = { attempted: true, ok: false, error: e.message };
+      const detail = String(e.stderr ?? '').trim().slice(0, 300);
+      // dedup: keep stderr only when the message doesn't already carry it
+      const extra = detail && !String(e.message).includes(detail) ? `\n${detail}` : '';
+      fixNote = `\nfix failed: ${e.message}${extra}`;
+      fixOutcome = { attempted: true, ok: false, error: detail || e.message };
     }
   }
   const summary = `${issues} issue(s), ${warns} warning(s)`;

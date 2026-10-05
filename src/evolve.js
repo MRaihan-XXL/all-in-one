@@ -23,7 +23,7 @@ function step(name, file, args = []) {
 }
 
 /** `aio evolve` command → { ok, text, exit }. */
-export async function runEvolve(opts = {}) {
+export async function runEvolve() {
   // A compiled binary (or a partial install) has no package.json/test/ next to
   // itself — the pipeline would re-exec the wrong binary. Fail honestly instead.
   if (!fs.existsSync(path.join(ROOT, 'package.json')) || !fs.existsSync(path.join(ROOT, 'test'))) {
@@ -44,12 +44,9 @@ export async function runEvolve(opts = {}) {
   // 2. Health gate.
   results.push(step('doctor --check', path.join(ROOT, 'bin', 'aio.js'), ['doctor', '--check']));
 
-  // 3. Tests (test/ ships with the npm package — `npm test` works from any install).
+  // 3. Tests (only reachable in a source checkout — the guard above requires test/).
   const testStep = (() => {
     const started = Date.now();
-    if (!fs.existsSync(path.join(ROOT, 'test'))) {
-      return { name: 'npm test', ok: false, ms: 0, out: 'test/ directory missing — reinstall aio-connect' };
-    }
     try {
       execFileSync('npm', ['test'], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], timeout: 600000, shell: true });
       return { name: 'npm test', ok: true, ms: Date.now() - started, out: 'all pass' };

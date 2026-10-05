@@ -15,7 +15,7 @@ export function blockState(file) {
   return txt.includes(BLOCK_END) ? 'injected' : 'no block';
 }
 
-export function runStatus(opts = {}) {
+export function runStatus() {
   const home = os.homedir();
   const issues = [];
   const lines = [];

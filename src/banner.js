@@ -18,8 +18,12 @@ export const ART = GLYPHS.A.map((row, i) => `${row} ${GLYPHS.I[i]} ${GLYPHS.O[i]
 // Top-to-bottom glow: dark ember → bright coral (a rising "powering up" ramp).
 const RAMP = [52, 94, 135, 167, 180, 203];
 
+// Env vars arrive as strings: `AIO_QUIET=0`/`=false` must mean "banner on",
+// so plain truthiness can't be the switch (6h).
+const off = (v) => Boolean(v) && !['0', 'false'].includes(String(v).toLowerCase());
+
 export function banner() {
-  if (process.env.AIO_QUIET || process.env.AIO_NO_BANNER) return '';
+  if (off(process.env.AIO_QUIET) || off(process.env.AIO_NO_BANNER)) return '';
   const color = Boolean(process.stdout.isTTY) && !process.env.NO_COLOR;
   const dim = color ? '\x1b[2m' : '';
   const accent = color ? '\x1b[38;5;203m' : '';

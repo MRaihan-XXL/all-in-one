@@ -5,6 +5,10 @@ import { removeSkillAdditions } from './skill.js';
 import { blockTargets } from './targets.js';
 import { BACKUP_DIR } from './paths.js';
 
+/** Runs the full rollback report. Returns true when the rollback was CLEAN —
+ *  every row finished. A row that kept something behind (`kept`, `parse error`,
+ *  `failed`, `refusing…`) means aio left work on disk, so the command must exit
+ *  non-zero instead of reporting success (5g); row text itself is unchanged. */
 export function runRollback() {
   const home = os.homedir();
   // one shared list with setup/status/doctor — global always included (B-04)
@@ -40,4 +44,8 @@ export function runRollback() {
   console.log(`File backups (kept as safety net): ${BACKUP_DIR}`);
   console.log('Local data (TRACKING.md, TOOLS-INDEX.md) was never touched.');
   console.log('');
+
+  const incomplete = [...mcp, ...skills].some((r) => /kept|parse error|failed|refusing/i.test(r.status));
+  if (incomplete) console.log('[aio] rollback incomplete — some rows were kept behind (see above); exit 1.');
+  return !incomplete;
 }

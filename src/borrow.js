@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
+import { ghThrottle } from './live.js';
 
 export const BORROW_DIR = path.join(os.tmpdir(), 'aio-borrow');
 const TTL_MS = 24 * 60 * 60 * 1000;
@@ -11,7 +12,11 @@ const MIN_FREE_BYTES = 1024 * 1024 * 1024; // 1 GB guard
 
 function ghToken() {
   try {
-    return execFileSync('gh', ['auth', 'token'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    return execFileSync('gh', ['auth', 'token'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 5000, // a hung `gh` must not stall the whole borrow call
+    }).trim();
   } catch {
     return process.env.GITHUB_TOKEN || '';
   }
@@ -53,6 +58,7 @@ export function purgeExpired(dir = BORROW_DIR) {
 
 /** Live GitHub repository search. Returns top repos: { name, url, desc, stars, why }. */
 export async function ghSearch(query, limit = 8) {
+  await ghThrottle(); // same GitHub budget as live.js ghRepos/ghSkills — search used to bypass it
   const q = encodeURIComponent(`${query} stars:>5 in:name,description,readme`);
   const headers = { accept: 'application/vnd.github+json', 'user-agent': 'aio-borrow' };
   const token = ghToken();
@@ -86,13 +92,25 @@ export function borrowClone(target) {
     throw new Error(`low disk: ${fmtBytes(free)} free (< 1 GB) — run \`aio borrow --clean\` first`);
   }
   const dest = path.join(BORROW_DIR, repo.replace(/[\\/]/g, '_'));
-  if (fs.existsSync(dest)) {
+  if (fs.existsSync(path.join(dest, '.git'))) {
     return { path: dest, status: 'already borrowed' };
   }
-  execFileSync('git', ['clone', '--depth', '1', `https://github.com/${repo}.git`, dest], {
-    stdio: ['ignore', 'pipe', 'pipe'],
-    timeout: 120000,
-  });
+  if (fs.existsSync(dest)) {
+    // dir without .git = an interrupted/partial clone, NOT a healthy borrow —
+    // clear it and re-clone instead of handing back a broken tree
+    fs.rmSync(dest, { recursive: true, force: true });
+  }
+  try {
+    execFileSync('git', ['clone', '--depth', '1', `https://github.com/${repo}.git`, dest], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: 120000,
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }, // never prompt — a typo'd repo must not hang on a credential prompt
+    });
+  } catch (e) {
+    // surface GitHub's real answer (stderr, verbatim ~300 chars) instead of a bare code
+    const detail = String(e.stderr || '').trim().slice(0, 300);
+    throw new Error(detail ? `git clone failed: ${detail}` : e.message);
+  }
   return { path: dest, status: 'cloned (shallow, depth 1)' };
 }
 
@@ -114,6 +132,10 @@ export function borrowClean(dir = BORROW_DIR) {
   for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
     if (ent.isDirectory()) {
       fs.rmSync(path.join(dir, ent.name), { recursive: true, force: true });
+      n++;
+    } else if (ent.isFile()) {
+      // stray files at the top level (aborted-clone leftovers) are part of the wipe
+      fs.rmSync(path.join(dir, ent.name), { force: true });
       n++;
     }
   }
@@ -177,6 +199,16 @@ export async function runBorrow({ query, get, clean, list, json }) {
         '  aio borrow --get <owner/repo>  shallow-clone to temp (24h TTL)\n' +
         '  aio borrow --list | --clean    inspect / wipe temp clones',
       json: null,
+    };
+  }
+
+  if (process.env.AIO_OFFLINE === '1') {
+    // same offline payload as search.js runAsk — before any fetch, never
+    // "borrow search failed: fetch failed"
+    return {
+      ok: false,
+      json: null,
+      text: '[aio] offline (AIO_OFFLINE=1) — aio keeps zero local catalog by design; live search needs network.',
     };
   }
 

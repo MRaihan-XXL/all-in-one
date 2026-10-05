@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildBlock, injectBlock, backup } from './write.js';
-import { STATE_DIR } from './paths.js';
+import { STATE_DIR, writeAtomic } from './paths.js';
 import { getVersion } from './banner.js';
 
 function pointerBody() {
@@ -48,7 +48,7 @@ export async function runInit(opts = {}) {
         fs.mkdirSync(dir, { recursive: true });
         // never destroy pre-existing team content silently (F1) — copy first, then replace
         if (existed) backup(copilotFile, 'init-copilot');
-        fs.writeFileSync(copilotFile, next);
+        writeAtomic(copilotFile, next);
         results.push({ label: '.github/copilot-instructions.md', status: existed ? 'updated (pointer; previous backed up)' : 'injected (pointer)', file: copilotFile });
       } else {
         results.push({ label: '.github/copilot-instructions.md', status: 'unchanged', file: copilotFile });

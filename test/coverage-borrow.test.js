@@ -19,6 +19,9 @@ process.env.TMPDIR = OWN_TMP;
 // gh/git unresolvable → every spawn inside borrow.js throws ENOENT immediately.
 process.env.PATH = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-borrow-cov-path-'));
 delete process.env.GITHUB_TOKEN; // ambient token must not leak into assertions
+// ghSearch now calls ghThrottle (3c): without this the default budget would space
+// the mocked ghSearch calls by seconds against a real ~/.aio/gh-rate.json.
+process.env.AIO_RATE = '0';
 
 const { BORROW_DIR, ghSearch, borrowClone, runBorrow, purgeExpired } = await import('../src/borrow.js');
 
@@ -128,7 +131,7 @@ test('borrowClone: statfs unavailable → guard passes (Infinity), then the git 
 
 test('runBorrow --get: already-cloned target → ok + status/path/free-disk report (no spawn)', async () => {
   resetBorrowDir();
-  fs.mkdirSync(path.join(BORROW_DIR, 'owner_repo'), { recursive: true });
+  fs.mkdirSync(path.join(BORROW_DIR, 'owner_repo', '.git'), { recursive: true }); // 4c: a real clone carries .git
 
   const r = await runBorrow({ get: 'https://github.com/owner/repo.git' });
 

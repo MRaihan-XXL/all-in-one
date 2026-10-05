@@ -97,7 +97,7 @@ test('foreign skill (on disk, no ledger): add refused, remove refused, file kept
   const src = sourceDir('# mine, not aio\'s\n');
 
   const add = await skillAdd({ target: '', file: src, name: 'foreign-skill', dry: false });
-  assert.equal(add.ok, false, add.text);
+  assert.equal(add.ok, true, add.text); // 2f: a benign skip exits 0 (remove below still refuses)
   assert.match(add.text, /not installed by aio/, `ownership refused: ${add.text}`);
 
   const rm = skillRemove({ target: 'foreign-skill' });
