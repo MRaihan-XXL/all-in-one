@@ -165,14 +165,15 @@ export function dedupe(hits) {
   });
 }
 
-/** Human note per source failure — rate limits and dead networks must not masquerade as "no match". */
-function sourceErrorNote(errors) {
+/** Human note per source failure — rate limits and dead networks must not masquerade as "no match".
+ *  Exported: `aio agent` (agent.js) renders the same honest per-source notes. */
+export function sourceErrorNote(errors) {
   return errors.map((e) => {
     const m = String(e.msg || '');
     const kind = /403|401|rate|abuse/i.test(m)
       ? 'rate-limited — set GH_TOKEN / `gh auth login`, or retry later'
       : /timeout|abort|timed out/i.test(m)
-        ? 'timeout (4s budget)'
+        ? 'timeout (4s/source budget)'
         : /fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|EAI_AGAIN|network/i.test(m)
           ? 'unreachable (network)'
           : m.slice(0, 120);

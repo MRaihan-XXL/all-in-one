@@ -145,7 +145,7 @@ test('runAsk: sources answer with zero hits + per-source failures → notes for 
   assert.equal(r.json.hits.length, 0, 'zero hits to render');
   assert.match(r.text, /live: github/, 'the answering source is named');
   assert.match(r.text, /npm: unreachable \(network\)/, 'network failure kind');
-  assert.match(r.text, /crates: timeout \(4s budget\)/, 'timeout kind');
+  assert.match(r.text, /crates: timeout \(4s\/source budget\)/, 'timeout kind');
   assert.match(r.text, /No result from live sources\./, 'zero-hit ending');
   assert.match(r.text, /\(URL detected in the prompt\)/, 'web hint appended for a URL query');
   assert.match(r.text, /aio ask — "rust csv parser https:\/\/example\.com\/doc" \(live: github · \d+\.\ds\)/, 'header with timing');

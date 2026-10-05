@@ -77,12 +77,14 @@ test('status --bogus-flag → unknown flag reported, status exit stays normal', 
   assert.ok([0, 1].includes(r.status), `status keeps its normal exit, got ${r.status}`);
 });
 
-test('frobnicate → unknown command, exit 1, help still printed', () => {
+test('frobnicate → unknown command, exit 1, points at --help instead of dumping it', () => {
   const r = run('frobnicate');
 
   assert.equal(r.status, 1, 'unknown command exits 1');
   assert.match(r.stderr, /unknown command: frobnicate/, `named on stderr:\n${r.stderr}`);
-  assert.match(r.stdout, /Usage/, 'help text still lands on stdout');
+  // 5f: a typo must not print 90 lines of HELP — the hint goes to stderr, stdout stays clean
+  assert.match(r.stderr, /run 'aio --help' for usage/, `hint on stderr:\n${r.stderr}`);
+  assert.ok(!r.stdout.includes('Usage'), `no HELP dump on stdout:\n${r.stdout}`);
 });
 
 test('--version → exit 0, version equals package.json', () => {

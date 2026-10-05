@@ -130,7 +130,7 @@ test('cratesSearch: maps rows (trim, trust, meta fallbacks) and surfaces HTTP 50
   assert.equal(big.url, 'https://crates.io/crates/serde-json');
   assert.ok(big.func.length <= 120 && big.func.endsWith('…'), `long description trimmed (${big.func.length})`);
   assert.match(big.meta, /v1\.0\.100/, 'stable version in meta');
-  assert.ok(big.meta.includes('42'), 'star count in meta');
+  assert.ok(big.meta.includes('5m'), 'real downloads shown — crates.io has no stars field (no fabricated ★0)');
   assert.ok(Math.abs(big.trust01 - Math.min(1, Math.log10(5000001) / 7)) < 1e-9, 'trust from downloads');
 
   assert.equal(small.url, 'https://crates.io/crates/tiny-crate');

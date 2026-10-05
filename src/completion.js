@@ -1,8 +1,11 @@
 // completion.js — shell completion for `aio` (Stage 6): print a script to stdout.
 // Boring by design: static command/flag lists, no runtime probing — completion
-// must work offline and inside a compiled binary.
-const COMMANDS = ['preview', 'init', 'setup', 'status', 'ask', 'borrow', 'skill', 'completion', 'doctor', 'evolve', 'update', 'rollback', 'version', 'help'];
-const FLAGS = ['--yes', '--dry-run', '--show-block', '--json', '--check', '--fix', '--file', '--name', '--get', '--clean', '--list', '--copilot', '--help', '--version'];
+// must work offline and inside a compiled binary. Also the SINGLE SOURCE the CLI
+// dispatches from: bin/aio.js validates commands/flags against these exports (7d),
+// so a new command or flag can never silently miss shell completion (or vice versa).
+export const COMMANDS = ['preview', 'init', 'setup', 'status', 'ask', 'agent', 'borrow', 'skill', 'completion', 'doctor', 'evolve', 'update', 'rollback', 'version', 'help'];
+export const FLAGS = ['--yes', '--dry-run', '--show-block', '--json', '--check', '--fix', '--file', '--name', '--get', '--clean', '--list', '--copilot', '--add', '--help', '--version'];
+export const SHORT_FLAGS = ['-h', '-v'];
 
 const usage = 'usage: aio completion bash|zsh|fish|pwsh';
 
