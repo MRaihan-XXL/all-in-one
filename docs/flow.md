@@ -43,6 +43,8 @@ is the authoritative diagram.
 | `aio init [--copilot]` | project scope — same gate; block into `./AGENTS.md`, `--copilot` adds the `.github/copilot-instructions.md` pointer |
 | `aio status` | read-only health report — hand-edited blocks flagged `injected*` (drift) |
 | `aio ask "<prompt>"` | step 2 — **live** search across GitHub (repos + skill files), npm and crates in parallel; link + function + source tag per hit; `--json` for machine-readable output (`stored: 0`) |
+| `aio agent "<task>"` | **coordinator variant of step 2** — every lane at once (github ∥ skills ∥ npm ∥ crates ∥ web: Wikipedia + Hacker News ∥ local tools on `PATH`), then one ordered cheapest-first route (run now → read first → quick try → borrow → install skill); rule-based synthesis, `stored: 0`; `--json` → `{schemaVersion, task, engine, plan, sources, errors, route, count, stored: 0, hits}` |
+| `aio skill search "<query>" [--add]` | live skill discovery: ranked `SKILL.md` hits with ready-to-run `aio skill add …` commands; `--add` installs the top hit; writes nothing (`stored: 0`) |
 | `aio borrow "<kw>"` | optional live GitHub search for what you want to **clone** — discovery itself is `ask`'s job, not a catalog-miss fallback |
 | `aio borrow --get <owner/repo>` | step 4 — shallow clone to temp, 24 h TTL |
 | `aio borrow --list` / `--clean` | step 6 — inspect / wipe temp clones |

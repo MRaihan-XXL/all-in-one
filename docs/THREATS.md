@@ -2,7 +2,8 @@
 
 Scope: the `aio-connect` package (binaries `aio` / `aioc`) as installed
 globally from npm, plus the artifacts it writes on the user's machine and the
-untrusted content it surfaces through `aio ask`. This document is the answer
+untrusted content it surfaces through `aio ask`, `aio agent` and
+`aio skill search`. This document is the answer
 both external reviews asked for: what aio protects, what it does not, and
 where the remaining risk sits.
 
@@ -30,14 +31,27 @@ where the remaining risk sits.
 | c | **agent = autonomous code executor** | the agent decides what to run; aio's rules are instructions, not a sandbox |
 | d | **package registries = untrusted supply chain** | anything surfaced by search can be typosquatted, stale, or malicious |
 | e | **`aio skill add` = third-party markdown into the shared skills root** | a fetched `SKILL.md` lands in `~/.agents/skills/<name>/` where 40+ agents can read it. Crossing is explicit (an opt-in command, never automatic), content is only written when the target has no aio-claimed file yet, and its sha256 is recorded so later removal stays byte-exact — but aio does not review what the file says |
-| f | **installer downloads = remote executables** | the installers fetch a binary and `SHA256SUMS` over HTTPS, verify the hash before the file lands, and abort on mismatch; nothing remote is piped into a shell. Trust still rests on the release account and the cosign signature over `SHA256SUMS` |
+| f | **installer downloads = remote executables** | the installers fetch a binary and `SHA256SUMS` over HTTPS, verify the hash before the file lands, and abort on mismatch; nothing remote is piped into a shell. Trust still rests on the release account and the cosign signature over `SHA256SUMS`. The scoop manifest's `autoupdate` (v1.7.0) resolves new versions from the release URL and pins the download with a `SHA256SUMS` regex hash — the same file the installers verify — so `scoop update` never fetches an unpinned artifact |
+| g | **`aio agent` web lane = third-party, unvetted content** | Wikipedia `action=opensearch` and Hacker News Algolia (`hn.algolia.com`, `tags=story`) return titles, descriptions and URLs aio does not control; crossing is metadata only — aio prints it and never injects either API's response into agent context (same contract as T2). The route it builds points at this content (`read first`), so the executing agent decides what to open |
+| h | **`aio agent` local-tools lane = whatever is on `PATH`** | a hit means a curated ~38-entry map entry **that also resolves on `PATH`** (`detectBinary`); aio suggests it (`run now`) but never executes it. Presence on `PATH` is not a trust signal — a binary can be anything, and aio does not inspect it |
 
-Release `1.6.0` uploads `SHA256SUMS.bundle` (signature + certificate) next to
+Since release `1.6.0`, `SHA256SUMS.bundle` (signature + certificate) is
+uploaded next to
 `SHA256SUMS`. Download both files from the release page first, then verify —
-the certificate identity pins the tag:
+the certificate identity pins the tag (substitute the tag you are installing):
 
 ```sh
-cosign verify-blob --bundle SHA256SUMS.bundle --certificate-identity https://github.com/MRaihan-XXL/all-in-one/.github/workflows/release.yml@refs/tags/v1.6.0 --certificate-oidc-issuer https://token.actions.githubusercontent.com SHA256SUMS
+cosign verify-blob --bundle SHA256SUMS.bundle --certificate-identity https://github.com/MRaihan-XXL/all-in-one/.github/workflows/release.yml@refs/tags/v1.7.0 --certificate-oidc-issuer https://token.actions.githubusercontent.com SHA256SUMS
+```
+
+Since `1.7.0` the npm tarball itself is attested: publish runs
+`npm publish --access public --provenance` (OIDC, `id-token: write`), so the
+registry holds a Sigstore attestation from the tarball back to the source
+commit. Verify after any install (or inspect what the registry carries):
+
+```sh
+npm audit signatures              # registry signatures + provenance attestations
+npm view aio-connect dist.attestations   # the attestation entry point on the package
 ```
 
 ## 3. Threat table
@@ -48,9 +62,11 @@ cosign verify-blob --bundle SHA256SUMS.bundle --certificate-identity https://git
 | T2 | Prompt injection via README / `SKILL.md` bodies | Medium — injected instructions could steer the agent | aio prints only metadata (name, one-line description, path, URL) — it never injects file contents into agent context; `borrow` clones are temp with a 24 h TTL | **MEDIUM** — the agent may read cloned files itself, outside aio's control |
 | T3 | Config corruption / crash mid-write | High — agent files or MCP configs left broken | consent gate before any write (TTY `[y/N]`, non-TTY plan-only, `--yes` to apply); timestamped backup of every touched file **before** modification; `JSON.parse` verify-before-write; single idempotent marker block; **drift detection** — each inject records a SHA-256 prefix in `~/.aio/block-hashes.json`, so a hand-edited block is reported (`injected*`) and replaced only with the original kept in `backups/`; rollback ledger for MCP entries; `aio --dry-run` / `aio preview` plan-first review (writes **nothing at all**: no manifest, no block, no MCP entry, no backup, no state file — the drift-hash and ledger writes are `!dry`-guarded); malformed target configs reported as `parse error` and **never overwritten** (tested) | **LOW** |
 | T4 | Token exposure | High — GitHub credential leak | `gh auth token` read at call time into memory only; request headers never logged or written to disk | **LOW** |
-| T5 | aio's own supply chain | High — a compromised release reaches every install | zero runtime dependencies; no install/postinstall scripts; GPL-3.0 source; npm publish behind 2FA/EOTP; CI on 3 OS; release workflow (`.github/workflows/release.yml`) only publishes on a `v*` tag after `npm test` passes **and** the tag equals `package.json` version **and** the tag is the tip of `origin/main` (a stale tag ships old code), using an `NPM_TOKEN` stored as a GitHub Actions secret; all 5 binaries are compiled per release and the ones the build OS can run are smoke-tested before upload (`aio-darwin-x64` and `aio-linux-arm64` are cross-built and not yet executed — tracked as a roadmap gap), `SHA256SUMS` is uploaded with the assets and then cosign keyless-signed (`SHA256SUMS.sig`, after upload so a signing outage never blocks the binaries), and the installers refuse a hash mismatch | **Known gap:** the binaries themselves are not individually signed and npm provenance is not configured yet |
+| T5 | aio's own supply chain | High — a compromised release reaches every install | zero runtime dependencies; no install/postinstall scripts; GPL-3.0 source; npm publish behind 2FA/EOTP **plus `--provenance` (v1.7.0)** — an OIDC Sigstore attestation ties the published tarball to its source commit (verify: `npm audit signatures`, §2); CI on 3 OS; release workflow (`.github/workflows/release.yml`) only publishes on a `v*` tag after `npm test` passes **and** the tag equals `package.json` version **and** the tag is the tip of `origin/main` (a stale tag ships old code), using an `NPM_TOKEN` stored as a GitHub Actions secret; all 5 binaries are compiled per release and the ones the build OS can run are smoke-tested before upload (`aio-darwin-x64` and `aio-linux-arm64` are cross-built and not yet executed — tracked as a roadmap gap), `SHA256SUMS` is uploaded with the assets and then cosign keyless-signed (`SHA256SUMS.sig`, after upload so a signing outage never blocks the binaries), and the installers refuse a hash mismatch; the scoop manifest's `autoupdate` (v1.7.0) pins each update to that same `SHA256SUMS` | **Known gap:** the binaries themselves are not individually signed — provenance covers the npm tarball only (T8 covers the web lane, T9 the tools lane) |
 | T6 | Path traversal via backup labels | Medium — write outside the backup dir | labels sanitized `[^a-z0-9_-]` before joining `BACKUP_DIR` | **LOW** |
-| T7 | Telemetry / exfiltration | Medium — user data leaves the machine | none exists — network calls are only github/npm/crates + localhost Ollama + `doctor` probes + (v1.6.0) `skill add`'s plain GET of a public raw URL (no query, no user data; user-agent `aio-connect/<version>`) | none (by construction) |
+| T7 | Telemetry / exfiltration | Medium — user data leaves the machine | none exists — network calls are only github/npm/crates + localhost Ollama + `doctor` probes + (v1.6.0) `skill add`'s plain GET of a public raw URL (no query, no user data; user-agent `aio-connect/<version>`) + (v1.7.0) `aio agent`'s web lane: keyless GETs to `en.wikipedia.org/w/api.php` and `hn.algolia.com/api/v1/search` carrying only the search words, no user data | none (by construction) |
+| T8 | Unvetted third-party web content steers the agent (`aio agent` web lane) | Medium — Wikipedia/HN titles, descriptions and URLs are attacker-influenceable and appear in the printed route (`read first`) | metadata only (name/URL/one-line description), never file contents injected into agent context; 4 s timeout, `tags=story` filter drops HN comment objects (no titles) at source; partial failure still prints an error rather than a fake clean answer; the route repeats `docs/THREATS.md` verify guidance on run-now steps | **MEDIUM** — the agent chooses what to open; popularity of a source is not proof of truth |
+| T9 | Local-tools lane suggests a compromised binary | Medium — a `run now` step points at a `PATH` executable | curated ~38-entry map ∩ `PATH` via `detectBinary` (nothing off-PATH is ever suggested), token-boundary matching + `KEYSTOP` filter (no generic-word false hits); aio never executes it — it only prints the suggestion | **MEDIUM** — `PATH` presence is not a trust signal; verify before running |
 
 ## 4. Enforcement honesty
 
@@ -67,9 +83,15 @@ guarantees compliance".
 ## 5. Known gaps / future work
 
 - **Unsigned binaries** — `SHA256SUMS` is cosign keyless-signed and the
-  installers verify hashes before install (v1.6.0), but the binaries are not
-  individually signed and npm provenance/`--provenance` is not configured
-  yet (T5).
+  installers verify hashes before install (v1.6.0); since v1.7.0 the npm
+  tarball is additionally provenance-attested (`npm publish --provenance`,
+  verify with `npm audit signatures` — §2), but the 5 binaries are still not
+  individually signed (T5). Scoop's `autoupdate` pins to `SHA256SUMS` rather
+  than to a per-binary signature.
+- **Unvetted web/tools suggestions** — `aio agent`'s web lane (Wikipedia,
+  Hacker News) and local-tools lane are metadata-only suggestions behind the
+  same verify-before-run contract as `ask`; aio does not vet the content or
+  the `PATH` binary (T8/T9).
 - **Popularity ≠ trust** — the 35% prior demotes unknowns but cannot prove
   safety (T1 residual).
 - **`aio skill add` trusts the upstream file's content** — aio checks

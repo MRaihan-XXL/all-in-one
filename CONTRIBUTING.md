@@ -81,12 +81,13 @@ A release is a version bump plus a tag — CI does the rest.
 
 1. Bump `version` in `package.json`, move `CHANGELOG.md` `[Unreleased]` into a
    dated section.
-2. Commit, tag the same value: `git tag v1.6.0`.
+2. Commit, tag the same value: `git tag v1.7.0`.
 3. Push the tag. `release.yml` gates, in order:
    - tag must be the tip of `origin/main` (a stale tag ships old code),
    - `npm test`,
    - tag must equal the `package.json` version,
-   - `npm publish` (`secrets.NPM_TOKEN`),
+   - `npm publish --access public --provenance` (`secrets.NPM_TOKEN` + OIDC
+     attestation),
    - GitHub Release,
    - build the 5 standalone binaries (smoke-tested on the OS that can execute
      them: windows-x64, linux-x64, darwin-arm64; darwin-x64 and linux-arm64

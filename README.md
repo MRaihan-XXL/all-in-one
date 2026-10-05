@@ -36,7 +36,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 209/209 tests">
+  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 254 tests (253 pass · 1 skip · 0 fail)">
 </p>
 
 ## ✨ What it does
@@ -45,8 +45,10 @@
 your machine to **search live on each prompt**: GitHub (**630M+ repos** plus
 `filename:SKILL.md` public skills — **6.8M+ skill files**), npm (**3M+
 packages**) and crates (**340K+ crates**), queried in parallel — all counts are
-**verified floors, measured 2026-09-30**; websites go through your agent's
-own built-in web search. Results are printed, ranked and discarded — **no
+**verified floors, measured 2026-09-30**; in `aio ask` websites go through
+your agent's own built-in web search, while `aio agent` adds its own web lane
+(Wikipedia + Hacker News — metadata only). Results are printed, ranked and
+discarded — **no
 search history is stored** (aio's own files are the manifest, one block per
 agent file, timestamped backups, `config.json`, the MCP rollback ledger
 `mcp-ledger.json`, the drift-hash list
@@ -61,6 +63,9 @@ capped by them**:
 prompt → aio ask (live: github ∥ npm ∥ crates) → top-8 + diversity (BM25 + ≥2 rows/source)
        → use it ephemerally → report WHAT changed + EVERY link used + function
        → aio borrow --clean
+
+aio agent "<task>" = every lane at once (github ∥ skills ∥ npm ∥ crates ∥ web ∥
+       local tools on PATH) → one ordered, cheapest-first route to follow
 ```
 
 > **Auth:** GitHub works unauthenticated at low rate; `gh auth login` (or `GH_TOKEN`)
@@ -73,9 +78,11 @@ prompt → aio ask (live: github ∥ npm ∥ crates) → top-8 + diversity (BM25
 | `aio` | scan → slim manifest → inject the auto-use block into every agent. **Consent gate**: prints the plan first — interactive → asks `Proceed with these writes? [y/N] `, non-TTY → plan only (exit 0, nothing written); `--yes` writes silent, `--dry-run`/`aio preview` = plan only |
 | `aio init [--copilot]` | **project scope**: inject the block into `./AGENTS.md` (official standard — Zed/Copilot/Cursor read it); `--copilot` also writes `.github/copilot-instructions.md` (pointer only). Same consent gate; not reversed by `rollback` |
 | `aio ask "csv ke chart"` | **live search** across GitHub (630M+ repos + public skills), npm (3M+ pkgs) and crates (340K+) in parallel (4 s per source), merge-ranked with BM25 + source diversity, blended 65% keyword relevance + 35% source popularity (stars/downloads/npm score); every hit prints **link + one-line function + `<github>`/`<npm>`/`<crates>` tag**; reranked by your local Ollama (qwen3) only when it is warm and fast; `--json` → `{schemaVersion: 1, …, stored: 0, hits}` (`stored: 0` = no search results stored) |
+| `aio agent "csv ke interactive chart"` | **agentic coordinator** — runs EVERY lane in parallel (GitHub repos ∥ skills ∥ npm ∥ crates ∥ web: Wikipedia + Hacker News ∥ local tools already on your PATH), then prints an ordered **cheapest-first route**: what to run now, read first, try via `npx`/`cargo`, clone with `aio borrow --get`, or install with `aio skill add`. Synthesis is rule-based by design (never a fake LLM decision) and `stored: 0` — `--json` → `{schemaVersion: 1, task, engine: 'agent', plan, sources, errors, route, count, stored: 0, hits}` |
 | `aio borrow "etl tool"` | **optional ephemeral fetch** — `--get owner/repo` shallow-clones to temp (**24 h TTL**, auto-purged), `--list` inspects, `--clean` wipes it. Not a fallback for `ask`: use it when you actually need the files locally |
 | `aio skill add <owner/repo\|url>` | **install a public `SKILL.md`** into `~/.agents/skills/<name>/SKILL.md` (the agentskills.io shared layout read by 40+ agents). Tries 3 locations on `raw.githubusercontent.com/…/HEAD` (`SKILL.md`, `<name>/SKILL.md`, `.agents/skills/<name>/SKILL.md`); `--file <path\|dir>` installs a local file instead; `--name <n>` overrides the name; `--dry-run` prints the target and writes nothing. Idempotent, sha256-recorded in `~/.aio/skills-ledger.json`; never touches skills it did not write |
 | `aio skill list` / `aio skill remove <name>` | inspect installed skills (`[x] … aio` = aio-installed, `yours` = not tracked by aio's ledger) and remove one — `remove` refuses skills aio never wrote, so a user-owned skill stays yours |
+| `aio skill search "<query>" [--add]` | **live skill discovery in one step** — searches GitHub skill files (`gh` code search, needs auth) plus a repo fallback, prints ranked hits with ready-to-run `aio skill add …` commands; `--add` installs the top hit. `--json` → `{schemaVersion: 1, query, sources, errors, count, stored: 0, hits, commands}` (with `--add`, `commands` → `installed`); same ok-rule as `ask` — a failed lane is reported, never faked as "0 hits" |
 | `aio completion bash\|zsh\|fish\|pwsh` | print a shell completion script to stdout (static command/flag list — works offline and inside the compiled binary); add it to `~/.bashrc` / `~/.zshrc` / `~/.config/fish/completions/aio.fish` / `$PROFILE` as the script header says |
 | `aio doctor` | **9 checks**, every row tagged `[ok]`/`[~~]`/`[!!]`: node · state · live sources · manifest · agent blocks · agents · gh auth · Ollama · MCP ledger; `--fix` repairs, `--check` = CI gate, `--json` = machine output `{schemaVersion: 1, version, mode, ok, issues, warns, checks[]}` |
 | `aio evolve` | the whole self-upgrade pipeline in one run: setup (manifest+blocks) → doctor --check → npm test (never commits) |
@@ -199,6 +206,11 @@ scoop: download `aio-scoop.json` from the release page, then
 scoop install .\aio-scoop.json
 ```
 
+> Since v1.7.0 the generated manifest carries `checkver` + `autoupdate`
+> (release URL + `SHA256SUMS` regex), so `scoop update` resolves each new
+> release and pins its download against the same checksum file the installers
+> verify — no hand re-download.
+
 > **Binary caveats, stated plainly:**
 > - `aio evolve` needs a source or npm install (it runs `npm test` from the
 >   checkout) — the standalone binary prints an honest error instead of
@@ -226,19 +238,23 @@ The binary and installer channels need no Node at all.
 | `AIO_RATE=<calls/min\|0>` | GitHub search budget: default **8 calls/min** unauthenticated, **25/min** once a GitHub token is available (`gh auth login` / `GH_TOKEN`); `0` disables spacing entirely. Spacing is shared across processes via `~/.aio/gh-rate.json` (timestamps only) |
 | `AIO_QUIET=1` (or `AIO_NO_BANNER=1`) | no banner |
 | `NO_COLOR=1` | no ANSI colors (the banner is already colorless when piped) |
-| `AIO_OFFLINE=1` | `aio ask` short-circuits with an explicit offline message; `skill add` refuses remote installs |
+| `AIO_OFFLINE=1` | `aio ask` short-circuits with an explicit offline message; `skill search` and `agent` do the same (live by design); `skill add` refuses remote installs |
 | `AIO_NO_GH=1` | skip the GitHub skills lane entirely |
+| `AIO_LANG=id` | help text in Bahasa Indonesia (`aio --help` mirrors the English help line-for-line; commands/flags/env names stay English) |
 | `AIO_STATE_DIR` | move the state dir off `~/.aio` |
 | `GH_TOKEN` / `gh auth login` | authenticated GitHub search (raises the rate budget, enables the skills lane) |
 | `OLLAMA_HOST`, `AIO_OLLAMA_MODEL`, `AIO_NO_AI=1` | optional local rerank for `aio ask` (warm only) |
 
 ### `--json` and the `schemaVersion` contract
 
-`aio ask --json`, `aio borrow --json` and `aio doctor --json` all emit
+`aio ask --json`, `aio agent --json`, `aio skill search --json`,
+`aio borrow --json` and `aio doctor --json` all emit
 `"schemaVersion": 1`. Machine consumers pin to that number: aio bumps it **only
 on a breaking shape change**, and new fields are added without a bump —
 parse what you need, ignore the rest. `doctor --json` returns
-`{schemaVersion, version, mode, ok, issues, warns, checks: [{level, id, detail}]}`.
+`{schemaVersion, version, mode, ok, issues, warns, checks: [{level, id, detail}]}`;
+`agent --json` returns
+`{schemaVersion, task, engine: 'agent', plan, sources, errors, route, count, stored: 0, hits}`.
 
 ## 🤖 Honesty is the product
 
@@ -270,7 +286,8 @@ Changes: added chart.js, wired the data feed.
 - **No search history by design**: no `ai-tools.db`, no local catalog, no search
   history — `aio ask` results are printed and discarded (**zero search
   storage — results printed, never saved**), and the npm package ships no
-  database (`files` = bin, src, test, assets, docs, README, CHANGELOG, LICENSE).
+  database (`files` = bin, src, docs, README, CHANGELOG, LICENSE — `test/` and
+  `assets/` dropped in v1.7.0, pack 101,080 bytes ≈ 98.7 KiB / 30 files).
   What aio *does* write: the
   manifest `~/.aio/aio-context.md`, one `AIO AUTO-CONTEXT` block per agent
   file, timestamped backups under `~/.aio/backups/`, `~/.aio/config.json`,
@@ -293,8 +310,10 @@ backup of every touched file under `~/.aio/backups/` first. `aio rollback`
 reverses exactly what aio added — your own config is never touched.
 The one other opt-in writer is `aio skill add`: a single `SKILL.md` under
 `~/.agents/skills/` plus its `skills-ledger.json` entry.
-No telemetry; the only network calls are your explicit `ask`/`borrow`/
-`skill add`, `doctor`'s reachability probe, and the agent's own.
+No telemetry; the only network calls are your explicit `ask`/`agent`/
+`borrow`/`skill add`/`skill search`, `doctor`'s reachability probe, and the
+agent's own (the `agent` web lane talks only to `en.wikipedia.org` and
+`hn.algolia.com`).
 
 ## 🕵️ Keeping it fresh
 
@@ -330,11 +349,16 @@ No telemetry; the only network calls are your explicit `ask`/`borrow`/
 > (non-negotiable …)`) that repeats the exact disclosure line before rule 1,
 > aimed at agents that skim later rules; **the kimi retest is still pending** —
 > the matrix above is unchanged until it is measured again.
+> Retest attempted 2026-10-05 during v1.7.0 and inconclusive: the default
+> 9router relay (`localhost:20128`) was down, so every probe returned
+> `provider.connection_error`, and the local Ollama fallback
+> (`ollama/qwen3:4b`) needed ~45 s per response — too slow for a multi-turn
+> probe. Matrix unchanged; kimi stays model-dependent.
 
 ## 🛡 Security
 
 - Threat model: **[docs/THREATS.md](./docs/THREATS.md)** — assets, trust
-  boundaries, the T1–T7 threat table, known gaps, reporting.
+  boundaries, the T1–T9 threat table, known gaps, reporting.
 - **Trust-weighted ranking** — final order = 65% BM25 keyword relevance
   (keyword overlap is the gate) + 35% source popularity prior (`trust01`:
   GitHub stars, npm score, crates downloads; skills neutral), and every
@@ -364,20 +388,26 @@ No telemetry; the only network calls are your explicit `ask`/`borrow`/
   smoke-tests the ones the build OS can execute (`aio-darwin-x64` and
   `aio-linux-arm64` are cross-built and not yet smoked — see
   [ROADMAP.md](./ROADMAP.md)).
+- **npm provenance (v1.7.0)** — `npm publish --access public --provenance`
+  (OIDC; `release.yml` grants `id-token: write`) attaches a Sigstore
+  attestation from the tarball back to the source commit — check it with
+  `npm audit signatures` on an install, or
+  `npm view aio-connect dist.attestations`.
 - **Packaging** — zero runtime dependencies, no install/postinstall scripts,
-  npm publish behind 2FA/EOTP.
+  npm publish behind 2FA/EOTP plus provenance attestation.
 - Known gaps, stated plainly: the release binaries are not individually
-  signed (only `SHA256SUMS` carries a cosign signature; npm provenance is not
-  configured yet), and disclosure is instruction-level (model-dependent), not
-  technically enforced.
+  signed (only `SHA256SUMS` carries a cosign signature; npm provenance covers
+  the npm tarball, not the binaries), and disclosure is instruction-level
+  (model-dependent), not technically enforced.
 
 ## 🛠 Development
 
 ```bash
-npm test             # node --test — 209 tests (live search, injection, consent gate, drift, borrow, doctor, …)
-npm run test:coverage # same suite with node's built-in coverage
+npm test             # node --test — 254 tests: 253 pass, 1 skip, 0 fail (live search, agent, skill search, injection, consent gate, drift, borrow, doctor, …)
+npm run test:coverage # same suite + coverage gates 90 lines / 80 branches / 85 functions (last run: 97.15 / 87.50 / 96.83)
 node bin/aio.js      # run from a checkout without installing
 node bin/aio.js ask "pdf ke word"
+node bin/aio.js agent "csv to interactive chart"
 node bin/aio.js doctor --check
 node scripts/eval-relevance.mjs   # from a repo checkout (scripts/ ships in the repo, not the npm tarball): live 20-query golden set → hit@8 = 20/20 (100%), hit@1 = 19/20 (95%), MRR 0.97, measured 2026-10-01
 ```
@@ -388,7 +418,10 @@ Planned work: **[ROADMAP.md](./ROADMAP.md)**.
 ## 🎨 Brand kit
 
 Identity ("three streams, one node"), palette, favicon sizes, CLI banner grid
-and usage rules live in **[assets/logo-gallery.html](./assets/logo-gallery.html)**;
+and usage rules live in **[assets/logo-gallery.html](./assets/logo-gallery.html)**
+(brand kit v1.2.0 — a **dual system**: primary marks are dimensional
+(extruded steel, machined grain, glossy vermilion node) for screen; the mono
+variants stay flat for print — do not mix the two);
 source SVGs (including the animated hero + flowchart) are in
 [`assets/`](./assets/).
 

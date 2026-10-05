@@ -6,6 +6,97 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-05
+
+### Added
+
+- **`aio agent "<task>"`** — agentic coordinator: runs EVERY lane in parallel
+  (GitHub repos ∥ skills ∥ npm ∥ crates ∥ WEB: Wikipedia `action=opensearch` +
+  Hacker News Algolia ∥ LOCAL TOOLS already on PATH), then synthesizes an
+  ordered **cheapest-first route** — run now → read first → quick try
+  (`npx` / `cargo add`) → `aio borrow --get` (deep dive) → `aio skill add`
+  (install the playbook). The synthesis is **rule-based by design** (aio
+  never pretends an LLM decided it); coordination results are printed and
+  discarded (`stored: 0`, zero search storage).
+  `--json` → `{schemaVersion: 1, task, engine: 'agent', plan, sources, errors,
+  route, count, stored: 0, hits}`.
+- **`aio skill search "<query>" [--add]`** — live skill discovery in one step
+  (was: search → copy the name → `skill add`): GitHub skill files
+  (`gh` code search, auth-gated) plus a repo fallback, printing ranked hits
+  with ready-to-run `aio skill add …` commands; `--add` installs the top hit.
+  `--json` supported; same B-01 ok-rule as `ask` — a source answered OR
+  nothing failed, so a failed lane is reported, never faked as "0 hits".
+- **Web lane (`aio agent` only)** — Wikipedia `action=opensearch` + Hacker News
+  `hn.algolia.com/api/v1/search?…&tags=story` (comment objects carry no title
+  and are filtered at source), both with a 4 s timeout; a partial failure
+  still answers with the surviving hits, both failing surfaces a lane error —
+  never a fake "0 hits".
+- **Local tools lane (`aio agent` only)** — curated ~38-entry map intersected
+  with `PATH` via `detectBinary` (no phantom suggestions), token-boundary
+  matching plus a `KEYSTOP` generic-word filter; the fast `aio ask` probe
+  budget is unchanged (the lane is consulted only by `aio agent`).
+- **Help i18n** — `AIO_LANG=id` prints the full help in Bahasa Indonesia
+  (`HELP_ID`, mirroring the English text line-for-line; commands, flags and
+  env var names stay English so copy-paste keeps working).
+- **`--flag=value` inline form** (the space form still works), **`--add`**
+  flag for `skill search`, and `agent` added to the command list +
+  shell completion.
+
+### Changed
+
+- **Fix wave (P0/P1/P2)** — atomic ledger writes with corrupt-file
+  preservation, skill path-traversal guard, gh token/throttle/redirect
+  hardening, borrow re-clone + offline handling, honest rollback/flag/command
+  errors, single-source `COMMANDS`/`FLAGS` (details under Fixed).
+- **tests + coverage** — suite **209/209 → 254** (**253 pass, 1 skip,
+  0 fail**), with new test files for the agent lane, skill search, the fix
+  wave and v1.7 dispatch; `npm run test:coverage` now reports **97.15%
+  lines / 87.50% branches / 96.83% functions** against the existing gates
+  (`--test-coverage-lines=90 --test-coverage-branches=80
+  --test-coverage-functions=85`).
+- **Slim tarball** — `package.json` `files` = bin, src, docs, README,
+  CHANGELOG, LICENSE (`test/` and `assets/` dropped): pack 101,080 bytes
+  (≈ 98.7 KiB) packed / 30 files.
+- **Brand — dimensional primary marks (v1.7 rebrand)** — `logo-mark`
+  (-reversed), `logo-wordmark`, `logo-tile`, `logo-lockup` (-reversed) and
+  `logo-favicon` are now dimensional (extruded steel, machined grain, glossy
+  vermilion node); **mono variants stay flat for print**;
+  `assets/logo-gallery.html` updated to brand kit **v1.2.0** with the
+  dual-system rules.
+- **Landing / README content** — v1.7.0 badge, ticker
+  `LIVE: github ∥ npm ∥ crates ∥ web ∥ tools`, tagline now includes `agent`,
+  stats cell = `254 · 253 pass · 1 skip · 0 fail`.
+- **numbers** — npm downloads **1,520** last-30-days (measured 2026-10-04).
+
+### Fixed
+
+- **Corrupt-ledger wipes (P0)** — atomic `writeAtomic` at ~18 write sites plus
+  a `<name>.corrupt-<ts>` preserve-aside when a write still fails
+  (`src/write.js`, skills/mcp/block ledgers): a failed write can no longer
+  truncate a ledger it was about to replace.
+- **Skill path traversal** — the `SKILL.md` join now enforces both prefix
+  checks, and raw-case `github.com` URLs are accepted.
+- **GitHub** — `ghToken()` reads `GH_TOKEN` / `GITHUB_TOKEN` env first; the
+  gh throttle takes an `wx` lock; responses capped at 1 MB with an
+  https-redirect check; device-name blacklist; crates count formatting;
+  `GIT_TERMINAL_PROMPT=0` + stderr captured (a credential prompt can no longer
+  hang a search).
+- **borrow** — 5 s `gh` timeout, partial clones re-cloned, `AIO_OFFLINE=1`
+  respected, stray-file cleanup.
+- **cli** — rollback exit codes, unknown-command hint, missing-value flag
+  errors, help-text updates; `COMMANDS`/`FLAGS` single-sourced from
+  `src/completion.js` (no second list to drift); dead exports removed.
+
+### Security
+
+- **npm provenance** — `npm publish --access public --provenance` (OIDC
+  attestation; `release.yml` grants `id-token: write`): the published tarball
+  now carries an attestation back to its source commit.
+- **scoop autoupdate** — the generated `aio-scoop.json` gains `checkver` and
+  `autoupdate` (release URL + `SHA256SUMS` regex): `scoop update` resolves the
+  new release and pins it against the same checksum file the installers
+  verify, instead of a hand-re-downloaded manifest.
+
 ## [1.6.0] - 2026-10-05
 
 ### Added
@@ -236,10 +327,11 @@ Older releases (1.1.x era): see `PRD.md` §11 Revision history.
 ### Release process
 
 1. Bump `package.json` `version` (and the banner/asset chips if shown).
-2. Commit, then tag the same value: `git tag v1.6.0`.
+2. Commit, then tag the same value: `git tag v1.7.0`.
 3. Push the tag — `release.yml` fails unless the tag **is the `origin/main`
    tip**, runs `npm test`, refuses a tag that does not equal `package.json`
-   version, publishes to npm (`secrets.NPM_TOKEN`), creates the GitHub
+   version, publishes to npm (`secrets.NPM_TOKEN`, `--provenance` via OIDC),
+   creates the GitHub
    Release, then builds + smoke-tests the 5 standalone binaries and uploads
    `SHA256SUMS`, `SHA256SUMS.sig` (cosign), `aio-scoop.json`, `install.ps1`
    and `install.sh`.
