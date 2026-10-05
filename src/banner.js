@@ -35,8 +35,9 @@ export function banner() {
   const lines = [
     '',
     ...art,
-    `${accent}  ▌ all-in-one${reset}${dim} v${version} — auto-connect every AI agent to${reset}`,
-    `${dim}  ▌ live: github · npm · crates · web${reset}   ${cyan}prompt → aio ask → use → report → clean${reset}`,
+    `${accent}  ▌ all-in-one${reset}${dim} v${version} — auto-connect every AI agent to live search${reset}`,
+    `${dim}  ▌ live: github · npm · crates · web · tools · skills${reset}`,
+    `${cyan}  ▌ prompt → aio ask / aio agent → use → report → clean${reset}`,
     rule,
     `${dim}  GPL-3.0 · https://github.com/MRaihan-XXL/all-in-one${reset}`,
     '',
