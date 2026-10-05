@@ -47,16 +47,34 @@
   .rules .no li::marker{content:"✗  ";color:var(--accent)}
   .rules .yes li::marker{content:"✓  ";color:#1B7F4B}
   code{font:13px ui-monospace,Consolas,monospace;background:#EEEAE4;padding:1px 6px;border-radius:6px}
+  /* gallery motion: lift on hover, orb catches the light (reduced-motion respected) */
+  .card{transition:transform .45s cubic-bezier(.32,.72,0,1),box-shadow .45s cubic-bezier(.32,.72,0,1);
+    will-change:transform}
+  .card:not(.dark){box-shadow:0 1px 2px rgba(16,20,24,.05)}
+  .card:hover{transform:translateY(-5px);
+    box-shadow:0 18px 34px -14px rgba(16,20,24,.28)}
+  .card img{transition:transform .5s cubic-bezier(.32,.72,0,1),filter .5s ease}
+  .card:hover img{transform:scale(1.035) rotate(-.4deg);
+    filter:drop-shadow(0 8px 12px rgba(16,20,24,.22))}
+  .card.tall:hover img,.card.dark:hover img{filter:drop-shadow(0 8px 14px rgba(0,0,0,.45))}
+  .cap{animation:capIn .7s cubic-bezier(.32,.72,0,1) both}
+  h2{animation:capIn .7s cubic-bezier(.32,.72,0,1) both}
+  @keyframes capIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .card,.card img,.cap,h2{transition:none;animation:none}
+    .card:hover{transform:none}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <div class="kicker">Brand kit · v1.1.0</div>
+  <div class="kicker">Brand kit · v1.2.0</div>
   <h1>aio — all-in-one</h1>
   <p class="sub">Identity system for the auto-connect layer of AI coding agents.
   Motif: <b>three streams, one node</b> — many agents, repos and tools converging
-  into a single context. Flat, geometric, no gradients.</p>
+  into a single context. Primary marks are <b>dimensional</b> — extruded steel
+  streams, machined grain, a glossy node; mono variants stay flat for print.</p>
 
   <hr class="rule">
 
@@ -68,6 +86,7 @@
     <div class="card dark tall"><img src="logo-lockup-reversed.svg" alt="aio lockup on dark" width="420"></div>
   </div>
   <div class="cap">left: paper background · right: ink background (reversed treatment)</div>
+  <div class="cap">dimensional streams + glossy node — extrusion, rim light and machined grain</div>
 
   <h2>Mark &amp; tile</h2>
   <div class="grid g4">
@@ -83,14 +102,14 @@
     <div class="card"><img src="logo-wordmark.svg" alt="wordmark" width="300"></div>
     <div class="card"><img src="logo-mono-black.svg" alt="mono black" width="400"></div>
   </div>
-  <div class="cap">single-color letterforms (constructed paths — no font dependency)</div>
+  <div class="cap">single-color letterforms (constructed paths — no font dependency) · dimensional primary</div>
 
   <h2>Monochrome</h2>
   <div class="grid g2">
     <div class="card"><img src="logo-mono-black.svg" alt="mono black" width="400"></div>
     <div class="card dark"><img src="logo-mono-white.svg" alt="mono white" width="400"></div>
   </div>
-  <div class="cap">single-ink fallbacks for embossing, fax-grade contexts and print</div>
+  <div class="cap">single-ink fallbacks for embossing, fax-grade contexts and print — mono stays FLAT (no gradients)</div>
 
   <h2>Real sizes</h2>
   <div class="card" style="justify-content:flex-start">
@@ -122,7 +141,7 @@
 ████████  ██  ██    ██
 ██    ██  ██  ██    ██
 ██    ██ ████  ██████ </span>
-<span class="d">  all-in-one v1.1.0 — auto-connect AI agents to your repos, tools &amp; skills
+<span class="d">  all-in-one v1.7.0 — auto-connect AI agents to your repos, tools &amp; skills
   GPL-3.0 · https://github.com/MRaihan-XXL/all-in-one</span></pre>
 
   <h2>Usage rules</h2>
@@ -133,13 +152,14 @@
         <li>Use the accent only for the node / i-dot — never for body text.</li>
         <li>Reverse to paper-on-ink on dark surfaces.</li>
         <li>Scale the favicon geometry below 64 px; full mark above.</li>
+        <li>Primary marks carry the dimensional treatment (steel + grain + gloss).</li>
       </ul>
     </div>
     <div class="no">
       <ul>
-        <li>No gradients, glows, or starbursts on the mark.</li>
+        <li>No gradients, glows or extrusion in the MONO variants — they stay flat.</li>
         <li>Don’t stretch, rotate, or recolor the streams.</li>
-        <li>Don’t outline the tile or add drop shadows.</li>
+        <li>Don’t add extra drop shadows beyond the built-in one.</li>
         <li>Don’t place the ink mark on busy photos.</li>
       </ul>
     </div>

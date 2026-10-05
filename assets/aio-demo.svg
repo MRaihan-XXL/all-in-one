@@ -58,7 +58,7 @@
     <g class="ln" style="animation-delay:.7s">
       <text x="96" y="154" class="mono" font-size="13" fill="#FF4A1C">$</text>
       <text x="114" y="154" class="mono" font-size="13" fill="#EDEBE6">aio</text>
-      <text x="152" y="154" class="mono" font-size="12.5" fill="#8A919B">setup v1.5.0 — 8 agents wired, block injected, manifest written</text>
+      <text x="152" y="154" class="mono" font-size="12.5" fill="#8A919B">setup v1.7.0 — 8 agents wired, block injected, manifest written</text>
     </g>
     <g class="ln" style="animation-delay:1.15s">
       <text x="96" y="176" class="mono" font-size="13" fill="#FF4A1C">$</text>
@@ -88,11 +88,21 @@
       <text x="138" y="344" class="mono" font-size="12" fill="#5A606A">★2037 · why: BM25 keyword match (#2) + trust high</text>
     </g>
 
+    <!-- reading emphasis: the ask command lights up on the master loop -->
+    <rect x="110" y="194" width="308" height="17" rx="4" fill="#FF4A1C" opacity="0">
+      <animate attributeName="opacity" values="0;0;0.13;0.13;0" keyTimes="0;0.09;0.13;0.30;0.34" dur="8s" repeatCount="indefinite"/>
+    </rect>
+
     <!-- periodic highlight pass over the disclosure line (reading emphasis) -->
     <rect x="110" y="358" width="96" height="20" rx="4" fill="#FF4A1C" opacity="0">
       <animate attributeName="x" values="110;110;900;900" keyTimes="0;0.08;0.60;1" dur="8s" repeatCount="indefinite" calcMode="spline" keySplines="0 0 0 0;0.4 0 0.2 1;0 0 0 0"/>
       <animate attributeName="opacity" values="0;0.14;0.14;0;0" keyTimes="0;0.08;0.60;0.66;1" dur="8s" repeatCount="indefinite"/>
     </rect>
+
+    <!-- clean check: draws itself at the tail of the master loop -->
+    <path d="M624 391 l4 5 l8 -11" fill="none" stroke="#FF4A1C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100">
+      <animate attributeName="stroke-dashoffset" values="100;100;0;0" keyTimes="0;0.70;0.78;1" dur="8s" repeatCount="indefinite"/>
+    </path>
 
     <!-- 4. disclosure + clean -->
     <g class="ln" style="animation-delay:3.8s">

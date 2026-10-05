@@ -1,9 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="aio favicon">
+  <!-- tuned for 32 px: micro-extrude stays crisp, node keeps the gloss -->
+  <defs>
+    <radialGradient id="orbF" cx="0.36" cy="0.30" r="0.92">
+      <stop offset="0" stop-color="#FFCDB8"/>
+      <stop offset="0.3" stop-color="#FF7E52"/>
+      <stop offset="0.68" stop-color="#FF4A1C"/>
+      <stop offset="1" stop-color="#B0300F"/>
+    </radialGradient>
+    <linearGradient id="fsteel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F4F6F8"/>
+      <stop offset="1" stop-color="#B9BEC6"/>
+    </linearGradient>
+  </defs>
   <rect width="32" height="32" rx="7" fill="#101418"/>
-  <g fill="none" stroke="#F7F5F2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M4.5 8 L11.5 13.5 Q15.5 16 21 16"/>
-    <path d="M3.5 16 H21"/>
-    <path d="M4.5 24 L11.5 18.5 Q15.5 16 21 16"/>
+  <rect x="0.5" y="0.5" width="31" height="31" rx="6.5" fill="none" stroke="#2A3038"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g transform="translate(0.9 1.1)" stroke="#04060A" stroke-width="3">
+      <path d="M4.5 8 L11.5 13.5 Q15.5 16 21 16"/>
+      <path d="M3.5 16 H21"/>
+      <path d="M4.5 24 L11.5 18.5 Q15.5 16 21 16"/>
+    </g>
+    <g stroke="url(#fsteel)" stroke-width="3">
+      <path d="M4.5 8 L11.5 13.5 Q15.5 16 21 16"/>
+      <path d="M3.5 16 H21"/>
+      <path d="M4.5 24 L11.5 18.5 Q15.5 16 21 16"/>
+    </g>
   </g>
-  <circle cx="25.7" cy="16" r="3.1" fill="#FF4A1C"/>
+  <circle cx="25.7" cy="16" r="3.1" fill="url(#orbF)"/>
+  <ellipse cx="24.8" cy="14.9" rx="1.1" ry="0.7" fill="#FFFFFF" opacity="0.8"/>
 </svg>

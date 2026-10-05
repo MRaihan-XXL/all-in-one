@@ -63,6 +63,10 @@
     <!-- the disclosure line (typewriter reveal) -->
     <g clip-path="url(#typeClip)">
       <text x="86" y="194" class="mono" font-size="13.5" fill="#EDEBE6">[aio] Using <tspan fill="#FF4A1C" font-weight="700">[Stirling-PDF](https://github.com/Stirling-Tools/Stirling-PDF)</tspan> (repo) — HTML/CSS/JS to PDF converter</text>
+      <!-- [aio] prefix breathes in accent on the master loop (same glyphs, sits on top) -->
+      <text x="86" y="194" class="mono" font-size="13.5" font-weight="700" fill="#FF4A1C" opacity="0">[aio]
+        <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.82;0.86;0.96;1" dur="8s" repeatCount="indefinite"/>
+      </text>
     </g>
     <rect x="1089" y="180" width="9" height="17" fill="#FF4A1C">
       <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.52;0.52;1" dur="1.06s" repeatCount="indefinite"/>

@@ -1,10 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 128" width="210" height="128" role="img" aria-label="aio wordmark">
-  <!-- geometric single-story letterforms: constructed paths, no fonts -->
-  <g fill="none" stroke="#101418" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="44" cy="70" r="26"/>          <!-- a: bowl -->
-    <path d="M70 44 V100"/>                   <!-- a: stem -->
-    <path d="M110 44 V100"/>                  <!-- i -->
-    <circle cx="164" cy="70" r="26"/>         <!-- o -->
+  <!-- geometric single-story letterforms: constructed paths, no fonts.
+       Dimensional treatment (v1.7): extruded steel body, machined grain,
+       glossy accent i-dot — geometry identical to the flat mono variants. -->
+  <defs>
+    <linearGradient id="steelW" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#39424E"/>
+      <stop offset="0.42" stop-color="#181E25"/>
+      <stop offset="1" stop-color="#0A0D11"/>
+    </linearGradient>
+    <radialGradient id="orbW" cx="0.36" cy="0.30" r="0.92">
+      <stop offset="0" stop-color="#FFCDB8"/>
+      <stop offset="0.24" stop-color="#FF7E52"/>
+      <stop offset="0.62" stop-color="#FF4A1C"/>
+      <stop offset="1" stop-color="#A82A0C"/>
+    </radialGradient>
+    <filter id="grainW" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="3" seed="7" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0" result="w"/>
+      <feComposite in="w" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="softW" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#101418" flood-opacity="0.26"/>
+    </filter>
+    <g id="wm" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="44" cy="70" r="26"/>
+      <path d="M70 44 V100"/>
+      <path d="M110 44 V100"/>
+      <circle cx="164" cy="70" r="26"/>
+    </g>
+  </defs>
+
+  <g filter="url(#softW)">
+    <g transform="translate(4.5 5.5)" stroke="#05070A" stroke-width="12" opacity="0.92"><use href="#wm"/></g>
+    <g transform="translate(2.2 2.7)" stroke="#141A21" stroke-width="12"><use href="#wm"/></g>
+    <g stroke="url(#steelW)" stroke-width="12"><use href="#wm"/></g>
+    <g transform="translate(-1 -1.3)" stroke="#FFFFFF" stroke-width="3.8" opacity="0.16"><use href="#wm"/></g>
+    <g stroke="#FFFFFF" stroke-width="12" opacity="0.13" filter="url(#grainW)"><use href="#wm"/></g>
+
+    <!-- i-dot: glossy node -->
+    <circle cx="110" cy="24" r="8" fill="url(#orbW)"/>
+    <circle cx="110" cy="24" r="8" fill="none" stroke="#7E2008" stroke-opacity="0.55" stroke-width="0.9"/>
+    <ellipse cx="107.9" cy="21.2" rx="2.8" ry="1.8" fill="#FFFFFF" opacity="0.72" transform="rotate(-32 107.9 21.2)"/>
+    <ellipse cx="111.7" cy="26.7" rx="3.5" ry="1.4" fill="#FFB69A" opacity="0.38"/>
   </g>
-  <circle cx="110" cy="24" r="8" fill="#FF4A1C"/> <!-- i: dot = accent -->
 </svg>

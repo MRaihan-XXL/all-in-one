@@ -1,19 +1,77 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 128" width="480" height="128" role="img" aria-label="aio lockup">
-  <!-- tile + wordmark lockup -->
-  <rect width="128" height="128" rx="28" fill="#101418"/>
-  <g fill="none" stroke="#F7F5F2" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M18 32 L46 54 Q62 64 84 64"/>
-    <path d="M14 64 H84"/>
-    <path d="M18 96 L46 74 Q62 64 84 64"/>
-  </g>
-  <circle cx="103" cy="64" r="9.5" fill="#FF4A1C"/>
-  <g transform="translate(168,0)">
-    <g fill="none" stroke="#101418" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+  <!-- dimensional app tile + dimensional wordmark lockup (light backgrounds) -->
+  <defs>
+    <linearGradient id="tileBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1A2028"/>
+      <stop offset="0.55" stop-color="#101418"/>
+      <stop offset="1" stop-color="#0B0E12"/>
+    </linearGradient>
+    <linearGradient id="steelL" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#39424E"/>
+      <stop offset="0.42" stop-color="#181E25"/>
+      <stop offset="1" stop-color="#0A0D11"/>
+    </linearGradient>
+    <linearGradient id="steelTL" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.45" stop-color="#D7DADF"/>
+      <stop offset="1" stop-color="#9BA1AA"/>
+    </linearGradient>
+    <radialGradient id="orbL" cx="0.36" cy="0.30" r="0.92">
+      <stop offset="0" stop-color="#FFCDB8"/>
+      <stop offset="0.24" stop-color="#FF7E52"/>
+      <stop offset="0.62" stop-color="#FF4A1C"/>
+      <stop offset="1" stop-color="#A82A0C"/>
+    </radialGradient>
+    <radialGradient id="tileLight" cx="0.32" cy="0.24" r="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.10"/>
+      <stop offset="0.6" stop-color="#FFFFFF" stop-opacity="0.02"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.18"/>
+    </radialGradient>
+    <filter id="grainL" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="3" seed="7" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0" result="w"/>
+      <feComposite in="w" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="softL" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#101418" flood-opacity="0.26"/>
+    </filter>
+    <g id="mkl" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 32 L46 54 Q62 64 84 64"/>
+      <path d="M14 64 H84"/>
+      <path d="M18 96 L46 74 Q62 64 84 64"/>
+    </g>
+    <g id="wml" fill="none" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="44" cy="70" r="26"/>
       <path d="M70 44 V100"/>
       <path d="M110 44 V100"/>
       <circle cx="164" cy="70" r="26"/>
     </g>
-    <circle cx="110" cy="24" r="8" fill="#FF4A1C"/>
+  </defs>
+
+  <!-- app tile -->
+  <g>
+    <rect width="128" height="128" rx="28" fill="url(#tileBg)"/>
+    <rect x="1.5" y="1.5" width="125" height="125" rx="26.5" fill="none" stroke="#2A3038" stroke-width="1.5"/>
+    <rect x="3.5" y="3.5" width="121" height="121" rx="25" fill="url(#tileLight)"/>
+    <g transform="translate(3 4)" stroke="#040609" stroke-width="11" opacity="0.9"><use href="#mkl"/></g>
+    <g transform="translate(1.5 2)" stroke="#5A6270" stroke-width="11"><use href="#mkl"/></g>
+    <g stroke="url(#steelTL)" stroke-width="11"><use href="#mkl"/></g>
+    <circle cx="103" cy="64" r="9.5" fill="url(#orbL)"/>
+    <circle cx="103" cy="64" r="9.5" fill="none" stroke="#7E2008" stroke-opacity="0.6" stroke-width="0.9"/>
+    <ellipse cx="100.4" cy="60.6" rx="3.3" ry="2.1" fill="#FFFFFF" opacity="0.75" transform="rotate(-32 100.4 60.6)"/>
+    <ellipse cx="104.6" cy="67.8" rx="4.2" ry="1.6" fill="#FFB69A" opacity="0.38" transform="rotate(-18 104.6 67.8)"/>
+  </g>
+
+  <!-- wordmark -->
+  <g transform="translate(168,0)" filter="url(#softL)">
+    <g transform="translate(4.5 5.5)" stroke="#05070A" stroke-width="12" opacity="0.92"><use href="#wml"/></g>
+    <g transform="translate(2.2 2.7)" stroke="#141A21" stroke-width="12"><use href="#wml"/></g>
+    <g stroke="url(#steelL)" stroke-width="12"><use href="#wml"/></g>
+    <g transform="translate(-1 -1.3)" stroke="#FFFFFF" stroke-width="3.8" opacity="0.16"><use href="#wml"/></g>
+    <g stroke="#FFFFFF" stroke-width="12" opacity="0.13" filter="url(#grainL)"><use href="#wml"/></g>
+    <circle cx="110" cy="24" r="8" fill="url(#orbL)"/>
+    <circle cx="110" cy="24" r="8" fill="none" stroke="#7E2008" stroke-opacity="0.55" stroke-width="0.9"/>
+    <ellipse cx="107.9" cy="21.2" rx="2.8" ry="1.8" fill="#FFFFFF" opacity="0.72" transform="rotate(-32 107.9 21.2)"/>
+    <ellipse cx="111.7" cy="26.7" rx="3.5" ry="1.4" fill="#FFB69A" opacity="0.38"/>
   </g>
 </svg>
