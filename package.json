@@ -1,6 +1,6 @@
 {
   "name": "aio-connect",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "aio - auto-connect your AI agents to LIVE search across GitHub (630M+ repos, public skills), npm & crates. Zero search storage (results printed, never saved), no slash-commands.",
   "type": "module",
   "bin": {
@@ -8,7 +8,7 @@
     "aioc": "bin/aio.js"
   },
   "scripts": {
-    "test": "node --test \"test/*.js\"",
+    "test": "node --test \"test/*.js\" && node scripts/verify-scorecard.mjs",
     "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=90 --test-coverage-branches=80 --test-coverage-functions=85 \"test/*.js\"",
     "prepublishOnly": "npm test"
   },
@@ -18,8 +18,6 @@
   "files": [
     "bin",
     "src",
-    "test",
-    "assets",
     "docs",
     "README.md",
     "CHANGELOG.md",

@@ -4,7 +4,7 @@ name: Release
 # (compile + smoke) → checksums/signature → and ONLY THEN npm publish.
 # npm versions are publish-once: a binary/signing failure must never strand a
 # half-release on the registry (publish is the LAST job, needs: binary+finalize).
-# Publish auth: NPM_TOKEN repo secret (chosen provenance path — most efficient).
+# Publish auth: NPM_TOKEN repo secret + --provenance via OIDC (id-token: write above).
 on:
   push:
     tags: ['v*']
@@ -143,7 +143,21 @@ jobs:
                 "hash": "${WINHASH}"
               }
             },
-            "bin": [["aio-windows-x64.exe", "aio"]]
+            "bin": [["aio-windows-x64.exe", "aio"]],
+            "checkver": {
+              "github": "https://github.com/MRaihan-XXL/all-in-one"
+            },
+            "autoupdate": {
+              "architecture": {
+                "64bit": {
+                  "url": "https://github.com/MRaihan-XXL/all-in-one/releases/download/v\$version/aio-windows-x64.exe",
+                  "hash": {
+                    "url": "https://github.com/MRaihan-XXL/all-in-one/releases/download/v\$version/SHA256SUMS",
+                    "regex": "([a-fA-F0-9]{64}).*aio-windows-x64.exe"
+                  }
+                }
+              }
+            }
           }
           EOF
           node -e "JSON.parse(require('fs').readFileSync('aio-scoop.json','utf8'))" # a broken manifest must fail here, not at scoop install
@@ -173,6 +187,7 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-      - run: npm publish --access public
+      # --provenance: npm builds the attestation from this job's OIDC (id-token: write)
+      - run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
