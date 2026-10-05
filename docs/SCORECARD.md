@@ -75,13 +75,13 @@ Real spawns of `bin/aio.js` (`node`, 30 s timeout, `NO_COLOR=1`).
 | `-v prints package version` | `aio -v` exits 0 and stdout contains `pkg.version` |
 | `AIO_LANG=id help in Bahasa Indonesia` | `AIO_LANG=id aio --help` exits 0 and stdout matches `/Penggunaan/` |
 | `unknown command exits 1, names the command` | `aio frobnicate` exits 1 and stderr matches `/unknown command: frobnicate/` |
-| `unknown flag warns but keeps exit 0 (pinned)` | `aio status --bogus-flag` exits 0 and stderr matches `/unknown flag: --bogus-flag/` (warn-and-continue is pinned behaviour) |
+| `unknown flag warns, status exit stays 0\|1 (pinned)` | hermetic spawn of `aio status --bogus-flag` (isolated temp state dir) → exit code ∈ {0, 1} **and** stderr matches `/unknown flag: --bogus-flag/`; detail is `status=…` plus the first 120 chars of stderr/stdout |
 
 ## 7. doctor (10 pts)
 
 | check | what it asserts |
 |---|---|
-| `aio doctor --check` exit 0 | `aio doctor --check` exits 0; on failure the first 200 chars of stderr/stdout are attached as detail |
+| `doctor --check: 9 tagged lines, version header, exit ⇔ [!!]` | hermetic spawn of `aio doctor --check` (isolated temp state dir) over stdout+stderr: exactly 9 lines matching `^\[(ok\|~~\|!!)\] `, output contains `v<pkg.version>`, and exit code === 1 iff any `[!!]` line exists (else 0); detail is `lines=… issues=… exit=…` plus the first 140 chars of output |
 
 ## 8. pack (10 pts)
 
@@ -149,3 +149,7 @@ node scripts/verify-scorecard.mjs     # scorecard only (never re-runs the test s
   metrics) are **not** scored here.
 - The scorecard asserts invariants; it does not judge code quality. A green
   run means the release promises hold, not that the suite was re-proven.
+- The spawn-based checks (cli-ux's unknown-flag probe, doctor) run hermetically
+  against an isolated temp state dir (`AIO_STATE_DIR`) with `AIO_NO_GH=1`,
+  `AIO_RATE=0`, `AIO_OFFLINE=1`, so results are environment-independent — a
+  fresh CI runner scores the same as a configured host.

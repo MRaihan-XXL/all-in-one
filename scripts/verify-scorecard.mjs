@@ -11,6 +11,7 @@
 // Pass criterion (README): every aspect >= 10/10. Exit 1 otherwise.
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -43,6 +44,18 @@ function runNpmPack() {
   if (r.status !== 0) return { error: `npm pack exit ${r.status}: ${(r.stderr || '').slice(0, 200)}` };
   try { return { json: JSON.parse(r.stdout) }; }
   catch (e) { return { error: `unparsable pack json: ${e.message}` }; }
+}
+
+// Spawn `node bin/aio.js <args>` hermetically, mirroring the test-suite contract
+// (test/cli-args.test.js): isolated state dir + no gh subprocess + no throttle
+// sleep + no network. Without isolation these probes read the caller's real
+// ~/.aio — they passed locally but failed on a fresh CI runner (state/manifest
+// missing), which is correct product behaviour, not a product bug.
+const ISO_STATE = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-sc-'));
+function runNodeIso(args) {
+  return runNode(args, {
+    AIO_STATE_DIR: ISO_STATE, AIO_NO_GH: '1', AIO_RATE: '0', AIO_OFFLINE: '1',
+  });
 }
 
 // ── 1. integrity ────────────────────────────────────────────────────────────
@@ -121,14 +134,27 @@ check('honesty', 'agent surfaces source errors (no fake empty)', has('src/agent.
   check('cli-ux', 'AIO_LANG=id help in Bahasa Indonesia', id.status === 0 && /Penggunaan/.test(id.stdout));
   const bad = runNode(['frobnicate']);
   check('cli-ux', 'unknown command exits 1, names the command', bad.status === 1 && /unknown command: frobnicate/.test(bad.stderr));
-  const bf = runNode(['status', '--bogus-flag']);
-  check('cli-ux', 'unknown flag warns but keeps exit 0 (pinned)', bf.status === 0 && /unknown flag: --bogus-flag/.test(bf.stderr));
+  // Pinned contract (test/cli-args.test.js): the flag is reported on stderr and
+  // status keeps its NORMAL exit (0 or 1 — empty state legitimately exits 1).
+  const bf = runNodeIso(['status', '--bogus-flag']);
+  check('cli-ux', 'unknown flag warns, status exit stays 0|1 (pinned)',
+    [0, 1].includes(bf.status) && /unknown flag: --bogus-flag/.test(bf.stderr),
+    `status=${bf.status} ${(bf.stderr || bf.stdout).slice(0, 120)}`);
 }
 
 // ── 7. doctor ───────────────────────────────────────────────────────────────
 {
-  const d = runNode(['doctor', '--check']);
-  check('doctor', '`aio doctor --check` exit 0', d.status === 0, (d.stderr || d.stdout).slice(0, 200));
+  // Environment-independent contract (B-09 / test/v150.test.js): always exactly
+  // 9 tagged check lines + version header, and `--check` exits 1 IFF any [!!]
+  // issue exists. A fresh machine (missing manifest) correctly reports [!!] → 1;
+  // requiring exit 0 would only ever pass on an already-configured host.
+  const d = runNodeIso(['doctor', '--check']);
+  const out = `${d.stdout}\n${d.stderr}`;
+  const tagged = out.split('\n').filter((l) => /^\[(ok|~~|!!)\] /.test(l));
+  const issues = tagged.filter((l) => l.startsWith('[!!]')).length;
+  check('doctor', 'doctor --check: 9 tagged lines, version header, exit ⇔ [!!]',
+    tagged.length === 9 && out.includes(`v${pkg.version}`) && d.status === (issues > 0 ? 1 : 0),
+    `lines=${tagged.length} issues=${issues} exit=${d.status} ${out.slice(0, 140)}`);
 }
 
 // ── 8. pack (tarball slim) ──────────────────────────────────────────────────
