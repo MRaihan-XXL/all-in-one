@@ -1,8 +1,8 @@
-// evolve.js — `aio evolve`: run the self-upgrade pipeline as one command and
+// verify.js — `aio verify`: run the self-upgrade pipeline as one command and
 // report what changed. Never commits/pushes by itself (git stays with the human).
 // Pipeline: setup (manifest+blocks) → doctor --check → tests.
 // The install-plan scan (scripts/install-tools.mjs) is dev-machine tooling and
-// is NOT part of evolve — it is not shipped in the npm package.
+// is NOT part of verify — it is not shipped in the npm package.
 import path from 'node:path';
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -22,8 +22,8 @@ function step(name, file, args = []) {
   }
 }
 
-/** `aio evolve` command → { ok, text, exit }. */
-export async function runEvolve() {
+/** `aio verify` command (CLI alias: `aio evolve`) → { ok, text, exit }. */
+export async function runVerify() {
   // A compiled binary (or a partial install) has no package.json/test/ next to
   // itself — the pipeline would re-exec the wrong binary. Fail honestly instead.
   if (!fs.existsSync(path.join(ROOT, 'package.json')) || !fs.existsSync(path.join(ROOT, 'test'))) {
@@ -31,8 +31,8 @@ export async function runEvolve() {
       ok: false,
       exit: 1,
       text:
-        `aio evolve — self-test pipeline needs a source checkout (looked in ${ROOT}).\n` +
-        'Binary build: install the npm package (`npm i -g aio-connect`) or clone the repo, then run `aio evolve` there.',
+        `aio verify — self-test pipeline needs a source checkout (looked in ${ROOT}).\n` +
+        'Binary build: install the npm package (`npm i -g aio-connect`) or clone the repo, then run `aio verify` there.',
     };
   }
   const results = [];
@@ -59,13 +59,13 @@ export async function runEvolve() {
 
   const ok = results.every((r) => r.ok);
   const lines = [
-    `aio evolve — v${getVersion()} self-upgrade pipeline`,
+    `aio verify — v${getVersion()} self-upgrade pipeline`,
     '─'.repeat(76),
     ...results.map((r) => `  [${r.ok ? 'x' : '!!'}] ${r.name.padEnd(28)} ${(r.ms / 1000).toFixed(1)}s  ${r.out}`),
     '─'.repeat(76),
     ok
       ? 'pipeline green — review the diff (git status) and commit when ready.'
-      : 'pipeline FAILED — fix the [!!] step above, then re-run `aio evolve`.',
+      : 'pipeline FAILED — fix the [!!] step above, then re-run `aio verify`.',
     `next: git diff  ·  nothing was committed or pushed automatically.`,
   ];
   return { ok, text: lines.join('\n'), exit: ok ? 0 : 1 };
