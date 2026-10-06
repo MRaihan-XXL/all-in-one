@@ -58,7 +58,7 @@
     <g class="ln" style="animation-delay:.7s">
       <text x="96" y="154" class="mono" font-size="13" fill="#FF4A1C">$</text>
       <text x="114" y="154" class="mono" font-size="13" fill="#EDEBE6">aio</text>
-      <text x="152" y="154" class="mono" font-size="12.5" fill="#8A919B">setup v1.7.0 — 8 agents wired, block injected, manifest written</text>
+      <text x="152" y="154" class="mono" font-size="12.5" fill="#8A919B">setup v1.8.0 — 8 agents wired, block injected, manifest written</text>
     </g>
     <g class="ln" style="animation-delay:1.15s">
       <text x="96" y="176" class="mono" font-size="13" fill="#FF4A1C">$</text>

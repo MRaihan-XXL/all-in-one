@@ -233,7 +233,6 @@
     <rect class="core" x="750" y="484" width="228" height="68" rx="10"/>
     <text x="766" y="506" class="mono idx">06</text>
     <text x="766" y="534" class="sans t">borrow --clean</text>
-    <rect class="march" x="766" y="542" width="114" height="2" rx="1" stroke-opacity="0.65"/>
     <!-- clean-check: draws itself as the loop comet reaches 06, resets at loop end -->
     <path d="M936 504 l5 6 l10 -13" fill="none" stroke="#FF4A1C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100">
       <animate attributeName="stroke-dashoffset" values="100;100;0;0" keyTimes="0;0.72;0.80;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>

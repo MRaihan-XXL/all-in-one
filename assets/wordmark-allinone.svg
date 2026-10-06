@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 128" width="430" height="128" role="img" aria-label="AllinOne wordmark">
+  <!-- AllinOne typographic wordmark (brand v1.8): geometric monoline letterforms,
+       constructed paths, no fonts. Same dimensional recipe as the primary marks -
+       extruded steel body, machined grain, single glossy vermilion node on the i. -->
+  <defs>
+    <linearGradient id="steelA" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#39424E"/>
+      <stop offset="0.42" stop-color="#181E25"/>
+      <stop offset="1" stop-color="#0A0D11"/>
+    </linearGradient>
+    <radialGradient id="orbA" cx="0.36" cy="0.30" r="0.92">
+      <stop offset="0" stop-color="#FFCDB8"/>
+      <stop offset="0.24" stop-color="#FF7E52"/>
+      <stop offset="0.62" stop-color="#FF4A1C"/>
+      <stop offset="1" stop-color="#A82A0C"/>
+    </radialGradient>
+    <filter id="grainA" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="3" seed="7" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0" result="w"/>
+      <feComposite in="w" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="softA" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#101418" flood-opacity="0.26"/>
+    </filter>
+    <g id="allinone" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <!-- A -->
+      <path d="M18 100 L46 44 L74 100"/>
+      <path d="M28 80 H64"/>
+      <!-- ll i -->
+      <path d="M94 44 V100"/>
+      <path d="M116 44 V100"/>
+      <path d="M138 60 V100"/>
+      <!-- n -->
+      <path d="M160 100 V64 a16 16 0 0 1 32 0 V100"/>
+      <!-- O (capital) -->
+      <circle cx="240" cy="70" r="28"/>
+      <!-- n -->
+      <path d="M292 100 V64 a16 16 0 0 1 32 0 V100"/>
+      <!-- e -->
+      <path d="M344 70 H392"/>
+      <path d="M392 70 A24 24 0 0 1 368 94 A24 24 0 0 1 344 70 A24 24 0 0 1 368 46 A24 24 0 0 1 383.4 88.4"/>
+    </g>
+  </defs>
+
+  <g filter="url(#softA)">
+    <g transform="translate(4.5 5.5)" stroke="#05070A" stroke-width="12" opacity="0.92"><use href="#allinone"/></g>
+    <g transform="translate(2.2 2.7)" stroke="#141A21" stroke-width="12"><use href="#allinone"/></g>
+    <g stroke="url(#steelA)" stroke-width="12"><use href="#allinone"/></g>
+    <g transform="translate(-1 -1.3)" stroke="#FFFFFF" stroke-width="3.8" opacity="0.16"><use href="#allinone"/></g>
+    <g stroke="#FFFFFF" stroke-width="12" opacity="0.13" filter="url(#grainA)"><use href="#allinone"/></g>
+
+    <!-- i-dot: glossy vermilion node (the single accent) -->
+    <circle cx="138" cy="44" r="8" fill="url(#orbA)"/>
+    <circle cx="138" cy="44" r="8" fill="none" stroke="#7E2008" stroke-opacity="0.55" stroke-width="0.9"/>
+    <ellipse cx="135.9" cy="41.2" rx="2.8" ry="1.8" fill="#FFFFFF" opacity="0.72" transform="rotate(-32 135.9 41.2)"/>
+    <ellipse cx="139.7" cy="46.7" rx="3.5" ry="1.4" fill="#FFB69A" opacity="0.38"/>
+  </g>
+</svg>
