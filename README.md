@@ -10,8 +10,10 @@
 </p>
 
 <p align="center">
+  <a href="./CHANGELOG.md"><img src="https://img.shields.io/badge/release-v1.8.0-cb3837" alt="release v1.8.0 (2026-10-06)"></a>
   <a href="https://www.npmjs.com/package/aio-connect"><img src="https://img.shields.io/npm/v/aio-connect?color=cb3837" alt="npm version"></a>
   <a href="https://github.com/MRaihan-XXL/all-in-one/actions/workflows/ci.yml"><img src="https://github.com/MRaihan-XXL/all-in-one/actions/workflows/ci.yml/badge.svg" alt="CI 3-OS"></a>
+  <img src="https://img.shields.io/badge/eval-hit%401%2097.4%25%20%C2%B7%20MRR%200.984%20%C2%B7%20n%3D114-2ea44f" alt="eval: hit@1 97.4%  MRR 0.984  n=114 (2026-10-06)">
   <img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="license: GPL-3.0">
   <img src="https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg" alt="node >= 22">
   <img src="https://img.shields.io/badge/agents-8-orange.svg" alt="8 agents supported">
@@ -78,16 +80,17 @@ aio agent "<task>" = every lane at once (github ∥ skills ∥ npm ∥ crates �
 | `aio` | scan → slim manifest → inject the auto-use block into every agent. **Consent gate**: prints the plan first — interactive → asks `Proceed with these writes? [y/N] `, non-TTY → plan only (exit 0, nothing written); `--yes` writes silent, `--dry-run`/`aio preview` = plan only |
 | `aio init [--copilot]` | **project scope**: inject the block into `./AGENTS.md` (official standard — Zed/Copilot/Cursor read it); `--copilot` also writes `.github/copilot-instructions.md` (pointer only). Same consent gate; not reversed by `rollback` |
 | `aio ask "csv ke chart"` | **live search** across GitHub (630M+ repos + public skills), npm (3M+ pkgs) and crates (340K+) in parallel (4 s per source), merge-ranked with BM25 + source diversity, blended 65% keyword relevance + 35% source popularity (stars/downloads/npm score); every hit prints **link + one-line function + `<github>`/`<npm>`/`<crates>` tag**; reranked by your local Ollama (qwen3) only when it is warm and fast; `--json` → `{schemaVersion: 1, …, stored: 0, hits}` (`stored: 0` = no search results stored) |
-| `aio agent "csv ke interactive chart"` | **agentic coordinator** — runs EVERY lane in parallel (GitHub repos ∥ skills ∥ npm ∥ crates ∥ web: Wikipedia + Hacker News ∥ local tools already on your PATH), then prints an ordered **cheapest-first route**: what to run now, read first, try via `npx`/`cargo`, clone with `aio borrow --get`, or install with `aio skill add`. Synthesis is rule-based by design (never a fake LLM decision) and `stored: 0` — `--json` → `{schemaVersion: 1, task, engine: 'agent', plan, sources, errors, route, count, stored: 0, hits}` |
+| `aio agent "csv ke interactive chart"` | **agentic coordinator** — runs EVERY lane in parallel (GitHub repos ∥ skills ∥ npm ∥ crates ∥ web: Wikipedia + Hacker News ∥ local tools on your PATH — curated tools are confirmed against your PATH with a PATHEXT-aware scan (no phantom suggestions) and print `local · on PATH` with `— on PATH: <full path>`; a CLI outside aio's curated list can still surface on an exact query-token match ≥ 3 chars, generic words filtered), then prints an ordered **cheapest-first route**: what to run now, read first, try via `npx`/`cargo`, clone with `aio borrow --get`, or install with `aio skill add`. Synthesis is rule-based by design (never a fake LLM decision) and `stored: 0` — `--json` → `{schemaVersion: 1, task, engine: 'agent', plan, sources, errors, route, count, stored: 0, hits}` |
 | `aio borrow "etl tool"` | **optional ephemeral fetch** — `--get owner/repo` shallow-clones to temp (**24 h TTL**, auto-purged), `--list` inspects, `--clean` wipes it. Not a fallback for `ask`: use it when you actually need the files locally |
-| `aio skill add <owner/repo\|url>` | **install a public `SKILL.md`** into `~/.agents/skills/<name>/SKILL.md` (the agentskills.io shared layout read by 40+ agents). Tries 3 locations on `raw.githubusercontent.com/…/HEAD` (`SKILL.md`, `<name>/SKILL.md`, `.agents/skills/<name>/SKILL.md`); `--file <path\|dir>` installs a local file instead; `--name <n>` overrides the name; `--dry-run` prints the target and writes nothing. Idempotent, sha256-recorded in `~/.aio/skills-ledger.json`; never touches skills it did not write |
+| `aio skill add <owner/repo\|url>` | **install a public `SKILL.md`** into `~/.agents/skills/<name>/SKILL.md` (the agentskills.io shared layout read by 40+ agents). Tries 3 locations on `raw.githubusercontent.com/…/HEAD` (`SKILL.md`, `<name>/SKILL.md`, `.agents/skills/<name>/SKILL.md`); `--file <path\|dir>` installs a local file instead; `--name <n>` overrides the name; `--sha256 <hex>` pins the download (the fetched content is hashed before install — bad format → `skillShaBadFormat`, mismatch → `skillShaMismatch`, exit 1); `--dry-run` prints the target and writes nothing. Idempotent, sha256-recorded in `~/.aio/skills-ledger.json`; never touches skills it did not write |
 | `aio skill list` / `aio skill remove <name>` | inspect installed skills (`[x] … aio` = aio-installed, `yours` = not tracked by aio's ledger) and remove one — `remove` refuses skills aio never wrote, so a user-owned skill stays yours |
 | `aio skill search "<query>" [--add]` | **live skill discovery in one step** — searches GitHub skill files (`gh` code search, needs auth) plus a repo fallback, prints ranked hits with ready-to-run `aio skill add …` commands; `--add` installs the top hit. `--json` → `{schemaVersion: 1, query, sources, errors, count, stored: 0, hits, commands}` (with `--add`, `commands` → `installed`); same ok-rule as `ask` — a failed lane is reported, never faked as "0 hits" |
 | `aio completion bash\|zsh\|fish\|pwsh` | print a shell completion script to stdout (static command/flag list — works offline and inside the compiled binary); add it to `~/.bashrc` / `~/.zshrc` / `~/.config/fish/completions/aio.fish` / `$PROFILE` as the script header says |
 | `aio doctor` | **9 checks**, every row tagged `[ok]`/`[~~]`/`[!!]`: node · state · live sources · manifest · agent blocks · agents · gh auth · Ollama · MCP ledger; `--fix` repairs, `--check` = CI gate, `--json` = machine output `{schemaVersion: 1, version, mode, ok, issues, warns, checks[]}` |
-| `aio evolve` | the whole self-upgrade pipeline in one run: setup (manifest+blocks) → doctor --check → npm test (never commits) |
+| `aio verify` | the whole self-upgrade pipeline in one run: setup (manifest+blocks) → doctor --check → npm test (never commits). `aio evolve` is kept as a hidden, deprecated alias for 2 releases (it prints an em-dash deprecation line to stderr) |
 | `aio status` | read-only health report — flags hand-edited blocks as `injected*` (drift) |
-| `aio update` / `aio rollback` | update from npm / remove everything aio injected (blocks, MCP ledger entries, and only byte-identical aio-installed skills) |
+| `aio update [--check]` | update from npm; `--check` is read-only — compares installed vs `npm view aio-connect version` (exit 0 up-to-date, 1 behind, 2 check failed) |
+| `aio rollback` | remove everything aio injected (blocks, MCP ledger entries, and only byte-identical aio-installed skills) |
 
 Example — real `aio ask` output, abridged (links + functions always included):
 
@@ -212,9 +215,9 @@ scoop install .\aio-scoop.json
 > verify — no hand re-download.
 
 > **Binary caveats, stated plainly:**
-> - `aio evolve` needs a source or npm install (it runs `npm test` from the
->   checkout) — the standalone binary prints an honest error instead of
->   half-running the pipeline.
+> - `aio verify` (formerly `aio evolve`) needs a source or npm install (it runs
+>   `npm test` from the checkout) — the standalone binary prints an honest
+>   error instead of half-running the pipeline.
 > - `aio update` still goes through npm, so it needs `npm` on the machine.
 > - `aio doctor` reports the embedded runtime in the node check
 >   (`v<node> (supported: >= 22, bun <version> build)`) — that is the
@@ -240,7 +243,7 @@ The binary and installer channels need no Node at all.
 | `NO_COLOR=1` | no ANSI colors (the banner is already colorless when piped) |
 | `AIO_OFFLINE=1` | `aio ask` short-circuits with an explicit offline message; `skill search` and `agent` do the same (live by design); `skill add` refuses remote installs |
 | `AIO_NO_GH=1` | skip the GitHub skills lane entirely |
-| `AIO_LANG=id` | help text in Bahasa Indonesia (`aio --help` mirrors the English help line-for-line; commands/flags/env names stay English) |
+| `AIO_LANG=id` | full CLI output in Bahasa Indonesia (`aio --help` mirrors the English help line-for-line, and errors, doctor, update, skill and borrow messages come from the same 51-key catalog in `src/messages.js`; commands/flags/env names stay English) |
 | `AIO_STATE_DIR` | move the state dir off `~/.aio` |
 | `GH_TOKEN` / `gh auth login` | authenticated GitHub search (raises the rate budget, enables the skills lane) |
 | `OLLAMA_HOST`, `AIO_OLLAMA_MODEL`, `AIO_NO_AI=1` | optional local rerank for `aio ask` (warm only) |
@@ -286,8 +289,9 @@ Changes: added chart.js, wired the data feed.
 - **No search history by design**: no `ai-tools.db`, no local catalog, no search
   history — `aio ask` results are printed and discarded (**zero search
   storage — results printed, never saved**), and the npm package ships no
-  database (`files` = bin, src, docs, README, CHANGELOG, LICENSE — `test/` and
-  `assets/` dropped in v1.7.0, pack 101,080 bytes ≈ 98.7 KiB / 30 files).
+  database (`files` = bin, src, docs, README, CHANGELOG, LICENSE, sbom.cdx.json —
+  `test/` and `assets/` dropped in v1.7.0; current pack 108,837 bytes ≈
+  106.3 KiB / 33 files).
   What aio *does* write: the
   manifest `~/.aio/aio-context.md`, one `AIO AUTO-CONTEXT` block per agent
   file, timestamped backups under `~/.aio/backups/`, `~/.aio/config.json`,
@@ -324,8 +328,13 @@ agent's own (the `agent` web lane talks only to `en.wikipedia.org` and
   — your edit stays in `~/.aio/backups/` (hash check via
   `~/.aio/block-hashes.json`).
 - **Something drifted?** `aio doctor --fix` (or `--check` in CI).
-- **Full self-upgrade?** `aio evolve` runs setup (manifest+blocks) →
+- **Full self-upgrade?** `aio verify` runs setup (manifest+blocks) →
   doctor --check → npm test and prints the diff; committing stays your call.
+  (`aio evolve` still dispatches the same pipeline as a deprecated alias for
+  the next 2 releases.)
+- **Newer release out?** `aio update --check` compares your installed version
+  with `npm view aio-connect version` and exits 0 (up-to-date) / 1 (behind) /
+  2 (check failed) — read-only, never installs.
 - **Want your machine back?** `aio rollback`.
 
 ## 🧩 Supported agents
@@ -393,8 +402,11 @@ agent's own (the `agent` web lane talks only to `en.wikipedia.org` and
   attestation from the tarball back to the source commit — check it with
   `npm audit signatures` on an install, or
   `npm view aio-connect dist.attestations`.
-- **Packaging** — zero runtime dependencies, no install/postinstall scripts,
-  npm publish behind 2FA/EOTP plus provenance attestation.
+- **Packaging + SBOM** — zero runtime dependencies, no install/postinstall
+  scripts, npm publish behind 2FA/EOTP plus provenance attestation;
+  `sbom.cdx.json` (CycloneDX 1.5, `npm run sbom` — deterministic, no
+  timestamp) ships in the tarball, and CI regenerates it and fails on a
+  `git diff --exit-code` (SBOM freshness gate).
 - Known gaps, stated plainly: the release binaries are not individually
   signed (only `SHA256SUMS` carries a cosign signature; npm provenance covers
   the npm tarball, not the binaries), and disclosure is instruction-level
@@ -403,13 +415,13 @@ agent's own (the `agent` web lane talks only to `en.wikipedia.org` and
 ## 🛠 Development
 
 ```bash
-npm test             # node --test — 254 tests: 253 pass, 1 skip, 0 fail (live search, agent, skill search, injection, consent gate, drift, borrow, doctor, …)
-npm run test:coverage # same suite + coverage gates 90 lines / 80 branches / 85 functions (last run: 97.15 / 87.50 / 96.83)
+npm test             # node --test — 279 tests: 278 pass, 1 skip, 0 fail (live search, agent, skill search, injection, consent gate, drift, borrow, doctor, …)
+npm run test:coverage # same suite + coverage gates 90 lines / 80 branches / 85 functions (last run: 97.97 / 90.26 / 97.56)
 node bin/aio.js      # run from a checkout without installing
 node bin/aio.js ask "pdf ke word"
 node bin/aio.js agent "csv to interactive chart"
 node bin/aio.js doctor --check
-node scripts/eval-relevance.mjs   # from a repo checkout (scripts/ ships in the repo, not the npm tarball): live 20-query golden set → hit@8 = 20/20 (100%), hit@1 = 19/20 (95%), MRR 0.97, measured 2026-10-01
+node scripts/eval-relevance.mjs --write   # from a repo checkout (scripts/ ships in the repo, not the npm tarball): live 114-query golden set → hit@8 = 114/114 (100%), hit@1 = 111/114 (97.4%), MRR 0.984, measured 2026-10-06
 ```
 
 Contribution workflow and conventions: **[CONTRIBUTING.md](./CONTRIBUTING.md)**.

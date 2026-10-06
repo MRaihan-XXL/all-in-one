@@ -1,7 +1,7 @@
-# Release scorecard — aio / aio-connect v1.7.0
+# Release scorecard — aio / aio-connect v1.8.0
 
 Machine-checkable release gate produced by `scripts/verify-scorecard.mjs`.
-Ten aspects, ten points each, one row per sub-check exactly as the script
+Fifteen aspects, ten points each, one row per sub-check exactly as the script
 implements it — nothing here is aspirational: every row is a regex, a file
 existence test, or a real spawn of `bin/aio.js`.
 
@@ -89,8 +89,8 @@ Real spawns of `bin/aio.js` (`node`, 30 s timeout, `NO_COLOR=1`).
 
 | check | what it asserts |
 |---|---|
-| `tarball file count <= 30` | first pack entry has ≤ 30 files (actual count in detail) |
-| `tarball packed size <= 120 kB (test/assets/scripts excluded)` | first pack entry `size` ≤ 120000 bytes |
+| `tarball file count <= 34` | first pack entry has ≤ 34 files (actual count in detail) — current: **33 files** |
+| `tarball packed size <= 120 kB (test/assets/scripts excluded)` | first pack entry `size` ≤ 120000 bytes — current: **108,837 bytes** packed (≈ 106.3 KiB; unpacked 317,860) |
 | `test/assets/scripts excluded from tarball` | no tarball path starts with `test/`, `assets/`, or `scripts/` (first offenders in detail) |
 
 If `npm pack` fails or its JSON is unparsable, this aspect instead records a
@@ -103,8 +103,8 @@ Reads the live files, so stale docs fail the release.
 | check | what it asserts |
 |---|---|
 | `README documents aio agent + skill search + AIO_LANG` | `README.md` matches `aio agent`, `skill search`, **and** `AIO_LANG` |
-| `CHANGELOG has 1.7.0 entry` (label uses live `pkg.version`) | `CHANGELOG.md` contains `pkg.version` with dots escaped (`1\.7\.0`) |
-| `README states current version 1.7.0` (label uses live `pkg.version`) | `README.md` contains the literal `pkg.version` substring |
+| `CHANGELOG has 1.8.0 entry` (label uses live `pkg.version`) | `CHANGELOG.md` contains `pkg.version` with dots escaped (`1\.8\.0`) |
+| `README states current version 1.8.0` (label uses live `pkg.version`) | `README.md` contains the literal `pkg.version` substring |
 | `THREATS covers provenance` | `docs/THREATS.md` matches `/provenance/i` |
 | `docs/SCORECARD.md present` | this file exists at `docs/SCORECARD.md` |
 
@@ -120,6 +120,63 @@ All five read `.github/workflows/release.yml`.
 | `cosign + SHA256SUMS present` | workflow contains `cosign sign-blob` **and** `SHA256SUMS` |
 | `tag-guard step (Tag is main tip)` | workflow contains `Tag is main tip` |
 
+## 11. quality (10 pts)
+
+The live eval gate — `eval-result.json` is written by
+`scripts/eval-relevance.mjs` and auto-committed by the nightly `eval.yml`.
+
+| check | what it asserts |
+|---|---|
+| `eval golden set: n>=100, hit@8>=95%, mrr>=0.9, dated` | `eval-result.json` parses with `n >= 100`, `hit8 >= 95`, `mrr >= 0.9` and a `YYYY-MM-DD` `measured` date (current: n=114, hit@8 = 114/114, hit@1 = 111/114, MRR 0.984, measured 2026-10-06) |
+| `eval workflow regenerates + commits the snapshot` | `.github/workflows/eval.yml` runs the script with `--write` **and** grants `contents: write` (the result snapshot is committed, not hand-typed) |
+| `eval script covers all query families (QUERIES array)` | `scripts/eval-relevance.mjs` declares `const QUERIES = [` |
+
+## 12. coverage-floor (10 pts)
+
+Recorded numbers, never hand-typed: `docs/stats.json` is written by
+`node scripts/stats.mjs --write` from a real suite run.
+
+| check | what it asserts |
+|---|---|
+| `docs/stats.json: >= gates, 0 fail, scorecard clean` | `docs/stats.json` has `coverage.lines >= 90`, `coverage.branches >= 80`, `coverage.functions >= 85`, `tests.fail === 0`, `tests.total >= 150` and `scorecard.earned === scorecard.possible` |
+| `README test line matches docs/stats.json exactly` | `README.md` contains the literal `${total} tests: ${pass} pass, ${skip} skip, ${fail} fail` string built from `docs/stats.json` (current: `279 tests: 278 pass, 1 skip, 0 fail`) |
+
+## 13. i18n (10 pts)
+
+The EN/ID message catalog (`src/messages.js`) and the mirrored help texts.
+
+| check | what it asserts |
+|---|---|
+| `messages parity: 51 keys in BOTH tables` | `parity()` reports ≥ 51 keys with no key missing from the ID table and none missing from the EN table |
+| `no placeholder drift EN vs ID` | every EN/ID pair carries the same `{placeholder}` set (detail lists the offenders) |
+| `msg renders (EN default + AIO_LANG=id switch)` | `msg('evolveDeprecated')` contains `deprecated` with the default language and `usang` after `AIO_LANG=id` |
+| `HELP_EN/HELP_ID line-for-line mirror` | the `HELP_EN` and `HELP_ID` template literals in `bin/aio.js` have equal line counts |
+
+## 14. ci-gates (10 pts)
+
+Every release promise has a workflow enforcing it (`.github/workflows/ci.yml`
+plus the two generated-artifact workflows).
+
+| check | what it asserts |
+|---|---|
+| `CI runs the coverage gate (90/80/85)` | `ci.yml` carries `--test-coverage-lines=90`, `--test-coverage-branches=80` and `--test-coverage-functions=85` |
+| `CI runs the scorecard` | `ci.yml` runs `scripts/verify-scorecard.mjs` |
+| `CI runs npm audit + guarded signature audit` | `ci.yml` runs `npm audit --omit=dev` and `npm audit signatures` (guarded: skipped honestly with the message `0 dependencies in lockfile … skipping (honest)` when the lockfile has 0 deps) |
+| `CI enforces SBOM freshness (regen + clean diff)` | `ci.yml` runs `node scripts/sbom.mjs` then `git diff --exit-code sbom.cdx.json` |
+| `stats auto-gen + og render workflows present` | `.github/workflows/stats.yml` (weekly `scripts/stats.mjs --write`, auto-commit `[skip ci]`) and `.github/workflows/og.yml` (windows-latest headless-Edge render of `assets/og-cover.png`) both exist |
+
+## 15. freshness (10 pts)
+
+Recorded artifacts must be recent — an old file is a stale promise.
+
+| check | what it asserts |
+|---|---|
+| `docs/stats.json regenerated <= 14 days` | mtime of `docs/stats.json` is ≤ 14 days old |
+| `og-cover.png exists and is not older than its source` | `assets/og-cover.png` exists and its mtime ≥ mtime of `scripts/og.html` |
+| `eval measured <= 5 days ago (nightly keeps it honest)` | `eval-result.json` `measured` date is ≤ 5 days old |
+| `sbom.cdx.json version matches package.json` | `sbom.cdx.json` `metadata.component.version` equals `pkg.version` |
+| `package-lock.json present (audit/signature capable)` | `package-lock.json` exists at the repo root |
+
 ## How to run
 
 ```sh
@@ -127,7 +184,7 @@ npm test                              # suite first; scorecard is the last step 
 node scripts/verify-scorecard.mjs     # scorecard only (never re-runs the test suite)
 ```
 
-- **exit 0** — release-ready: `SUMMARY 100/100 — 10/10 aspects >= 10/10`.
+- **exit 0** — release-ready: `SUMMARY 100/100 — 15/15 aspects >= 10/10`.
 - **exit 1** — `RELEASE BLOCKED`, preceded by one line per failed sub-check:
   `FAIL [aspect] name → detail`.
 

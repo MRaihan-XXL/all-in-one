@@ -4,7 +4,7 @@
 |---|---|
 | **Product** | `aio` — All-In-One auto-connect layer for AI coding agents |
 | **Package** | `aio-connect` (npm registry; GitHub repo `MRaihan-XXL/all-in-one`) |
-| **Version** | 1.7.0 (2026-10-05; supersedes 1.6.0) |
+| **Version** | 1.8.0 (2026-10-06; supersedes 1.7.0) |
 | **Status** | Approved for implementation |
 | **License** | GPL-3.0 |
 | **Docs language** | English (international) |
@@ -126,6 +126,11 @@ npx-cached copy (B-03).
 **Acceptance:** `aio update` exits 0 on success, prints new version + setup
 report; offline → clear error, exit 1, no partial damage.
 
+**`aio update --check` (v1.8.0)** — read-only newest-version comparison
+against `npm view aio-connect version`, never installs: exit **0**
+up-to-date / **1** behind / **2** check failed, with the
+`updateCurrent` / `updateAvailable` / `updateCheckFailed` message keys.
+
 ### FR6 — Usage disclosure in agent output
 The injected block mandates: whenever an agent uses a repository or tool from
 the manifest, it must start that step with:
@@ -159,9 +164,9 @@ Public GitHub repository; `.gitignore` excludes local-only data: tracking/
 registry logs, the generated context manifest, and env files. **No database
 ships**: v1.3.0 deleted `ai-tools.db`, `src/catalog.js` and
 `scripts/build-db.mjs`, and `package.json` `files` carries only
-bin/src/docs/README/CHANGELOG/LICENSE (v1.7.0 dropped `test/` and `assets/` —
-pack 101,080 bytes ≈ 98.7 KiB / 30 files) — there is no catalog file to bundle or
-version. No machine-specific absolute paths or secrets in committed code —
+bin/src/docs/README/CHANGELOG/LICENSE/sbom.cdx.json (v1.7.0 dropped `test/` and
+`assets/` — current pack 108,837 bytes ≈ 106.3 KiB / 33 files) — there is no
+catalog file to bundle or version. No machine-specific absolute paths or secrets in committed code —
 paths are resolved at runtime (env var / config / discovery), README examples
 use placeholders.
 
@@ -195,7 +200,7 @@ no-gh gates), BM25 ranking, source diversity, URL + function + source tag per
 hit, `--json` (`stored: 0`), and the borrow lifecycle (24 h TTL purge,
 `--clean`, `--list`).
 
-### FR10 — Self-diagnosis & self-upgrade (`doctor` / `evolve`)
+### FR10 — Self-diagnosis & self-upgrade (`doctor` / `verify`)
 - `aio doctor [--check|--fix]` runs **exactly 9 read-only checks**, each row
   tagged `[ok]` / `[~~]` / `[!!]` — Node, persisted state, live source
   reachability (no search storage), manifest freshness + live layout, agent
@@ -203,15 +208,18 @@ hit, `--json` (`stored: 0`), and the borrow lifecycle (24 h TTL purge,
   (B-08, B-09; network probes run in parallel) — and exits 1 when any issue
   exists (`--check` = CI gate); `--fix` re-runs the idempotent setup pipeline
   (safe fixes only).
-- `aio evolve` runs the full pipeline in one command: setup (manifest +
+- `aio verify` (renamed from `aio evolve` in v1.8.0 for clarity) runs the full
+  pipeline in one command: setup (manifest +
   blocks) → `doctor --check` → `npm test`, prints a per-step pass/fail report
   with timings, and **never commits or pushes** (git stays with the human).
+  `aio evolve` is kept as a hidden alias for 2 releases: it prints an em-dash
+  deprecation line to stderr and dispatches to the same runner.
   No repos-dir or install-plan scan runs anywhere: `scripts/install-tools.mjs`
   is dev-machine tooling, not shipped in the npm package, and `aio setup`
   contains no repository scan (removed entirely in v1.5.0).
 
-**Acceptance:** `node --test` covers doctor checks; `aio evolve` reports every
-step green on the owner machine (verified 2026-09-30).
+**Acceptance:** `node --test` covers doctor checks; `aio verify` reports every
+step green on the owner machine (verified 2026-09-30 as `aio evolve`).
 
 ### FR11 — Real-time unlimited search, zero search storage
 The catalog is **the network, queried at prompt time** — unlimited (630M+
@@ -272,7 +280,12 @@ measured 2026-10-01; suite **254 (253 pass · 1 skip · 0 fail)**, coverage
   Algolia `hn.algolia.com/…/search?…&tags=story`, 4 s each, comments filtered
   at source) and LOCAL TOOLS already on `PATH` (curated ~38-entry map
   intersected via `detectBinary` — no phantom suggestions; agent-only, the
-  fast `ask` probe budget is unchanged) — then prints an ordered
+  fast `ask` probe budget is unchanged). Since v1.8.0 any other executable
+  basename on the user's PATH is discoverable too (`src/scan.js`
+  `listPathCommands()`, PATHEXT-aware): curated hits and PATH-only hits print
+  `local · on PATH` meta and `func` `— on PATH: <full path>`, matched on an
+  exact query token ≥ 3 chars with generic words filtered — never a phantom
+  entry) — then prints an ordered
   **cheapest-first route**: run now → read first → quick try (`npx` /
   `cargo add`) → `aio borrow --get` (deep dive) → `aio skill add`. The
   synthesis is **rule-based by design** (aio never pretends an LLM decided
@@ -286,9 +299,13 @@ measured 2026-10-01; suite **254 (253 pass · 1 skip · 0 fail)**, coverage
   ready-to-run `aio skill add …` commands, `--add` installs the top hit;
   `--json` supported; same B-01 ok-rule as `ask` (a source answered OR
   nothing failed).
-- **Help i18n** — `AIO_LANG=id` prints the full Bahasa Indonesia help
-  (`HELP_ID`, mirrors the English text line-for-line; commands, flags and
-  env var names stay English).
+- **Help i18n (full catalog since v1.8.0)** — `AIO_LANG=id` renders the CLI in
+  Bahasa Indonesia: help, errors, doctor, update, skill and borrow messages all
+  come from the 51-key catalog in `src/messages.js` (`msg()` + `parity()`),
+  mirroring the English strings line-for-line (English output stays
+  byte-identical to the pre-i18n originals; commands, flags and
+  env var names stay English); parity is enforced by `test/messages.test.js`
+  and the scorecard `i18n` aspect.
 
 **Acceptance:** `test/agent.test.js`, `test/skill-search.test.js` and
 `test/live-web-tools.test.js` cover lane parallelism, route ordering,
@@ -333,12 +350,12 @@ measured 2026-10-01; suite **254 (253 pass · 1 skip · 0 fail)**, coverage
 | `aio ask "<prompt>"` | **Live search router**: GitHub (630M+ repos + `filename:SKILL.md` skills, 6.8M+ files) + npm (3M+) + crates (340K+) in parallel, 4 s/source; BM25 merge + source diversity + optional warm-Ollama rerank; every hit prints link + one-line function + `<src>` tag; `--json` (`stored: 0`) |
 | `aio agent "<task>"` | **Agentic coordinator (FR13)**: every lane in parallel — repos ∥ skills ∥ npm ∥ crates ∥ web (Wikipedia + Hacker News) ∥ local tools on `PATH` — then a rule-based, cheapest-first route (run now → read first → quick try → borrow → install skill); `--json` → `{schemaVersion: 1, task, engine: 'agent', plan, sources, errors, route, count, stored: 0, hits}`; zero storage |
 | `aio skill search "<query>" [--add]` | **Live skill discovery (FR13)**: GitHub skill files + repo fallback, ranked hits with ready-to-run `aio skill add …` commands; `--add` installs the top hit; `--json` (`stored: 0`); same ok-rule as `ask` |
-| `aio skill add <owner/repo\|url>` | Install a public `SKILL.md` into `~/.agents/skills/<name>/` (`--file`, `--name`, `--dry-run`; sha256-claimed in `skills-ledger.json`); `aio skill list` / `aio skill remove <name>` inspect and remove — user-owned skills are never touched |
+| `aio skill add <owner/repo\|url>` | Install a public `SKILL.md` into `~/.agents/skills/<name>/` (`--file`, `--name`, `--sha256 <hex>` content pin — bad format → `skillShaBadFormat`, mismatch → `skillShaMismatch`, exit 1 — `--dry-run`; sha256-claimed in `skills-ledger.json`); `aio skill list` / `aio skill remove <name>` inspect and remove — user-owned skills are never touched |
 | `aio completion bash\|zsh\|fish\|pwsh` | Print a shell completion script (static `COMMANDS`/`FLAGS` from `src/completion.js` — offline-safe, works in the compiled binary) |
 | `aio borrow "<kw>"` | Optional live GitHub search for what you want cloned; `--get <owner/repo>` shallow-clone to `%TEMP%\aio-borrow` (24 h TTL, 1 GB disk guard); `--list` / `--clean` |
 | `aio doctor [--check\|--fix]` | Self-diagnosis: 9 checks (node / state / live sources / manifest / agent blocks / agents / gh auth / Ollama / MCP ledger), rows tagged `[ok]`/`[~~]`/`[!!]`; `--check` = CI gate, `--fix` = safe repair |
-| `aio evolve` | Pipeline: setup (manifest + blocks) → `doctor --check` → `npm test`; never commits |
-| `aio update` | Reinstall latest from npm → re-run setup automatically |
+| `aio verify` | Pipeline: setup (manifest + blocks) → `doctor --check` → `npm test`; never commits. `aio evolve` remains as a hidden, deprecated alias for 2 releases (em-dash deprecation line on stderr) |
+| `aio update [--check]` | Reinstall latest from npm → re-run setup automatically; `--check` is read-only (exit 0 up-to-date / 1 behind / 2 check failed) |
 | `aio rollback` | Remove injected block + reverse MCP additions from ledger |
 | `aio --help` | Usage + branding |
 | `aio --version` | Print package version |
@@ -478,7 +495,8 @@ SKILLS 67, screenshots **231/231**, `aio status` healthy (7/7 agent blocks),
 
 Verified 2026-09-30 (v1.2.0): tests **30/30**; `aio ask` live (engine
 `ollama:qwen3:4b`, link + function per hit); `aio borrow` live GitHub search;
-`aio doctor --check` 0 issues; `aio evolve` pipeline green; SITES **45**;
+`aio doctor --check` 0 issues; `aio evolve` (renamed `aio verify` in v1.8.0)
+pipeline green; SITES **45**;
 screenshot artifacts removed by decision (`docs/SCREENSHOTS.md` + `screenshots/`
 deleted); 231 clones deleted (db-first catalog, 16.43 GB freed) with status
 healthy (0 dirs); repo renamed to `all-in-one`; `aio-connect@1.2.0` published.
@@ -505,7 +523,17 @@ coverage **97.15 lines / 87.50 branches / 96.83 functions** (gates 90/80/85);
 `aio agent` + `aio skill search` covered by `test/agent.test.js`,
 `test/skill-search.test.js`, `test/live-web-tools.test.js`,
 `test/v170-dispatch.test.js`; npm provenance + scoop autoupdate live;
-tarball 101,080 bytes ≈ 98.7 KiB / 30 files (`test/` + `assets/` dropped).
+tarball slimmed to bin/src/docs/README/CHANGELOG/LICENSE (`test/` + `assets/`
+dropped in v1.7.0; re-measured at v1.8.0 below).
+
+Verified 2026-10-06 (v1.8.0): tests **279** (**278 pass, 1 skip, 0 fail** — the
+skip is the pre-existing symlink-availability skip in
+`test/regression-fixes.test.js`); coverage **97.97 lines / 90.26 branches /
+97.56 functions** (gates 90/80/85); scorecard **100/100 — 15/15 aspects ≥
+10/10** (`node scripts/verify-scorecard.mjs`); tarball **108,837 bytes ≈
+106.3 KiB / 33 files** (unpacked 317,860, incl. `sbom.cdx.json`); eval golden
+set **114 queries**: hit@8 **114/114**, hit@1 **111/114**, MRR **0.984**,
+measured 2026-10-06 (`eval-result.json`, nightly `eval.yml` auto-commits).
 
 ## 10. Known limitations
 
@@ -531,7 +559,8 @@ tarball 101,080 bytes ≈ 98.7 KiB / 30 files (`test/` + `assets/` dropped).
   beyond that temp dir.
 - **`aio doctor --fix` only re-runs setup.** Fixes are limited to the
   idempotent pipeline (regenerate manifest + reinject blocks); it never edits
-  agent files by hand, never touches MCP ledgers, and `aio evolve` never
+  agent files by hand, never touches MCP ledgers, and `aio verify`
+  (formerly `aio evolve`, kept as a deprecated alias) never
   commits.
 - **kimi — FR6 not applied.** After 9 attempts kimi quotes the disclosure rule
   verbatim but does not emit the `[aio] Using …` line in its reply — a
@@ -566,4 +595,6 @@ tarball 101,080 bytes ≈ 98.7 KiB / 30 files (`test/` + `assets/` dropped).
 
 | 2026-10-05 | v1.11 — aio 1.6.0 scope: `aio skill add <owner/repo\|url> [--file <path\|dir>] [--name <n>] [--dry-run]` (raw.githubusercontent HEAD, 3 layout candidates → `~/.agents/skills/<name>/SKILL.md`, sha256-claimed in `skills-ledger.json`; `skill list` / `skill remove` refuse user-owned skills; rollback removes only byte-identical aio installs), `aio completion bash\|zsh\|fish\|pwsh`, `aio doctor --json` (9 checks as `{schemaVersion:1, version, mode, ok, issues, warns, checks[]}`) + `schemaVersion: 1` on `ask --json`/`borrow --json` (bump only on breaking shape; additive fields free), standalone binaries + installers (`aio-windows-x64.exe`, `aio-linux-x64`, `aio-linux-arm64`, `aio-darwin-x64`, `aio-darwin-arm64` + `SHA256SUMS` + cosign-signed `SHA256SUMS.sig`; download-then-run `install.ps1`/`install.sh` with sha256 verification, scoop manifest; binary caveats: evolve needs source/npm, update needs npm, doctor reports the embedded bun build), GitHub search rate budget (`gh-rate.json` timestamps only — 8/min unauth, 25/min with GH token, `AIO_RATE`/`AIO_RATE=0`), `AIO_QUIET=1`/`AIO_NO_BANNER=1` + `NO_COLOR=1`, FR6 rule 0 (`FIRST LINE RULE` repeating the disclosure line before rule 1 — kimi retest pending, no new compliance claim), release.yml hardening (tag must be the `origin/main` tip, per-OS binary smoke, asset upload, cosign signs after upload), uninstall order documented (rollback first, then `npm rm -g`), `CONTRIBUTING.md` + `ROADMAP.md` added, tests 209/209, coverage gate 90/80/85 |
 
-| 2026-10-05 | v1.12 — aio 1.7.0: `aio agent "<task>"` (FR13 — every lane in parallel: repos ∥ skills ∥ npm ∥ crates ∥ web: Wikipedia opensearch + HN Algolia ∥ local tools on PATH via curated map ∩ detectBinary; rule-based cheapest-first route run now → read first → quick try → borrow → skill add; `--json` {schemaVersion, task, engine:'agent', plan, sources, errors, route, count, stored:0, hits}), `aio skill search "<query>" [--add]` (live skill discovery, ranked hits with ready-to-run `aio skill add` commands, `--add` = install top hit, B-01 ok-rule), `AIO_LANG=id` help i18n (HELP_ID mirrors EN line-for-line), `--flag=value` inline form + `--add` flag, agent in COMMANDS/completion; fix wave P0/P1/P2 (writeAtomic at ~18 sites + `<name>.corrupt-<ts>` preserve-aside, skill path-traversal + raw-case gh URLs, ghToken GH_TOKEN/GITHUB_TOKEN first + `wx` throttle lock + 1 MB cap + https-redirect check + device-name blacklist + crates count formatting + GIT_TERMINAL_PROMPT=0, borrow 5s gh timeout / partial-clone re-clone / AIO_OFFLINE / stray cleanup, rollback exit codes, unknown-command hint, missing-value flag errors, single-source COMMANDS/FLAGS in src/completion.js, dead exports removed); npm `--provenance` (OIDC, id-token: write) + scoop `checkver`/`autoupdate` (URL + SHA256SUMS regex); tarball slimmed to bin/src/docs/README/CHANGELOG/LICENSE (test/ + assets/ dropped, 101,080 bytes ≈ 98.7 KiB packed / 30 files); v1.7 brand — dimensional primary marks (extruded steel, machined grain, glossy vermilion node) with flat mono variants, gallery = brand kit v1.2.0 dual-system rules; hero/stats/demo/disclosure refresh (v1.7.0 badge, `LIVE: github ∥ npm ∥ crates ∥ web ∥ tools` ticker, tagline includes `agent`, stats cell `254 · 253 pass · 1 skip · 0 fail`); tests **254 (253 pass · 1 skip · 0 fail)**, coverage 97.15/87.50/96.83 (gates 90/80/85) |
+| 2026-10-05 | v1.12 — aio 1.7.0: `aio agent "<task>"` (FR13 — every lane in parallel: repos ∥ skills ∥ npm ∥ crates ∥ web: Wikipedia opensearch + HN Algolia ∥ local tools on PATH via curated map ∩ detectBinary; rule-based cheapest-first route run now → read first → quick try → borrow → skill add; `--json` {schemaVersion, task, engine:'agent', plan, sources, errors, route, count, stored:0, hits}), `aio skill search "<query>" [--add]` (live skill discovery, ranked hits with ready-to-run `aio skill add` commands, `--add` = install top hit, B-01 ok-rule), `AIO_LANG=id` help i18n (HELP_ID mirrors EN line-for-line), `--flag=value` inline form + `--add` flag, agent in COMMANDS/completion; fix wave P0/P1/P2 (writeAtomic at ~18 sites + `<name>.corrupt-<ts>` preserve-aside, skill path-traversal + raw-case gh URLs, ghToken GH_TOKEN/GITHUB_TOKEN first + `wx` throttle lock + 1 MB cap + https-redirect check + device-name blacklist + crates count formatting + GIT_TERMINAL_PROMPT=0, borrow 5s gh timeout / partial-clone re-clone / AIO_OFFLINE / stray cleanup, rollback exit codes, unknown-command hint, missing-value flag errors, single-source COMMANDS/FLAGS in src/completion.js, dead exports removed); npm `--provenance` (OIDC, id-token: write) + scoop `checkver`/`autoupdate` (URL + SHA256SUMS regex); tarball slimmed to bin/src/docs/README/CHANGELOG/LICENSE (test/ + assets/ dropped; pack size of that release recorded in CHANGELOG.md); v1.7 brand — dimensional primary marks (extruded steel, machined grain, glossy vermilion node) with flat mono variants, gallery = brand kit v1.2.0 dual-system rules; hero/stats/demo/disclosure refresh (v1.7.0 badge, `LIVE: github ∥ npm ∥ crates ∥ web ∥ tools` ticker, tagline includes `agent`, stats cell `254 · 253 pass · 1 skip · 0 fail`); tests **254 (253 pass · 1 skip · 0 fail)**, coverage 97.15/87.50/96.83 (gates 90/80/85) |
+
+| 2026-10-06 | v1.13 — aio 1.8.0: i18n EN/ID message catalog (`src/messages.js` — 51 keys, `msg()` + `parity()`; `AIO_LANG=id` renders full CLI output: help, errors, doctor, update, skill, borrow; English strings byte-identical to pre-i18n originals, parity enforced by `test/messages.test.js`), `aio evolve` → `aio verify` renamed for clarity (evolve kept as a hidden alias for 2 releases, em-dash deprecation line on stderr; dispatch fixed — `cmd is not defined` ReferenceError), `aio update --check` (installed vs `npm view aio-connect version`; exit 0 up-to-date / 1 behind / 2 check failed; keys `updateCheckFailed`/`updateCurrent`/`updateAvailable`), PATH discovery (`src/scan.js` `listPathCommands()` + `src/live.js`: local tools on the user's PATH — PATHEXT-aware — surface in `aio agent` with `local · on PATH` meta and func `— on PATH: <full path>`; token-exact match ≥3 chars; no phantom entries), help `Quick chooser` (ID `Pilih cepat`) with 7 rows per language + `aio update [--check]` help line in both languages, SBOM (`scripts/sbom.mjs` → `sbom.cdx.json`, CycloneDX 1.5, deterministic — no timestamp — shipped in the tarball, `npm run sbom`), CI supply-chain gates (ci.yml: `npm audit --omit=dev`, guarded `npm audit signatures` that skips honestly at 0 deps, SBOM regen + `git diff --exit-code sbom.cdx.json`, coverage gates, scorecard run) plus new `stats.yml` (weekly cron regenerates README/stats numbers via `scripts/stats.mjs` and auto-commits `[skip ci]`) and `og.yml` (windows-latest renders `assets/og-cover.png` from `scripts/og.html` via headless Edge), `aio skill add --sha256 <hex>` (hashes the tarball before install; bad format → `skillShaBadFormat`, mismatch → `skillShaMismatch` exit 1; works with `--dry-run`), scorecard 10 → 15 aspects (added `quality`, `coverage-floor`, `i18n`, `ci-gates`, `freshness`; verdict normalized; pack gate `file count <= 34`) = SUMMARY 100/100 — 15/15, brand `assets/wordmark-allinone.svg` (geometric monoline "AllinOne" — steel extrusion, machined grain, vermilion i-dot) added to `assets/logo-gallery.html`, `flow.svg` animation cleanup (noisy dashed underline under `borrow --clean` removed; master 8 s loop stays the single timeline; all assets carry `prefers-reduced-motion`), tests **279 (278 pass · 1 skip · 0 fail)**, coverage 97.97/90.26/97.56 (gates 90/80/85), pack 108,837 bytes ≈ 106.3 KiB / 33 files (unpacked 317,860), eval 114 queries hit@8 114/114 · hit@1 111/114 · MRR 0.984 (measured 2026-10-06) |

@@ -6,6 +6,71 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-10-06
+
+### Added
+
+- **i18n catalog EN/ID (`src/messages.js`)** — 51 keys behind `msg()` +
+  `parity()`; `AIO_LANG=id` now renders full CLI output (help, errors,
+  doctor, update, skill, borrow …), not only the help text. English strings
+  are byte-identical to the pre-i18n originals, and parity (both tables, no
+  placeholder drift) is enforced by `test/messages.test.js` and the scorecard
+  `i18n` aspect.
+- **`aio update [--check]`** — read-only newest-version comparison against
+  `npm view aio-connect version`: exit 0 = up-to-date, 1 = behind, 2 = check
+  failed (`updateCurrent` / `updateAvailable` / `updateCheckFailed`).
+- **PATH discovery** — `src/scan.js` `listPathCommands()` (PATHEXT-aware) feeds
+  the `aio agent` local-tools lane: curated tools are confirmed on the user's
+  PATH and print `local · on PATH` with `— on PATH: <full path>`, and a CLI
+  aio's list does not know surfaces on an exact query-token match (≥ 3 chars,
+  generic words filtered) — no phantom entries.
+- **`aio skill add --sha256 <hex>`** — pins the download: the fetched content
+  is hashed before install; bad format → `skillShaBadFormat`, mismatch →
+  `skillShaMismatch` (exit 1). Works with `--dry-run`.
+- **SBOM** — `scripts/sbom.mjs` writes `sbom.cdx.json` (CycloneDX 1.5,
+  deterministic — no timestamp), shipped in the tarball (`npm run sbom`).
+
+### Changed
+
+- **`aio evolve` → `aio verify`** — renamed for clarity; `evolve` stays as a
+  hidden alias for 2 releases and prints an em-dash deprecation line to
+  stderr. Help gains a **Quick chooser** section (ID `Pilih cepat`, 7 rows per
+  language) plus the `aio update [--check]` line in both languages.
+- **Scorecard: 10 → 15 aspects × 10/10 = 100/100 (15/15)** — added
+  `quality`, `coverage-floor`, `i18n`, `ci-gates`, `freshness`; verdict
+  normalized; the pack gate is now `file count <= 34`.
+- **tests + coverage** — suite **254 → 279** (**278 pass, 1 skip, 0 fail**;
+  the skip is the pre-existing symlink-availability skip in
+  `test/regression-fixes.test.js`); coverage **97.97 lines / 90.26 branches /
+  97.56 functions** against gates 90/80/85.
+- **tarball** — pack **108,837 bytes (≈ 106.3 KiB) / 33 files** (unpacked
+  317,860), now also shipping `sbom.cdx.json`.
+- **eval** — golden set **114 queries**: hit@8 **114/114**, hit@1 **111/114**,
+  MRR **0.984**, measured 2026-10-06 (`eval-result.json`; the nightly
+  `eval.yml` workflow regenerates and auto-commits the snapshot).
+- **brand / assets** — `assets/wordmark-allinone.svg` (geometric monoline
+  "AllinOne": steel extrusion, machined grain, vermilion i-dot) added to the
+  logo gallery; `flow.svg` animation cleanup (the noisy dashed underline under
+  `borrow --clean` is gone; the master 8 s loop stays the single timeline),
+  and every asset keeps `prefers-reduced-motion`.
+
+### Fixed
+
+- **`aio evolve` dispatch** — the deprecated alias crashed with
+  `cmd is not defined` (ReferenceError) instead of running the pipeline; it
+  now dispatches to the same runner as `aio verify`.
+
+### Security
+
+- **CI supply-chain gates (`ci.yml`)** — `npm audit --omit=dev`, a guarded
+  `npm audit signatures` (honestly skipped when the lockfile has 0
+  dependencies), SBOM freshness (regenerate + `git diff --exit-code
+  sbom.cdx.json`), the coverage gates, and the scorecard run.
+- **New workflows** — `stats.yml` (weekly cron regenerates the README/stats
+  numbers from a real suite run via `scripts/stats.mjs --write` and
+  auto-commits with `[skip ci]`) and `og.yml` (windows-latest renders
+  `assets/og-cover.png` from `scripts/og.html` with headless Edge).
+
 ## [1.7.0] - 2026-10-05
 
 ### Added
