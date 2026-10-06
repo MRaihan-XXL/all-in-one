@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { banner, getVersion } from '../src/banner.js';
 import { COMMANDS, FLAGS, SHORT_FLAGS } from '../src/completion.js';
+import { msg } from '../src/messages.js';
 
 const binPath = fileURLToPath(import.meta.url);
 
@@ -49,12 +50,23 @@ const HELP_EN = `
     aio completion <shell>       Print shell completion script (bash|zsh|fish|pwsh)
     aio doctor [--check|--fix]   Self-diagnosis; --fix = safe auto-repair,
                                  --check = CI gate (exit 1 on issues)
-    aio evolve                   Self-upgrade pipeline: setup → doctor → tests
+    aio verify                   Self-upgrade pipeline: setup → doctor → tests
                                  (never commits)
-    aio update                   Update from npm, then re-run setup
+    aio update [--check]         Update from npm, then re-run setup;
+                                  --check = report only (exit 1 = update available)
     aio rollback                 Strip injected blocks, recorded MCP entries +
                                   aio-installed skills (byte-identical only)
                                   (surgical; backups kept)
+
+
+  Quick chooser
+    find a repo / package / tool  aio ask "<what you need>"   (search, rank, discard)
+    do a multi-step task          aio agent "<your task>"     (all lanes, ordered route)
+    want the code locally         aio borrow --get <owner/repo>
+    install a reusable skill      aio skill search "<query>" --add
+    check this machine            aio status · aio doctor --check
+    check for a newer release     aio update --check          (exit 1 = update available)
+    upgrade self, run all gates   aio verify                  (setup -> doctor -> tests)
 
   Options
     --yes                        Apply the setup plan without prompting
@@ -139,12 +151,23 @@ const HELP_ID = `
     aio completion <shell>       Cetak skrip completion shell (bash|zsh|fish|pwsh)
     aio doctor [--check|--fix]   Diagnosis diri; --fix = perbaikan-otomatis aman,
                                  --check = gerbang CI (exit 1 bila ada masalah)
-    aio evolve                   Pipeline upgrade-diri: setup → doctor → test
+    aio verify                   Pipeline upgrade-diri: setup → doctor → test
                                  (tidak pernah commit)
-    aio update                   Update dari npm, lalu jalankan setup ulang
+    aio update [--check]         Update dari npm, lalu jalankan setup ulang;
+                                  --check = laporan saja (exit 1 = ada update)
     aio rollback                 Lepas blok yang disuntik, entri MCP tercatat +
                                  skill yang diinstal aio (hanya byte-identikal)
                                  (bedah; backup tetap disimpan)
+
+
+  Pilih cepat
+    cari repo / paket / tool      aio ask "<apa yang kamu butuh>"   (cari, ranking, buang)
+    tugas multi-langkah           aio agent "<tugas kamu>"          (semua lane, rute berurutan)
+    butuh kodenya lokal           aio borrow --get <owner/repo>
+    pasang skill reusable         aio skill search "<query>" --add
+    cek mesin ini                 aio status · aio doctor --check
+    cek rilis lebih baru          aio update --check                (exit 1 = ada update)
+    upgrade diri + semua gerbang  aio verify                        (setup -> doctor -> test)
 
   Opsi
     --yes                        Terapkan rencana setup tanpa prompt
@@ -190,7 +213,7 @@ function parseArgs(argv) {
   const opts = { command: 'setup', query: '', flags: {} };
   const rest = [];
   // value-flags: [flag key, usage hint] — 5h errors when the value is missing
-  const VALUE_FLAGS = { '--get': ['get', '<owner/repo>'], '--file': ['file', '<path>'], '--name': ['name', '<name>'] };
+  const VALUE_FLAGS = { '--get': ['get', '<owner/repo>'], '--file': ['file', '<path>'], '--name': ['name', '<name>'], '--sha256': ['sha256', '<hex>'] };
   // boolean flags (their long form only); --help/--version are NOT flags here —
   // they resolve as commands through `rest` below.
   const BOOL_FLAGS = {
@@ -222,7 +245,7 @@ function parseArgs(argv) {
       const val = inline !== undefined ? inline : argv[++i] ?? null;
       // value missing, empty, or the "value" is really the next flag → clear error
       if (val === null || val === '' || (inline === undefined && String(val).startsWith('-'))) {
-        console.error(`[aio] ${a} requires ${hint}`);
+        console.error(msg('cmdRequires', { a, hint }));
         process.exit(1);
       }
       opts.flags[flag] = val;
@@ -243,7 +266,7 @@ function parseArgs(argv) {
   else if (cmd !== undefined && COMMANDS.includes(cmd)) opts.command = cmd; // single source: completion.js (7d)
   else if (cmd !== undefined) {
     // 5f: name the bad command FIRST and point at help — never dump the full HELP
-    console.error(`[aio] unknown command: ${cmd}`);
+    console.error(msg('unknownCommand', { cmd }));
     console.error(`run 'aio --help' for usage`);
     process.exit(1);
   }
@@ -275,16 +298,16 @@ const invokedAsScript =
 const opts = parseArgs(invokedAsScript ? rawArgs.slice(1) : rawArgs);
 // --copilot only has meaning for `aio init` — never silently swallow it elsewhere (N2)
 if (opts.flags.copilot && opts.command !== 'init') {
-  console.error('[aio] --copilot only applies to `aio init` — ignoring');
+  console.error(msg('copilotOnlyInit'));
 }
 // --dry-run is only honored by setup/init/skill — warn elsewhere; REFUSE on the destructive
 // command so the flag can never be mistaken for a shield that doesn't exist (F3)
 if (opts.flags.dry && opts.command !== 'setup' && opts.command !== 'init' && opts.command !== 'help' && opts.command !== 'skill') {
   if (opts.command === 'rollback') {
-    console.error('[aio] rollback cannot honor --dry-run — refusing to run; inspect first with `aio doctor`');
+    console.error(msg('rollbackNoDryRun'));
     process.exit(1);
   }
-  console.error('[aio] --dry-run only applies to `aio setup` / `aio init` — ignoring');
+  console.error(msg('dryRunOnlySetupInit'));
 }
 // 5e: most commands don't accept --help — show HELP instead of swallowing it
 // silently. Token identity matters: `aio ask "node --help"` carries the flag
@@ -300,7 +323,7 @@ if (opts.command !== 'help' && opts.command !== 'version' && argvTokens.some((t)
 const KNOWN_FLAGS = new Set([...FLAGS, ...SHORT_FLAGS]); // one source: completion.js (7d)
 if (opts.command !== 'ask' && opts.command !== 'agent' && opts.command !== 'help' && opts.command !== 'version' && opts.command !== 'borrow') {
   for (const tok of opts.query.split(/\s+/).filter(Boolean)) {
-    if (tok.startsWith('--') && !KNOWN_FLAGS.has(tok.split('=')[0])) console.error(`[aio] unknown flag: ${tok} — ignoring`);
+    if (tok.startsWith('--') && !KNOWN_FLAGS.has(tok.split('=')[0])) console.error(msg('unknownFlag', { tok }));
   }
 }
 
@@ -315,9 +338,9 @@ switch (opts.command) {
     console.log(banner());
     try {
       const { runUpdate } = await import('../src/update.js');
-      runUpdate({ binPath });
+      runUpdate({ binPath, check: opts.flags.check });
     } catch (e) {
-      console.error(`[aio] update failed: ${e.message}`);
+      console.error(msg('cmdFailed', { cmd: 'update', err: e.message }));
       process.exitCode = 1;
     }
     break;
@@ -329,7 +352,7 @@ switch (opts.command) {
       // exitCode, not process.exit: stdout may be a pipe — let it drain first (5b)
       process.exitCode = r.ok ? 0 : 1;
     } catch (e) {
-      console.error(`[aio] status failed: ${e.message}`);
+      console.error(msg('cmdFailed', { cmd: 'status', err: e.message }));
       process.exitCode = 1;
     }
     break;
@@ -340,7 +363,7 @@ switch (opts.command) {
       const { runRollback } = await import('../src/rollback.js');
       process.exitCode = runRollback() ? 0 : 1; // 5g: a rollback that kept rows behind fails
     } catch (e) {
-      console.error(`[aio] rollback failed: ${e.message}`);
+      console.error(msg('cmdFailed', { cmd: 'rollback', err: e.message }));
       process.exitCode = 1;
     }
     break;
@@ -352,7 +375,7 @@ switch (opts.command) {
       console.log(r.text);
       process.exitCode = r.ok ? 0 : 1;
     } catch (e) {
-      console.error(`[aio] ask failed: ${e.message}`);
+      console.error(msg('cmdFailed', { cmd: 'ask', err: e.message }));
       process.exitCode = 1;
     }
     break;
@@ -364,7 +387,7 @@ switch (opts.command) {
       console.log(r.text);
       process.exitCode = r.ok ? 0 : 1;
     } catch (e) {
-      console.error(`[aio] agent failed: ${e.message}`);
+      console.error(msg('cmdFailed', { cmd: 'agent', err: e.message }));
       process.exitCode = 1;
     }
     break;
@@ -382,7 +405,7 @@ switch (opts.command) {
       console.log(r.text);
       process.exitCode = r.ok ? 0 : 1;
     } catch (e) {
-      console.error(`[aio] borrow failed: ${e.message}`);
+      console.error(msg('cmdFailed', { cmd: 'borrow', err: e.message }));
       process.exitCode = 1;
     }
     break;
@@ -400,12 +423,12 @@ switch (opts.command) {
         const { skillSearch } = await import('../src/skill.js');
         r = await skillSearch({ query: target, add: !!opts.flags.add, json: opts.flags.json });
       } else if (action === 'add' || action === undefined) {
-        r = await skillAdd({ target, file: opts.flags.file, name: opts.flags.name, dry: !!opts.flags.dry });
-      } else r = { ok: false, text: `[aio] skill: unknown subcommand "${action}" — use add | list | remove | search` };
+        r = await skillAdd({ target, file: opts.flags.file, name: opts.flags.name, dry: !!opts.flags.dry, sha256: opts.flags.sha256 });
+      } else r = { ok: false, text: msg('skillUnknownSub', { action }) };
       console.log(r.text);
       process.exitCode = r.ok ? 0 : 1;
     } catch (e) {
-      console.error(`[aio] skill failed: ${e.message}`);
+      console.error(msg('cmdFailed', { cmd: 'skill', err: e.message }));
       process.exitCode = 1;
     }
     break;
@@ -417,7 +440,7 @@ switch (opts.command) {
       console.log(r.text);
       process.exitCode = r.ok ? 0 : 1;
     } catch (e) {
-      console.error(`[aio] completion failed: ${e.message}`);
+      console.error(msg('cmdFailed', { cmd: 'completion', err: e.message }));
       process.exitCode = 1;
     }
     break;
@@ -429,19 +452,21 @@ switch (opts.command) {
       console.log(r.text);
       process.exitCode = r.exit;
     } catch (e) {
-      console.error(`[aio] doctor failed: ${e.message}`);
+      console.error(msg('cmdFailed', { cmd: 'doctor', err: e.message }));
       process.exitCode = 1;
     }
     break;
   }
+  case 'verify':
   case 'evolve': {
+    if (opts.command === 'evolve') console.error(msg('evolveDeprecated'));
     try {
-      const { runEvolve } = await import('../src/evolve.js');
-      const r = await runEvolve();
+      const { runVerify } = await import('../src/verify.js');
+      const r = await runVerify();
       console.log(r.text);
       process.exitCode = r.exit;
     } catch (e) {
-      console.error(`[aio] evolve failed: ${e.message}`);
+      console.error(msg('cmdFailed', { cmd: 'verify', err: e.message }));
       process.exitCode = 1;
     }
     break;
@@ -459,7 +484,7 @@ switch (opts.command) {
         apply: () => runInit({ dryRun: false, copilot: !!opts.flags.copilot }),
       });
     } catch (e) {
-      console.error(`[aio] init failed: ${e.message}`);
+      console.error(msg('cmdFailed', { cmd: 'init', err: e.message }));
       process.exitCode = 1;
     }
     break;
@@ -480,7 +505,7 @@ switch (opts.command) {
         apply: () => runSetup({ dryRun: false, showBlock }),
       });
     } catch (e) {
-      console.error(`[aio] setup failed: ${e.message}`);
+      console.error(msg('cmdFailed', { cmd: 'setup', err: e.message }));
       if (e.stack) console.error(e.stack.split('\n').slice(1, 4).join('\n'));
       process.exitCode = 1;
     }

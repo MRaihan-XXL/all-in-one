@@ -1,5 +1,5 @@
 // coverage-bin.test.js — spawn-level dispatch coverage for bin/aio.js: every
-// command case (update/status/rollback/ask/borrow/skill/doctor/evolve/init/setup),
+// command case (update/status/rollback/ask/borrow/skill/doctor/verify/evolve/init/setup),
 // the preview/--show-block wiring, the --copilot guard, and parseArgs' flag lanes
 // (get/file/name/json/list/check/fix/yes).
 //
@@ -10,8 +10,8 @@
 //                        only temp files
 //   AIO_STATE_DIR      → temp → manifests/backups/ledgers land there
 //   AIO_OFFLINE/NO_GH  → no probes; OLLAMA_HOST → closed port (instant refuse)
-// Never spawned: bare `aio` writes are ok (--yes runs in temp only); evolve is
-// safe because its npm-test step fails at the empty PATH.
+// Never spawned: bare `aio` writes are ok (--yes runs in temp only); verify
+// (and its `evolve` alias) is safe because its npm-test step fails at the empty PATH.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -157,20 +157,31 @@ test('update → npm is unreachable (PATH=""), fails honestly before any network
   assert.match(r.stdout, /Updating aio-connect from npm/, 'announced before failing');
 });
 
-test('evolve → pipeline runs setup+doctor in temp, npm-test step fails at lookup, exit 1', () => {
-  const r = run(REPO, 'evolve');
+test('update --check → npm unreachable (PATH="") → check failed, exit 2, never installs', () => {
+  const r = run(REPO, 'update', '--check');
+  assert.equal(r.status, 2, 'the check itself failed → exit 2 (0 current, 1 behind)');
+  assert.match(r.stderr, /update check failed: /, 'the underlying error is surfaced');
+  assert.doesNotMatch(r.stdout, /Updating aio-connect/, '--check is read-only: no install lane');
+  assert.doesNotMatch(r.stdout, /update check: aio/, 'no verdict without an answer from npm');
+});
+
+test('verify → pipeline runs setup+doctor in temp, npm-test step fails at lookup, exit 1', () => {
+  const r = run(REPO, 'verify');
   assert.equal(r.status, 1, 'a failing step fails the pipeline');
-  assert.match(r.stdout, /aio evolve . v\d+\.\d+\.\d+ self-upgrade pipeline/, 'report header');
+  assert.match(r.stdout, /aio verify . v\d+\.\d+\.\d+ self-upgrade pipeline/, 'report header');
+  assert.doesNotMatch(r.stderr, /deprecated/, 'the canonical command carries no alias warning');
   assert.match(r.stdout, /\[!!\] npm test/, 'npm test step failed');
-  assert.match(r.stdout, /pipeline FAILED/, 'verdict');
+  assert.match(r.stdout, /pipeline FAILED — fix the \[!!\] step above, then re-run `aio verify`\./, 'failure tail names the canonical command');
   assert.match(r.stdout, /nothing was committed or pushed automatically/, 'never commits');
 });
 
-test('evolve: AIO_STATE_DIR is a plain file → setup step fails, failure tail reported', () => {
+test('evolve alias → deprecation to stderr, pipeline still runs (plain-file state dir fails setup), exit 1', () => {
   const blocked = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'aio-bin-st-')), 'not-a-dir');
   fs.writeFileSync(blocked, 'x'); // mkdir over a file → setup throws in the child
   const r = runWith({ ...ENV, AIO_STATE_DIR: blocked }, REPO, 'evolve');
-  assert.equal(r.status, 1);
+  assert.equal(r.status, 1, 'the alias keeps the same exit contract as verify');
+  assert.match(r.stderr, /\[aio\] 'evolve' is deprecated — use 'aio verify' \(alias removed after 2 releases\)/, 'EN deprecation line on stderr, before the pipeline');
+  assert.match(r.stdout, /aio verify . v\d+\.\d+\.\d+ self-upgrade pipeline/, 'the alias renders the verify report');
   assert.match(r.stdout, /\[!!\] aio setup/, 'setup step failed and is named in the report');
   assert.match(r.stdout, /pipeline FAILED/, 'verdict');
 });
