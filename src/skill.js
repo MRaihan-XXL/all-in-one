@@ -11,6 +11,7 @@ import crypto from 'node:crypto';
 import { STATE_DIR, writeAtomic, preserveCorrupt } from './paths.js';
 import { getVersion } from './banner.js';
 import { ghSkills, ghRepos } from './live.js';
+import { msg } from './messages.js';
 
 const LEDGER = path.join(STATE_DIR, 'skills-ledger.json');
 
@@ -150,7 +151,7 @@ function existingStatus(file, name) {
 }
 
 /** `aio skill add <owner/repo|url> [--file <path>] [--name <n>] [--dry-run]`. */
-export async function skillAdd({ target, file: local, name: nameOpt, dry = false }) {
+export async function skillAdd({ target, file: local, name: nameOpt, dry = false, sha256: wantSha }) {
   const home = os.homedir();
   const root = skillsDir(home);
 
@@ -160,25 +161,22 @@ export async function skillAdd({ target, file: local, name: nameOpt, dry = false
   let source = null;
   if (local) {
     const p = path.resolve(local);
-    if (!fs.existsSync(p)) return { ok: false, text: `[aio] skill: local path not found — ${p}` };
+    if (!fs.existsSync(p)) return { ok: false, text: msg('skillPathNotFound', { p }) };
     const isDir = fs.statSync(p).isDirectory();
     const src = isDir ? path.join(p, 'SKILL.md') : p;
-    if (!fs.existsSync(src)) return { ok: false, text: `[aio] skill: SKILL.md not found — ${src}` };
+    if (!fs.existsSync(src)) return { ok: false, text: msg('skillMdNotFound', { src }) };
     content = fs.readFileSync(src, 'utf8');
     name = safeName(nameOpt || (isDir ? path.basename(p) : path.basename(p, path.extname(p))));
     source = `local ${src}`;
   } else {
     if (/^http:\/\//i.test(target || '')) {
-      return { ok: false, text: '[aio] skill: insecure http:// URL refused — use https://' };
+      return { ok: false, text: msg('skillInsecureHttp') };
     }
     const c = candidates(target || '');
     if (!c) {
       return {
         ok: false,
-        text:
-          'usage: aio skill add <owner/repo | url> [--file <path|dir>] [--name <name>]\n' +
-          '       aio skill list  ·  aio skill remove <name>\n' +
-          'example: aio skill add anthropics/skills --name pdf-tools',
+        text: msg('usageSkillAdd'),
       };
     }
     name = safeName(nameOpt || c.name);
@@ -199,16 +197,26 @@ export async function skillAdd({ target, file: local, name: nameOpt, dry = false
       if (errs.length && errs.length === outcomes.length) {
         return {
           ok: false,
-          text: `[aio] skill: fetch failed (${errs[0].error}) — check network/URL instead of "not found" for ${target}.`,
+          text: msg('skillFetchFailed', { err: errs[0].error, target }),
         };
       }
       return {
         ok: false,
         text:
-          `[aio] skill: SKILL.md not found for ${target} (tried ${c.urls.length} location${c.urls.length > 1 ? 's' : ''}).` +
+          msg('skillMdMissing', { target, n: c.urls.length, s: c.urls.length > 1 ? 's' : '' }) +
           (process.env.AIO_OFFLINE === '1' ? ' AIO_OFFLINE=1 — remote install disabled.' : ''),
       };
     }
+  }
+
+  // 1b. optional integrity pin (--sha256 <hex>): hash the exact content that is
+  // about to be written and refuse a mismatch - a supply-chain check the caller
+  // can run by pinning the hash out-of-band.
+  if (wantSha) {
+    const want = String(wantSha).toLowerCase().trim();
+    if (!/^[0-9a-f]{64}$/.test(want)) return { ok: false, text: msg('skillShaBadFormat', { want }) };
+    const got = crypto.createHash('sha256').update(content, 'utf8').digest('hex');
+    if (got !== want) return { ok: false, text: msg('skillShaMismatch', { want, got }) };
   }
 
   // 2. idempotence / ownership
@@ -219,18 +227,18 @@ export async function skillAdd({ target, file: local, name: nameOpt, dry = false
     // exit 0 for a benign skip ("already installed by aio" / "not aio's file") —
     // only genuine refusals/failures keep exit 1 (bin reads r.ok)
     const benign = st.status === 'present' || st.status === 'present (not installed by aio) — skipped';
-    return { ok: benign, text: `[aio] skill ${name}: ${st.status} — ${file}` };
+    return { ok: benign, text: msg('skillStatus', { name, status: st.status, file }) };
   }
 
   // 3. write (dry = plan only)
-  if (dry) return { ok: true, text: `[aio] skill ${name}: would install (dry-run) — ${file} (source: ${source})` };
+  if (dry) return { ok: true, text: msg('skillWouldInstall', { name, file, source }) };
   fs.mkdirSync(dir, { recursive: true });
   writeAtomic(file, content);
   const l = ledgerRead();
   const list = (Array.isArray(l) ? l : []).filter((e) => e.name !== name); // corrupt preserved aside → fresh record
   list.push({ name, file, sha: sha(content), source });
   ledgerWrite(list);
-  return { ok: true, text: `[aio] skill ${name}: installed — ${file}\n        source: ${source} · recorded for \`aio rollback\`` };
+  return { ok: true, text: msg('skillInstalled', { name, file, source }) };
 }
 
 /** `aio skill list` — what aio tracks, plus any skills you installed yourself. */
@@ -260,14 +268,14 @@ export function skillRemove({ target }) {
   if (!String(target ?? '').trim()) {
     // reject BEFORE sanitize: safeName('') falls back to 'skill' and would target
     // a bogus dir instead of telling the user what to pass
-    return { ok: false, text: '[aio] skill: missing name — usage: aio skill remove <name>' };
+    return { ok: false, text: msg('usageSkillRemove') };
   }
   const name = safeName(target);
   const root = path.resolve(skillsDir());
   const dir = path.resolve(root, name);
-  if (!dir.startsWith(root + path.sep)) return { ok: false, text: '[aio] skill: invalid name' };
+  if (!dir.startsWith(root + path.sep)) return { ok: false, text: msg('skillInvalidName') };
   const file = path.join(dir, 'SKILL.md');
-  if (!fs.existsSync(file)) return { ok: false, text: `[aio] skill ${name}: not installed — ${file}` };
+  if (!fs.existsSync(file)) return { ok: false, text: msg('skillNotInstalled', { name, file }) };
   const st = existingStatus(file, name);
   // same ownership contract as rollback: byte-identical aio installs only —
   // hand-modified → it is the user's file now, aio never silently deletes it
@@ -276,8 +284,8 @@ export function skillRemove({ target }) {
     return {
       ok: false,
       text: modified
-        ? `[aio] skill ${name}: modified since aio installed it — aio will not delete your edits; remove manually: ${file}`
-        : `[aio] skill ${name}: present (not installed by aio) — skipped: ${file}`,
+        ? msg('skillModified', { name, file })
+        : msg('skillNotOurs', { name, file }),
     };
   }
   // delete EXACTLY what aio wrote (the SKILL.md) — never sibling files the user
@@ -294,8 +302,8 @@ export function skillRemove({ target }) {
   return {
     ok: true,
     text: keptDir
-      ? `[aio] skill ${name}: SKILL.md removed — directory kept (not empty): ${dir}`
-      : `[aio] skill ${name}: removed — ${dir}`,
+      ? msg('skillMdRemoved', { name, dir })
+      : msg('skillRemoved', { name, dir }),
   };
 }
 
@@ -361,11 +369,11 @@ export async function skillSearch({ query, add = false, json = false }) {
     return {
       ok: false,
       json: null,
-      text: 'usage: aio skill search "<query>" [--add]\nexample: aio skill search "pdf word convert"',
+      text: msg('usageSkillSearch'),
     };
   }
   if (process.env.AIO_OFFLINE === '1') {
-    return { ok: false, json: null, text: '[aio] offline (AIO_OFFLINE=1) — skill search is live by design.' };
+    return { ok: false, json: null, text: msg('offlineSkillSearch') };
   }
   const t0 = Date.now();
   const lanes = [
@@ -392,7 +400,7 @@ export async function skillSearch({ query, add = false, json = false }) {
   if (add) {
     const top = hits.find((h) => h.type === 'skill') || hits[0];
     if (!top) {
-      const fail = { ok: false, json: null, text: `[aio] skill search: no installable hit for "${q}"${errors.length ? ` (lanes: ${errors.map((e) => e.src).join(', ')})` : ''}` };
+      const fail = { ok: false, json: null, text: msg('skillSearchNoHit', { q, lanes: errors.length ? ` (lanes: ${errors.map((e) => e.src).join(', ')})` : '' }) };
       return fail;
     }
     const r = await skillAdd({ target: top.name });
