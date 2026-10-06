@@ -1,4 +1,5 @@
 // consent.js — first-run consent for `aio` setup / init (B-02).
+import { msg } from './messages.js';
 // Interactive terminal → show the plan, then ask [y/N].
 // Non-TTY (npx pipes, CI) → plan only, nothing written: pass --yes to write
 // unattended. --dry-run / preview → always plan-only.
@@ -33,13 +34,13 @@ export async function gatedRun({ dry = false, yes = false, preview = false, show
   }
   if (mode === 'plan-stop') {
     await showPlan(false);
-    console.log('[aio] non-interactive session — plan shown above, nothing written. Re-run with --yes to apply.');
+    console.log(msg('consentNonInteractive'));
     return 'stopped';
   }
   if (mode === 'plan-ask') {
     await showPlan(false); // show the exact plan first
     if (!(await promptYes())) {
-      console.log('[aio] cancelled — no files written. Re-run with --yes to apply without prompting.');
+      console.log(msg('consentCancelled'));
       return 'cancelled';
     }
     await apply();

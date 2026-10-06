@@ -7,6 +7,7 @@ import { detectAgents, detectBinary } from './scan.js';
 import { buildBlock, injectBlock, genContext, ensureMcp, pruneBackups } from './write.js';
 import { blockTargets } from './targets.js';
 import { getVersion } from './banner.js';
+import { msg } from './messages.js';
 
 function row(tag, name, detail) {
   console.log(`  [${tag}] ${name.padEnd(26)} ${detail}`);
@@ -21,7 +22,7 @@ export async function runSetup(opts = {}) {
   const dry = !!opts.dryRun; // FR12: plan only — no manifest, blocks, MCP, state writes
 
   if (Number(process.versions.node.split('.')[0]) < 22 && !process.versions.bun) {
-    console.error(`[aio] warning: Node ${process.versions.node} detected — Node >= 22 recommended`);
+    console.error(msg('nodeVersionWarn', { version: process.versions.node }));
   }
 
   const agents = detectAgents();

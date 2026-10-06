@@ -4,6 +4,7 @@ import { stripBlock, removeMcpAdditions } from './write.js';
 import { removeSkillAdditions } from './skill.js';
 import { blockTargets } from './targets.js';
 import { BACKUP_DIR } from './paths.js';
+import { msg } from './messages.js';
 
 /** Runs the full rollback report. Returns true when the rollback was CLEAN —
  *  every row finished. A row that kept something behind (`kept`, `parse error`,
@@ -46,6 +47,6 @@ export function runRollback() {
   console.log('');
 
   const incomplete = [...mcp, ...skills].some((r) => /kept|parse error|failed|refusing/i.test(r.status));
-  if (incomplete) console.log('[aio] rollback incomplete — some rows were kept behind (see above); exit 1.');
+  if (incomplete) console.log(msg('rollbackIncomplete'));
   return !incomplete;
 }

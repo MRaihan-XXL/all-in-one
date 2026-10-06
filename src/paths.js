@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { msg } from './messages.js';
 
 export const STATE_DIR = process.env.AIO_STATE_DIR
   ? path.resolve(process.env.AIO_STATE_DIR)
@@ -62,7 +63,7 @@ export function readState() {
     // then fall back to {} — otherwise the next writeState would silently
     // clobber the only copy and the run would look perfectly healthy.
     const kept = preserveCorrupt(CONFIG_FILE);
-    console.error(`[aio] warning: ${CONFIG_FILE} is unreadable — preserved as ${kept}, continuing with empty state`);
+    console.error(msg('configUnreadable', { file: CONFIG_FILE, kept }));
     return {};
   }
 }

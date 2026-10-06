@@ -5,6 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { ghThrottle } from './live.js';
+import { msg } from './messages.js';
 
 export const BORROW_DIR = path.join(os.tmpdir(), 'aio-borrow');
 const TTL_MS = 24 * 60 * 60 * 1000;
@@ -186,7 +187,7 @@ export async function runBorrow({ query, get, clean, list, json }) {
         `free disk: ${fmtBytes(freeBytes(BORROW_DIR))}`;
       return { ok: true, text: txt, json: { schemaVersion: 1, ...r, url: `https://github.com/${get}` } };
     } catch (e) {
-      return { ok: false, text: `[aio] borrow --get failed: ${e.message}`, json: null };
+      return { ok: false, text: msg('borrowGetFailed', { err: e.message }), json: null };
     }
   }
 
@@ -208,7 +209,7 @@ export async function runBorrow({ query, get, clean, list, json }) {
     return {
       ok: false,
       json: null,
-      text: '[aio] offline (AIO_OFFLINE=1) — aio keeps zero local catalog by design; live search needs network.',
+      text: msg('offlineSearch'),
     };
   }
 
@@ -230,6 +231,6 @@ export async function runBorrow({ query, get, clean, list, json }) {
     lines.push('', `pin one: aio borrow --get ${hits[0].name}`);
     return { ok: true, text: lines.join('\n'), json: out };
   } catch (e) {
-    return { ok: false, text: `[aio] borrow search failed: ${e.message}`, json: null };
+    return { ok: false, text: msg('borrowSearchFailed', { err: e.message }), json: null };
   }
 }
