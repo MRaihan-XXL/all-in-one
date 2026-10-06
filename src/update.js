@@ -4,6 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 import { spawnSync, execFileSync } from 'node:child_process';
+import { msg } from './messages.js';
+import { getVersion } from './banner.js';
 
 /** Absolute path of the fresh global install (npm root -g + package bin). */
 export function globalBinPath(pkg = 'aio-connect') {
@@ -22,34 +24,61 @@ export function globalBinPath(pkg = 'aio-connect') {
   return null;
 }
 
-export function runUpdate({ binPath }) {
+export function runUpdate({ binPath, check = false }) {
   const pkg = 'aio-connect';
 
-  console.log(`[aio] Updating ${pkg} from npm ...`);
+  // --check: read-only newest-version comparison, never installs (npm outdated style:
+  // 0 = current, 1 = update available, 2 = check itself failed).
+  if (check) {
+    let latest;
+    try {
+      latest = execFileSync('npm', ['view', pkg, 'version'], {
+        encoding: 'utf8',
+        shell: true,
+        timeout: 30000,
+        windowsHide: true,
+      }).trim();
+    } catch (e) {
+      console.error(msg('updateCheckFailed', { err: e.message }));
+      process.exitCode = 2;
+      return;
+    }
+    const cur = getVersion();
+    if (cur === latest) {
+      console.log(msg('updateCurrent', { v: cur }));
+      process.exitCode = 0;
+    } else {
+      console.log(msg('updateAvailable', { cur, latest }));
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  console.log(msg('updateUpdating', { pkg }));
   const install = spawnSync('npm', ['install', '-g', pkg], {
     shell: true,
     stdio: 'inherit',
     cwd: os.homedir(),
   });
   if (install.error) {
-    console.error(`[aio] update failed: ${install.error.message}`);
+    console.error(msg('updateFailed', { err: install.error.message }));
     process.exit(1);
   }
   if (install.status !== 0) {
-    console.error(`[aio] update failed: npm install exited with code ${install.status}`);
+    console.error(msg('updateFailedCode', { code: install.status }));
     process.exit(install.status ?? 1);
   }
 
   // Re-run with the fresh global copy — NOT the running (possibly npx-cached) binPath.
   const fresh = globalBinPath(pkg);
   if (!fresh) {
-    console.error('[aio] update: fresh install not found under npm root -g — run `aio` manually.');
+    console.error(msg('updateFreshMissing'));
     process.exit(1);
   }
   if (binPath && binPath !== fresh) {
-    console.log('[aio] note: you invoked the old copy (npx cache?) — use the global `aio` from now on.');
+    console.log(msg('updateOldCopy'));
   }
-  console.log('[aio] Package updated — re-running setup with the new version ...');
+  console.log(msg('updateRerun'));
   // source/npm → re-run via the node that hosts us; compiled binary → its
   // embedded runtime can't execute a JS file, so use the PATH node (npm's host).
   const nodeBin = /node(\.exe)?$/i.test(process.execPath) ? process.execPath : 'node';

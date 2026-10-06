@@ -57,3 +57,37 @@ export function detectBinary(name) {
   return findOnPath(name);
 }
 
+/**
+ * Every executable basename reachable on PATH, as a lowercased map
+ * stem → absolute file path (one lazy scan; the caller caches it).
+ * Windows strips PATHEXT so `ffmpeg.exe` reads as `ffmpeg`. Feeds the tools
+ * lane's PATH discovery: aio can only suggest a CLI it can actually find here.
+ */
+export function listPathCommands() {
+  const map = new Map();
+  const isWin = process.platform === 'win32';
+  const exts = isWin
+    ? (process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean).map((e) => e.toLowerCase())
+    : [];
+  for (const dir of pathDirs()) {
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue; // unreadable PATH entry — keep scanning
+    }
+    for (const e of entries) {
+      if (!e.isFile()) continue;
+      let stem = e.name;
+      if (isWin) {
+        const lower = e.name.toLowerCase();
+        const ext = exts.find((x) => lower.endsWith(x));
+        if (!ext) continue; // README.md in a PATH dir is not a command
+        stem = e.name.slice(0, -ext.length);
+      }
+      if (stem) map.set(stem.toLowerCase(), path.join(dir, e.name));
+    }
+  }
+  return map;
+}
+
