@@ -270,10 +270,19 @@ check('quality', 'eval script covers all query families (QUERIES array)',
   const ageDays = (f) => (Date.now() - fs.statSync(path.join(ROOT, f)).mtimeMs) / 86400000;
   check('freshness', 'docs/stats.json regenerated <= 14 days',
     ageDays('docs/stats.json') <= 14, `${ageDays('docs/stats.json').toFixed(1)}d`);
+  // A git checkout rewrites mtimes in tree-write order, which can invert
+  // og-cover.png vs og.html on a fresh clone — last-commit time is the honest
+  // "when was this last touched" signal; fall back to mtime outside git.
+  const touchTime = (f) => {
+    const g = spawnSync('git', ['-C', ROOT, 'log', '-1', '--format=%ct', '--', f],
+      { encoding: 'utf8' });
+    const s = (g.stdout || '').trim();
+    return (g.status === 0 && s) ? Number(s) * 1000
+      : fs.statSync(path.join(ROOT, f)).mtimeMs;
+  };
   check('freshness', 'og-cover.png exists and is not older than its source',
     fs.existsSync(path.join(ROOT, 'assets', 'og-cover.png'))
-    && fs.statSync(path.join(ROOT, 'assets', 'og-cover.png')).mtimeMs
-       >= fs.statSync(path.join(ROOT, 'scripts', 'og.html')).mtimeMs);
+    && touchTime('assets/og-cover.png') >= touchTime('scripts/og.html'));
   let ok = false, detail = 'unreadable';
   try {
     const ev = JSON.parse(read('eval-result.json'));
