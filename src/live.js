@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getVersion } from './banner.js';
 import { STATE_DIR, writeAtomic } from './paths.js';
-import { detectBinary } from './scan.js';
+import { detectBinary, listPathCommands } from './scan.js';
 
 const execFileP = promisify(execFile);
 const UA = { 'user-agent': `aio-connect/${getVersion()} (+https://github.com/MRaihan-XXL/all-in-one)` };
@@ -279,11 +279,36 @@ export async function cratesSearch(q, n = 5) {
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+/** Web-lane content tokens — stop-stripped, ≥3 chars (csv/pdf/chart). */
+const webToks = (s) => String(s).toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3 && !STOP.has(t));
+
+/** Wikipedia's opensearch prefix-matches loosely: a full multi-word task query
+ *  returns 0 rows ("convert csv to interactive chart") while a short one drags
+ *  in prefix junk ("csv chart" → "CSS Chattahoochee"). So query with the SINGLE
+ *  longest content token — every title then legitimately starts with it.
+ *  Exported for tests. */
+export function wikiQuery(q) {
+  const toks = webToks(q);
+  if (toks.length) return [...toks].sort((a, b) => b.length - a.length)[0];
+  const fb = String(q).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  return fb[0] || String(q);
+}
+
+/** Relevance gate for the web lane — only when the query carries ≥2 content
+ *  tokens (a 1-token query is already prefix-exact by construction). A row must
+ *  share ≥1 content token with the query (either direction, ≥3 chars) or it is
+ *  noise: an honest short lane beats a junk-filled one. */
+export function webRelevant(title, qToks) {
+  if (qToks.length < 2) return true;
+  const tt = String(title).toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3);
+  return tt.some((t) => qToks.some((q) => t.startsWith(q) || q.startsWith(t)));
+}
+
 /** Web lane — Wikipedia opensearch + Hacker News Algolia. Both are keyless,
  *  JSON, no scraping; a hard failure of BOTH halves rejects (so the errors[]
  *  note shows), one healthy half still answers. */
 export async function webSearch(q, n = 5) {
-  const wikiUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(q)}&limit=${n}&format=json`;
+  const wikiUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(wikiQuery(q))}&limit=${n}&format=json`;
   // tags=story: without it the relevance-mixed index returns comment objects
   // (no title) first — a filter then silently empties the lane.
   const hnUrl = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(q)}&hitsPerPage=${n}&tags=story`;
@@ -329,7 +354,13 @@ export async function webSearch(q, n = 5) {
     else firstErr = firstErr || r.reason;
   }
   if (!out.length && firstErr) throw firstErr; // both halves dead → real error, not "0 hits"
-  return out.slice(0, n * 2);
+  const qToks = webToks(q);
+  const clean = out.filter((r) => webRelevant(r.name, qToks));
+  // Never starve: if the gate wipes EVERY row the lane produced, the unfiltered
+  // rows stand (same contract as ask's coverage gate). In production wiki rows
+  // are already prefix-exact by construction, so this only rescues a fixture-
+  // or edge-case wipe — junk rows sharing nothing with a ≥2-token query still drop.
+  return (clean.length ? clean : out).slice(0, n * 2);
 }
 
 /** Local tools lane — coordinate what is ALREADY on this machine. A hit means
@@ -386,6 +417,15 @@ const KEYSTOP = new Set([
   'into', 'to', 'format', 'formats', 'make', 'get', 'list', 'code', 'web', 'media',
 ]);
 
+// PATH-command discovery cache (one scan per process) + words that must never
+// surface as a discovered binary name even when present on PATH.
+let PATH_CMDS = null;
+function pathCommands() {
+  if (!PATH_CMDS) PATH_CMDS = listPathCommands();
+  return PATH_CMDS;
+}
+const GENERIC_BIN = new Set(['npx', 'node', 'npm', 'npmx', 'corepack', 'sh', 'bash', 'zsh', 'pwsh', 'powershell', 'cmd', 'sudo']);
+
 export function localTools(q, n = 4) {
   const s = String(q || '').toLowerCase();
   if (!s.trim()) return [];
@@ -404,17 +444,37 @@ export function localTools(q, n = 4) {
     const bin = detectBinary(t.name);
     if (!bin) continue; // no phantom suggestions — the row means "installed, run it"
     out.push({
-      type: 'tool',
-      name: t.name,
-      url: t.url,
-      func: `${t.func} — on PATH: ${bin}`,
-      meta: 'local · on PATH',
-      src: 'tools',
-      trust01: 0.9, // present + relevant = highest practical confidence
-    });
+        type: 'tool',
+        name: t.name,
+        url: t.url,
+        func: `${t.func} — on PATH: ${bin}`,
+        meta: 'local · on PATH',
+        src: 'tools',
+        trust01: 0.9, // present + relevant = highest practical confidence
+      });
+    }
+    // PATH discovery: a CLI aio's curated list does not know can still surface,
+    // but ONLY on an exact token match (>= 3 chars, never a KEYSTOP word), so the
+    // lane reports what is installed instead of guessing what might be useful.
+    if (out.length < n) {
+      const curated = new Set(LOCAL_TOOLS.map((t2) => t2.name.toLowerCase()));
+      for (const [stem, full] of pathCommands()) {
+        if (out.length >= n) break;
+        if (curated.has(stem) || stem.length < 3 || KEYSTOP.has(stem) || GENERIC_BIN.has(stem)) continue;
+        if (!tokens.has(stem)) continue;
+        out.push({
+          type: 'tool',
+          name: stem,
+          url: null,
+          func: `${stem} — on PATH: ${full}`,
+          meta: 'local · on PATH',
+          src: 'tools',
+          trust01: 0.8,
+        });
+      }
+    }
+    return out;
   }
-  return out;
-}
 
 /* ---------------- adaptive routing ---------------- */
 

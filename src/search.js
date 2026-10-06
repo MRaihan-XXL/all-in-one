@@ -3,6 +3,7 @@
 // optional local Ollama rerank (qwen3). No search storage: every result is
 // printed only — never written to disk or database.
 import { liveSearch } from './live.js';
+import { msg } from './messages.js';
 
 const OLLAMA = process.env.OLLAMA_HOST || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.AIO_OLLAMA_MODEL || 'qwen3:4b';
@@ -19,10 +20,13 @@ function tokenize(s) {
 }
 
 // Query-side intensifier stoplist — "awesome" must not fetch awesome-phonenumber.
-// (Only the query side; documents keep every token.)
+// (Only the query side; documents keep every token.) Direction/preposition words
+// joined in: "pdf to word" must not count "to" as a matchable term — that is how
+// pdf-to-png kept sneaking into a word-document query (direction blindness).
 const QSTOP = new Set([
   'awesome', 'best', 'free', 'good', 'nice', 'great', 'please', 'need', 'want',
   'find', 'some', 'any', 'recommend', 'recommended', 'looking',
+  'to', 'from', 'into', 'via', 'with', 'for', 'ke', 'dari', 'untuk', 'dengan',
 ]);
 
 function trustTier(t) {
@@ -61,7 +65,7 @@ export function bm25Search(query, entries, limit = 8) {
       score += idf * ((f * (k1 + 1)) / (f + k1 * (1 - b + (b * d.length) / (avgLen || 1))));
     }
     score *= 0.4 + (0.6 * matchedTerms) / q.length; // query-term coverage
-    return { entry: e, score };
+    return { entry: e, score, cov: matchedTerms / q.length };
   });
   const matched = scored.filter((s) => s.score > 0); // keyword gate: no overlap → no hit
   const maxScore = matched.reduce((m, s) => Math.max(m, s.score), 0) || 1;
@@ -78,6 +82,7 @@ export function bm25Search(query, entries, limit = 8) {
     .map((s, rank) => ({
       ...s.entry,
       score: Number(s.score.toFixed(3)),
+      cov: Number(s.cov.toFixed(2)), // fraction of query terms the hit covers (runAsk's noise gate)
       why: `BM25 keyword match (#${rank + 1})${blend ? ` + trust ${trustTier(s.entry.trust01)}` : ''}`,
     }));
 }
@@ -184,7 +189,7 @@ export function sourceErrorNote(errors) {
 /** `aio ask` → { ok, text, json }. Every hit carries url + function (item 3). */
 export async function runAsk({ query, json }) {
   if (!query || !query.trim()) {
-    return { ok: false, text: 'usage: aio ask "<what you need>"\nexample: aio ask "csv ke chart interaktif"', json: null };
+    return { ok: false, text: msg('usageAsk'), json: null };
   }
   const t0 = Date.now();
   const { entries, sources, errors = [], web, offline } = await liveSearch(query);
@@ -193,7 +198,7 @@ export async function runAsk({ query, json }) {
     return {
       ok: false,
       json: null,
-      text: '[aio] offline (AIO_OFFLINE=1) — aio keeps zero local catalog by design; live search needs network.',
+      text: msg('offlineSearch'),
     };
   }
 
@@ -203,6 +208,12 @@ export async function runAsk({ query, json }) {
     h.why ? h : { ...h, why: `source-ranked by ${h.src || 'live'}` }
   );
   pool = dedupe(diversify(pool, entries, 10));
+  // Near-name noise gate: a hit covering <60% of the query's content terms is a
+  // guess, not an answer — "word-wrap" for "pdf to word". BM25 rows carry cov;
+  // source-ranked fallback rows (no cov) always pass. Never starve the pool:
+  // if the gate would empty it, the unfiltered pool stands.
+  const strict = pool.filter((h) => (h.cov ?? 1) >= 0.6);
+  pool = strict.length ? strict : pool;
 
   // Rerank only if we are still inside the speed budget (warm Ollama, ≤3.5s).
   let ai = false;
