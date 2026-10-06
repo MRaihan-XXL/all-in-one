@@ -1,0 +1,36 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "tools": [
+      {
+        "vendor": "MRaihan-XXL",
+        "name": "aio scripts/sbom.mjs",
+        "version": "1.8.0"
+      }
+    ],
+    "component": {
+      "bom-ref": "pkg:npm/aio-connect@1.8.0",
+      "type": "application",
+      "name": "aio-connect",
+      "version": "1.8.0",
+      "description": "aio - auto-connect your AI agents to LIVE search across GitHub (630M+ repos, public skills), npm & crates. Zero search storage (results printed, never saved), no slash-commands.",
+      "purl": "pkg:npm/aio-connect@1.8.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-3.0-only"
+          }
+        }
+      ]
+    }
+  },
+  "components": [],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/aio-connect@1.8.0",
+      "dependsOn": []
+    }
+  ]
+}

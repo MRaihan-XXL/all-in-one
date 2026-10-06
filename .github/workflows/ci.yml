@@ -18,10 +18,28 @@ jobs:
         with:
           node-version: 22
       # zero runtime deps — no install step needed
-      # ubuntu runs the suite once via the coverage step (no double run)
+      # ubuntu runs the suite once via the coverage gate (no double run)
       - run: npm test
         if: matrix.os != 'ubuntu-latest'
-      - name: Coverage (reported, not gated)
+      - name: Coverage gate (90/80/85) + scorecard
         if: matrix.os == 'ubuntu-latest'
-        run: node --test --experimental-test-coverage "test/*.js"
+        run: |
+          node --test --experimental-test-coverage --test-coverage-lines=90 --test-coverage-branches=80 --test-coverage-functions=85 "test/*.js"
+          node scripts/verify-scorecard.mjs
+      # supply chain: vulnerability audit gates; signature verification runs only
+      # while the lockfile lists real dependencies (no-op at 0 deps, stated in log)
+      - name: npm audit (vulnerability gate)
+        if: matrix.os == 'ubuntu-latest'
+        run: npm audit --omit=dev
+      - name: npm audit signatures
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          n=$(node -p "Object.keys(require('./package-lock.json').packages).length")
+          if [ "$n" -gt 1 ]; then npm audit signatures; else echo "0 dependencies in lockfile — signature audit is a no-op; skipping (honest)"; fi
+      # SBOM must match package.json exactly — regenerate and require a clean diff
+      - name: SBOM freshness
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          node scripts/sbom.mjs
+          git diff --exit-code sbom.cdx.json
       - run: node bin/aio.js --help
