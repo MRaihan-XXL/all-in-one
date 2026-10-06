@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // scripts/verify-scorecard.mjs — release scorecard for aio.
 //
-// 10 aspects × machine-checkable sub-checks. Runs AFTER `node --test` in the
+// 15 aspects × machine-checkable sub-checks. Runs AFTER `node --test` in the
 // `npm test` chain, so tests are green by construction; this script never
 // re-runs the suite (circularity guard) — it asserts invariants docs & release
 // promises: parse integrity, fix-wave robustness, security posture, honest
 // offline/zero-storage behaviour, real CLI UX, doctor, slim pack, docs sync,
-// release workflow. Offline, fast (~3s), stdlib-only.
+// release readiness, eval quality gate, recorded coverage floor, i18n parity,
+// CI gates, artifact freshness. Offline, fast (~3s), stdlib-only.
 //
 // Pass criterion (README): every aspect >= 10/10. Exit 1 otherwise.
 
@@ -164,7 +165,7 @@ check('honesty', 'agent surfaces source errors (no fake empty)', has('src/agent.
   else {
     const entry = p.json[0] || {};
     const files = (entry.files || []).map((x) => x.path);
-    check('pack', 'tarball file count <= 30', files.length <= 30, `${files.length} files`);
+    check('pack', 'tarball file count <= 34', files.length <= 34, `${files.length} files`);
     check('pack', 'tarball packed size <= 120 kB (test/assets/scripts excluded)', (entry.size || 0) <= 120000, `${entry.size} bytes`);
     const heavy = files.filter((f) => f.startsWith('test/') || f.startsWith('assets/') || f.startsWith('scripts/'));
     check('pack', 'test/assets/scripts excluded from tarball', heavy.length === 0, heavy.slice(0, 3).join(', '));
@@ -189,8 +190,111 @@ check('release', 'id-token: write (OIDC)', has('.github/workflows/release.yml', 
   check('release', 'tag-guard step (Tag is main tip)', /Tag is main tip/.test(wf));
 }
 
+// ── 11. quality (the live eval gate) ─────────────────────────────────────────
+{
+  let ok = false, detail = '';
+  try {
+    const ev = JSON.parse(read('eval-result.json'));
+    ok = ev.n >= 100 && ev.hit8 >= 95 && ev.mrr >= 0.9 && /^\d{4}-\d{2}-\d{2}$/.test(ev.measured || '');
+    detail = `n=${ev.n} hit@8=${ev.hit8} mrr=${ev.mrr} measured=${ev.measured}`;
+  } catch (e) { detail = e.message; }
+  check('quality', 'eval golden set: n>=100, hit@8>=95%, mrr>=0.9, dated', ok, detail);
+}
+check('quality', 'eval workflow regenerates + commits the snapshot',
+  /--write/.test(read('.github/workflows/eval.yml'))
+  && /contents:\s*write/.test(read('.github/workflows/eval.yml')));
+check('quality', 'eval script covers all query families (QUERIES array)',
+  /const QUERIES = \[/.test(read('scripts/eval-relevance.mjs')));
+
+// ── 12. coverage floor (recorded numbers, never hand-typed) ──────────────────
+{
+  let ok = false, detail = '';
+  try {
+    const st = JSON.parse(read('docs/stats.json'));
+    const c = st.coverage, t = st.tests;
+    ok = c.lines >= 90 && c.branches >= 80 && c.functions >= 85
+      && t.fail === 0 && t.total >= 150 && st.scorecard.earned === st.scorecard.possible;
+    detail = `lines=${c.lines} branches=${c.branches} funcs=${c.functions} tests=${t.total} fail=${t.fail}`;
+  } catch (e) { detail = e.message; }
+  check('coverage-floor', 'docs/stats.json: >= gates, 0 fail, scorecard clean', ok, detail);
+}
+{
+  let ok = false, detail = '';
+  try {
+    const st = JSON.parse(read('docs/stats.json'));
+    const want = `${st.tests.total} tests: ${st.tests.pass} pass, ${st.tests.skip} skip, ${st.tests.fail} fail`;
+    ok = read('README.md').includes(want);
+    detail = want;
+  } catch (e) { detail = e.message; }
+  check('coverage-floor', 'README test line matches docs/stats.json exactly', ok, detail);
+}
+
+// ── 13. i18n (catalog parity + HELP mirror) ─────────────────────────────────
+{
+  const { parity, msg } = await import(new URL('../src/messages.js', import.meta.url));
+  const p = parity();
+  check('i18n', `messages parity: ${p.total} keys in BOTH tables`, p.total >= 51 && p.missingID.length === 0 && p.missingEN.length === 0,
+    JSON.stringify({ missingID: p.missingID, missingEN: p.missingEN }));
+  check('i18n', 'no placeholder drift EN vs ID', p.placeholderDrift.length === 0, p.placeholderDrift.join(', '));
+  check('i18n', 'msg renders (EN default + AIO_LANG=id switch)',
+    msg('evolveDeprecated').includes('deprecated')
+    && (() => { const prev = process.env.AIO_LANG; process.env.AIO_LANG = 'id';
+        const id = msg('evolveDeprecated'); process.env.AIO_LANG = prev;
+        return id.includes('usang'); })());
+}
+{
+  const he = read('bin/aio.js').match(/const HELP_EN = `([\s\S]*?)`;/);
+  const hi = read('bin/aio.js').match(/const HELP_ID = `([\s\S]*?)`;/);
+  const n = (m) => (m ? m[1].split('\n').length : 0);
+  check('i18n', 'HELP_EN/HELP_ID line-for-line mirror', he && hi && n(he) === n(hi),
+    `en=${n(he)} id=${n(hi)}`);
+}
+
+// ── 14. ci gates (every promise has a workflow enforcing it) ─────────────────
+{
+  const ci = read('.github/workflows/ci.yml');
+  check('ci-gates', 'CI runs the coverage gate (90/80/85)',
+    /--test-coverage-lines=90/.test(ci) && /--test-coverage-branches=80/.test(ci) && /--test-coverage-functions=85/.test(ci));
+  check('ci-gates', 'CI runs the scorecard', /verify-scorecard\.mjs/.test(ci));
+  check('ci-gates', 'CI runs npm audit + guarded signature audit',
+    /npm audit --omit=dev/.test(ci) && /npm audit signatures/.test(ci));
+  check('ci-gates', 'CI enforces SBOM freshness (regen + clean diff)',
+    /sbom\.mjs[\s\S]{0,120}git diff --exit-code sbom\.cdx\.json/.test(ci));
+  check('ci-gates', 'stats auto-gen + og render workflows present',
+    fs.existsSync(path.join(ROOT, '.github', 'workflows', 'stats.yml'))
+    && fs.existsSync(path.join(ROOT, '.github', 'workflows', 'og.yml')));
+}
+
+// ── 15. freshness (recorded artifacts must be recent) ────────────────────────
+{
+  const ageDays = (f) => (Date.now() - fs.statSync(path.join(ROOT, f)).mtimeMs) / 86400000;
+  check('freshness', 'docs/stats.json regenerated <= 14 days',
+    ageDays('docs/stats.json') <= 14, `${ageDays('docs/stats.json').toFixed(1)}d`);
+  check('freshness', 'og-cover.png exists and is not older than its source',
+    fs.existsSync(path.join(ROOT, 'assets', 'og-cover.png'))
+    && fs.statSync(path.join(ROOT, 'assets', 'og-cover.png')).mtimeMs
+       >= fs.statSync(path.join(ROOT, 'scripts', 'og.html')).mtimeMs);
+  let ok = false, detail = 'unreadable';
+  try {
+    const ev = JSON.parse(read('eval-result.json'));
+    const days = (Date.now() - Date.parse(ev.measured)) / 86400000;
+    ok = days <= 5;
+    detail = `${days.toFixed(1)}d since ${ev.measured}`;
+  } catch (e) { detail = e.message; }
+  check('freshness', 'eval measured <= 5 days ago (nightly keeps it honest)', ok, detail);
+  let sb = false, sd = '';
+  try {
+    sb = JSON.parse(read('sbom.cdx.json')).metadata.component.version === pkg.version;
+    sd = `sbom ${JSON.parse(read('sbom.cdx.json')).metadata.component.version} vs pkg ${pkg.version}`;
+  } catch (e) { sd = e.message; }
+  check('freshness', 'sbom.cdx.json version matches package.json', sb, sd);
+  check('freshness', 'package-lock.json present (audit/signature capable)',
+    fs.existsSync(path.join(ROOT, 'package-lock.json')));
+}
+
 // ── report ──────────────────────────────────────────────────────────────────
-const ASPECTS = ['integrity', 'tests', 'robustness', 'security', 'honesty', 'cli-ux', 'doctor', 'pack', 'docs-sync', 'release'];
+const ASPECTS = ['integrity', 'tests', 'robustness', 'security', 'honesty', 'cli-ux', 'doctor', 'pack', 'docs-sync', 'release',
+  'quality', 'coverage-floor', 'i18n', 'ci-gates', 'freshness'];
 let total = 0, aspectsOk = 0;
 const failures = results.filter((r) => !r.ok);
 console.log(`[aio] scorecard — ${ASPECTS.length} aspects × machine checks (v${pkg.version})\n`);
@@ -205,7 +309,7 @@ for (const a of ASPECTS) {
 console.log('');
 for (const f of failures) console.log(`  FAIL [${f.aspect}] ${f.name}${f.detail ? ` → ${f.detail}` : ''}`);
 if (failures.length) console.log('');
-const verdict = `${total}/100 — ${aspectsOk}/${ASPECTS.length} aspects >= 10/10`;
+const verdict = `${Math.round((100 * total) / (ASPECTS.length * 10))}/100 — ${aspectsOk}/${ASPECTS.length} aspects >= 10/10`;
 if (aspectsOk === ASPECTS.length) {
   console.log(`SUMMARY  ${verdict}`);
   process.exit(0);

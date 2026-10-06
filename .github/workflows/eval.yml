@@ -1,13 +1,18 @@
 name: Eval
 
-# Nightly relevance eval — `aio ask` against 20 golden queries, live sources.
-# Deterministic ranking (AIO_NO_AI=1: BM25 + trust, no Ollama); the network is the
-# only variable, so a red run means the live lanes degraded — worth a look, not a
-# blocker: this workflow never runs on PRs.
+# Nightly relevance eval — `aio ask` against the 110-query golden set, live
+# sources. Deterministic ranking (AIO_NO_AI=1: BM25 + trust, no Ollama); the
+# network is the only variable, so a red run means the live lanes degraded —
+# worth a look, not a blocker: this workflow never runs on PRs. The result is
+# committed back as eval-result.json — the machine source for the README badge
+# and the scorecard's quality gate.
 on:
   schedule:
     - cron: '0 3 * * *' # nightly 03:00 UTC
   workflow_dispatch:
+
+permissions:
+  contents: write # commit eval-result.json back to the repo
 
 jobs:
   relevance:
@@ -21,4 +26,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # enables the skills lane (gh api)
           AIO_NO_AI: '1'
-        run: node scripts/eval-relevance.mjs
+        run: node scripts/eval-relevance.mjs --write
+      - name: Commit fresh eval-result.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add eval-result.json
+          git diff --cached --quiet || git commit -m "chore(eval): nightly relevance snapshot"
+          git push

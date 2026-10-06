@@ -1,0 +1,45 @@
+name: OG cover render
+
+# assets/og-cover.png is RENDERED, never hand-exported: scripts/og.html is the
+# single source (1200x630 social card). Windows runner on purpose - it has both
+# msedge and Segoe UI, matching the source comment in og.html. Re-renders when
+# the source or its logo changes, plus on demand.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/og.html
+      - assets/logo-mark-reversed.svg
+
+permissions:
+  contents: write
+
+jobs:
+  render:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Render og.html -> assets/og-cover.png
+        shell: pwsh
+        run: |
+          $edge = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+          $html = 'file:///' + ($PWD.Path -replace '\\', '/') + '/scripts/og.html'
+          $out = Join-Path $PWD.Path 'assets\og-cover.png'
+          & $edge --headless=new --disable-gpu --no-sandbox `
+            --user-data-dir="$env:RUNNER_TEMP\edge-og" `
+            --screenshot="$out" --window-size=1200,630 $html
+          if (-not (Test-Path $out)) { Write-Error 'screenshot was not written'; exit 1 }
+          Write-Output "rendered: $((Get-Item $out).Length) bytes"
+      - name: Commit if changed
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/og-cover.png
+          if (git diff --cached --quiet) {
+            echo "og-cover.png unchanged - nothing to commit"
+          } else {
+            git commit -m "chore(og): re-render social cover [skip ci]"
+            git push
+          }
