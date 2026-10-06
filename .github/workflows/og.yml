@@ -8,6 +8,7 @@ name: OG cover render
 on:
   workflow_dispatch:
   push:
+    branches: ['**']  # tag pushes check out a detached HEAD - the commit step needs a branch
     paths:
       - scripts/og.html
       - assets/logo-mark-reversed.svg
@@ -41,5 +42,6 @@ jobs:
             echo "og-cover.png unchanged - nothing to commit"
           } else {
             git commit -m "chore(og): re-render social cover [skip ci]"
-            git push
+            # actions/checkout leaves a detached HEAD - push to the branch explicitly
+            git push origin "HEAD:refs/heads/$env:GITHUB_REF_NAME"
           }
