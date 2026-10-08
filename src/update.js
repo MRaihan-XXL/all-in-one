@@ -83,6 +83,7 @@ export function runUpdate({ binPath, check = false }) {
   // embedded runtime can't execute a JS file, so use the PATH node (npm's host).
   const nodeBin = /node(\.exe)?$/i.test(process.execPath) ? process.execPath : 'node';
   const res = spawnSync(nodeBin, [fresh, '--yes'], { stdio: 'inherit' });
-  // spawn failure (res.error) must not read as success via `status ?? 0`
-  process.exit(res.error ? 1 : res.status ?? 0);
+  // spawn failure (res.error) and a signal-killed child (status === null)
+  // must never read as success
+  process.exit(res.error || res.status === null ? 1 : res.status);
 }
