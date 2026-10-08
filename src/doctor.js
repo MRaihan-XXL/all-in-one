@@ -11,6 +11,7 @@ import { detectAgents } from './scan.js';
 import { BLOCK_START, ledgerList, ledgerFile } from './write.js';
 import { blockTargets } from './targets.js';
 import { getVersion } from './banner.js';
+import { msg } from './messages.js';
 
 /** CLI entry for re-spawning: source/npm install → bin/aio.js; a compiled
  *  binary has no sibling script file → the executable IS the CLI. */
@@ -71,51 +72,65 @@ export async function runChecks() {
   const supported = major >= 22 || !!process.versions.bun;
   checks.push(
     supported
-      ? line('ok', 'node', `v${process.versions.node} (supported: >= 22${process.versions.bun ? `, bun ${process.versions.bun} build` : ''})`)
+      ? line('ok', 'node', msg('doctorNodeOk', { v: process.versions.node, bun: process.versions.bun ? `, bun ${process.versions.bun} build` : '' }))
       : loads
-        ? line('warn', 'node', `v${process.versions.node} — runs, but unsupported; install Node >= 22 (load floor: >= 20.10)`)
-        : line('bad', 'node', `v${process.versions.node} — Node >= 22 required (load floor: Node >= 20.10)`)
+        ? line('warn', 'node', msg('doctorNodeWarn', { v: process.versions.node }))
+        : line('bad', 'node', msg('doctorNodeBad', { v: process.versions.node }))
   );
 
   // 2. State
   const state = readState();
   checks.push(
     Object.keys(state).length
-      ? line('ok', 'state', 'config.json ok (no local catalog)')
-      : line('warn', 'state', 'no persisted state — run `aio` once')
+      ? line('ok', 'state', msg('doctorStateOk'))
+      : line('warn', 'state', msg('doctorStateWarn'))
   );
 
   // 3. Live sources (info — the catalog IS the network; warn never fails CI)
   checks.push(
     live.offline
-      ? line('ok', 'live', 'AIO_OFFLINE=1 — live search intentionally disabled')
+      ? line('ok', 'live', msg('doctorLiveOffline'))
       : live.ok
-        ? line('ok', 'live', 'github reachable — ask searches GitHub + npm + crates (no search storage)')
+        ? line('ok', 'live', msg('doctorLiveOk'))
         : line(
             'warn',
             'live',
             live.status === 403 || live.status === 429
-              ? `rate-limited (HTTP ${live.status}) — gh auth login / GH_TOKEN — aio ask will still try npm/crates`
-              : `github unreachable (${live.msg}) — aio ask will still try npm/crates`
+              ? msg('doctorLiveRate', { status: live.status })
+              : msg('doctorLiveDown', { msg: live.msg })
           )
   );
 
   // 4. Manifest freshness
   const manifestPath = path.join(STATE_DIR, 'aio-context.md');
   if (fs.existsSync(manifestPath)) {
-    const txt = fs.readFileSync(manifestPath, 'utf8');
-    const ageDays = (Date.now() - fs.statSync(manifestPath).mtimeMs) / 86400000;
-    const liveLayout = txt.includes('Live architecture');
-    const detail = `${liveLayout ? 'live architecture (no search storage)' : 'LEGACY layout'} · ${ageDays.toFixed(1)}d old — ${manifestPath}`;
-    if (!liveLayout) {
-      checks.push(line('bad', 'manifest', `${detail} — fix: aio --fix`));
-    } else if (ageDays > 7) {
-      checks.push(line('warn', 'manifest', `${detail} — stale (>7d) — refresh: aio`));
-    } else {
-      checks.push(line('ok', 'manifest', detail));
+    // all reads inside try: a file vanishing/locking between existsSync and
+    // readFileSync must become a warn row, never a crash of the whole check (C-07)
+    try {
+      const txt = fs.readFileSync(manifestPath, 'utf8');
+      const ageDays = (Date.now() - fs.statSync(manifestPath).mtimeMs) / 86400000;
+      const liveLayout = txt.includes('Live architecture');
+      const detail = msg('doctorManifestLine', {
+        layout: msg(liveLayout ? 'doctorLayoutLive' : 'doctorLayoutLegacy'),
+        age: ageDays.toFixed(1),
+        path: manifestPath,
+      });
+      if (!liveLayout) {
+        checks.push(line('bad', 'manifest', msg('doctorManifestFix', { detail })));
+      } else if (ageDays > 7) {
+        checks.push(line('warn', 'manifest', msg('doctorManifestStale', { detail })));
+      } else {
+        checks.push(line('ok', 'manifest', detail));
+      }
+    } catch (e) {
+      // EISDIR (path is a directory, not a file) = broken install → rethrow so
+      // dispatch reports `doctor failed: ...` verbatim and exits 1 (loud, by
+      // contract). Transient read trouble (vanish/lock) → warn row instead.
+      if (e && e.code === 'EISDIR') throw e;
+      checks.push(line('warn', 'manifest', msg('doctorManifestUnreadable')));
     }
   } else {
-    checks.push(line('bad', 'manifest', 'aio-context.md missing — fix: aio --fix'));
+    checks.push(line('bad', 'manifest', msg('doctorManifestMissing')));
   }
 
   // 5. Agent blocks — from the shared target list (B-04); only count agents
@@ -127,66 +142,82 @@ export async function runChecks() {
   for (const { label, file, dir } of blockTargets(home, { agents })) {
     if (!fs.existsSync(dir)) continue;
     installed++;
-    if (fs.existsSync(file) && fs.readFileSync(file, 'utf8').includes(BLOCK_START)) injected++;
+    // read inside try: target file vanishing mid-scan = report as missing, not a crash (C-07)
+    let hasBlock = false;
+    try {
+      hasBlock = fs.readFileSync(file, 'utf8').includes(BLOCK_START);
+    } catch {
+      hasBlock = false;
+    }
+    if (fs.existsSync(file) && hasBlock) injected++;
     else missing.push(label);
   }
   checks.push(
     missing.length
-      ? line('bad', 'agent blocks', `${injected}/${installed} injected — missing: ${missing.join(', ')} — fix: aio --fix`)
-      : line('ok', 'agent blocks', `${injected}/${installed} installed agents carry the auto-context block`)
+      ? line('bad', 'agent blocks', msg('doctorBlocksMissing', { inj: injected, inst: installed, list: missing.join(', ') }))
+      : line('ok', 'agent blocks', msg('doctorBlocksOk', { inj: injected, inst: installed }))
   );
 
   // 6. Agents detected (info)
   const found = agents.filter((a) => a.found).map((a) => a.name);
-  checks.push(line('ok', 'agents', found.length ? found.join(', ') : 'none detected'));
+  checks.push(line('ok', 'agents', found.length ? found.join(', ') : msg('doctorAgentsNone')));
 
   // 7. gh auth — the skills lane reports an error on use without it (W1)
   checks.push(
     gh.state === 'ok'
-      ? line('ok', 'gh auth', 'logged in — skills lane enabled (gh api search/code)')
+      ? line('ok', 'gh auth', msg('doctorGhOk'))
       : gh.state === 'off'
-        ? line('ok', 'gh auth', 'AIO_NO_GH=1 — skills lane disabled by choice')
-        : line('warn', 'gh auth', 'not logged in — skills lane will report an error on use (run `gh auth login`)')
+        ? line('ok', 'gh auth', msg('doctorGhOff'))
+        : line('warn', 'gh auth', msg('doctorGhNoAuth'))
   );
 
   // 8. Ollama (info — powers `aio ask` AI rerank)
   checks.push(
     ollama.ok
-      ? line('ok', 'ollama', `reachable — models: ${ollama.models || 'none'}`)
-      : line('warn', 'ollama', 'not reachable — ask rerank skipped (source/BM25 order kept)')
+      ? line('ok', 'ollama', msg('doctorOllamaOk', { models: ollama.models || 'none' }))
+      : line('warn', 'ollama', msg('doctorOllamaDown'))
   );
 
   // 9. MCP ledger — always reported (B-09); missing ledger + state = attribution lost (S-01)
   if (!fs.existsSync(ledgerFile()) && Object.keys(state).length) {
-    checks.push(line('warn', 'mcp ledger', 'ledger missing — re-run `aio` to re-record MCP entries for rollback'));
+    checks.push(line('warn', 'mcp ledger', msg('doctorLedgerMissing')));
   } else {
     const ledger = ledgerList();
     if (ledger.length) {
       const broken = [];
       for (const { file, key } of ledger) {
-        if (!fs.existsSync(file)) {
-          broken.push(`${key}: ${path.basename(file)} missing`);
+        // read first, inside try: covers ENOENT (vanishing between checks —
+        // keep the exact 'missing' wording the report contract uses) AND
+        // EACCES/locked files, which used to throw out of runChecks (C-07).
+        let txt;
+        try {
+          txt = fs.readFileSync(file, 'utf8');
+        } catch (e) {
+          broken.push(
+            e && e.code === 'ENOENT'
+              ? msg('doctorLedgerNoFile', { key, file: path.basename(file) })
+              : msg('doctorLedgerUnreadable', { key, file: path.basename(file) })
+          );
           continue;
         }
-        const txt = fs.readFileSync(file, 'utf8');
         if (file.endsWith('.jsonc') || file.endsWith('.toml')) {
-          if (!txt.includes(key)) broken.push(`${key}: entry gone from ${path.basename(file)}`);
+          if (!txt.includes(key)) broken.push(msg('doctorLedgerGone', { key, file: path.basename(file) }));
         } else {
           try {
             JSON.parse(txt);
-            if (!txt.includes(key)) broken.push(`${key}: entry gone from ${path.basename(file)}`);
+            if (!txt.includes(key)) broken.push(msg('doctorLedgerGone', { key, file: path.basename(file) }));
           } catch {
-            broken.push(`${path.basename(file)}: parse error — fix before \`aio rollback\``);
+            broken.push(msg('doctorLedgerParse', { file: path.basename(file) }));
           }
         }
       }
       checks.push(
         broken.length
           ? line('warn', 'mcp ledger', broken.join('; '))
-          : line('ok', 'mcp ledger', `${ledger.length} aio-added MCP entry file(s) present & valid`)
+          : line('ok', 'mcp ledger', msg('doctorLedgerOk', { n: ledger.length }))
       );
     } else {
-      checks.push(line('ok', 'mcp ledger', '0 entries on record — nothing aio-added'));
+      checks.push(line('ok', 'mcp ledger', msg('doctorLedgerEmpty')));
     }
   }
 
@@ -219,13 +250,16 @@ function doctorJson(checks, { mode, ok, issues, warns, fix = null }) {
 export async function runDoctor(opts = {}) {
   const { checks, issues, warns, ok } = await runChecks();
   const mode = opts.check ? 'check' : opts.fix ? 'fix' : 'doctor';
-  const header = `aio doctor — v${getVersion()} ${opts.check ? '(check mode)' : opts.fix ? '(fix mode)' : ''}`;
+  const header = msg('doctorHeader', {
+    v: getVersion(),
+    mode: opts.check ? msg('doctorModeCheck') : opts.fix ? msg('doctorModeFix') : '',
+  });
   const body = checks.map((c) => c.text).join('\n');
   let fixNote = '';
   let fixOutcome = null;
   // --check is read-only by contract: --fix never spawns under it, only notes the conflict (6c)
   if (opts.fix && opts.check) {
-    fixNote = '\n--fix ignored under --check (read-only mode)';
+    fixNote = `\n${msg('doctorFixIgnored')}`;
   } else if (opts.fix && !ok) {
     // Safe fix = re-run the idempotent setup (regen manifest + reinject blocks).
     // --yes: the fix itself is the consent (non-TTY gate would stop at the plan).
@@ -240,7 +274,7 @@ export async function runDoctor(opts = {}) {
         timeout: 120000,
         encoding: 'utf8',
       });
-      fixNote = '\nfix: setup re-run complete — re-check:\n';
+      fixNote = `\n${msg('doctorFixDone')}\n`;
       const after = await runChecks();
       fixNote += after.checks.map((c) => c.text).join('\n');
       const fixed = { ok: after.ok, exit: after.ok ? 0 : 1 };
@@ -250,19 +284,19 @@ export async function runDoctor(opts = {}) {
       }
       return {
         ok: after.ok,
-        text: `${header}\n${body}${fixNote}\nafter fix: ${after.issues} issue(s), ${after.warns} warning(s)`,
+        text: `${header}\n${body}${fixNote}\n${msg('doctorAfterFix', { i: after.issues, w: after.warns })}`,
         exit: fixed.exit,
       };
     } catch (e) {
       const detail = String(e.stderr ?? '').trim().slice(0, 300);
       // dedup: keep stderr only when the message doesn't already carry it
       const extra = detail && !String(e.message).includes(detail) ? `\n${detail}` : '';
-      fixNote = `\nfix failed: ${e.message}${extra}`;
+      fixNote = `\n${msg('doctorFixFailed', { err: `${e.message}${extra}` })}`;
       fixOutcome = { attempted: true, ok: false, error: detail || e.message };
     }
   }
-  const summary = `${issues} issue(s), ${warns} warning(s)`;
-  const hint = !ok ? `\n→ run \`aio doctor --fix\` (regenerate manifest + agent blocks) or \`aio --yes\` directly.` : '';
+  const summary = msg('doctorSummary', { i: issues, w: warns });
+  const hint = !ok ? msg('doctorHint') : '';
   if (opts.json) {
     return { ok, text: doctorJson(checks, { mode, ok, issues, warns, fix: fixOutcome }), exit: ok ? 0 : 1 };
   }
