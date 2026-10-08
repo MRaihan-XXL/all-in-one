@@ -77,7 +77,10 @@ export function listPathCommands() {
       continue; // unreadable PATH entry — keep scanning
     }
     for (const e of entries) {
-      if (!e.isFile()) continue;
+      // Dirent.isFile() is FALSE for symlinks (withFileTypes doesn't stat
+      // through): skipping them hid every symlinked PATH command on POSIX
+      // (Homebrew /opt/homebrew/bin, `npm -g` bins) from PATH discovery (C-05).
+      if (!e.isFile() && !e.isSymbolicLink()) continue;
       let stem = e.name;
       if (isWin) {
         const lower = e.name.toLowerCase();

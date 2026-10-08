@@ -473,9 +473,11 @@ switch (opts.command) {
   }
   case 'init': {
     console.log(banner());
-    const { gatedRun } = await import('../src/consent.js');
-    const { runInit } = await import('../src/init.js');
+    // imports INSIDE the try: a corrupt/partial install must surface as
+    // cmdFailed + exit 1, never a bare top-level-await rejection (C-06).
     try {
+      const { gatedRun } = await import('../src/consent.js');
+      const { runInit } = await import('../src/init.js');
       await gatedRun({
         dry: !!opts.flags.dry,
         yes: !!opts.flags.yes,
@@ -491,9 +493,10 @@ switch (opts.command) {
   }
   default: {
     console.log(banner());
-    const { runSetup } = await import('../src/setup.js');
-    const { gatedRun } = await import('../src/consent.js');
+    // same contract as `init`: module-load failure → cmdFailed, not a raw throw (C-06).
     try {
+      const { runSetup } = await import('../src/setup.js');
+      const { gatedRun } = await import('../src/consent.js');
       const showBlock = !!opts.flags.showBlock;
       // 6b: --show-block only ADDS output — it never downgrades --yes to plan-only.
       // Only `aio preview` (flags.preview) and --dry-run force the plan.

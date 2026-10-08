@@ -73,23 +73,33 @@ const hashKey = (file) => {
   return process.platform === 'win32' ? k.toLowerCase() : k;
 };
 
+// Files this run moved aside via preserveCorrupt: an ENOENT right after is OUR
+// rename, not "no state yet" — reads must stay null (refuse) instead of
+// silently rebuilding from {} (C-03).
+const preservedAside = new Map();
+
 function hashesRead() {
   let raw;
   try {
     raw = fs.readFileSync(HASHES, 'utf8');
   } catch {
+    // nothing recorded yet → empty state; but after a this-run preserve the
+    // file is gone BY OUR HAND — returning {} there would rebuild drift state
+    // from scratch and let the next write claim "no drift" for every block.
+    if (preservedAside.has(HASHES)) return null;
     return {}; // nothing recorded yet — same as an empty state
   }
   try {
     const o = JSON.parse(raw);
-    return o && typeof o === 'object' ? o : {};
+    if (o && typeof o === 'object' && !Array.isArray(o)) return o;
   } catch {
-    // CORRUPT → null, not {}: rebuilding the drift state from {} would let the
-    // next write silently claim "no drift" for every block ever written. The bad
-    // bytes are preserved aside; callers must refuse to write until it's fixed.
-    preserveCorrupt(HASHES);
-    return null;
+    /* invalid JSON → corrupt below (same as a shapeless root) */
   }
+  // CORRUPT → null, not {}: rebuilding the drift state from {} would let the
+  // next write silently claim "no drift" for every block ever written. The bad
+  // bytes are preserved aside; callers must refuse to write until it's fixed.
+  preservedAside.set(HASHES, preserveCorrupt(HASHES));
+  return null;
 }
 
 function rememberBlock(file, body) {
@@ -223,7 +233,12 @@ function ledgerRead() {
   try {
     raw = fs.readFileSync(LEDGER, 'utf8');
   } catch {
-    return []; // no ledger yet = aio recorded nothing (missing ≠ corrupt)
+    // no ledger yet = aio recorded nothing (missing ≠ corrupt) — UNLESS this
+    // run already moved a corrupt copy aside: then ENOENT is our own rename and
+    // the corrupt sentinel must keep standing (a fresh [] would hide the old
+    // records from rollback) (C-03).
+    if (preservedAside.has(LEDGER)) return { corrupt: true, path: preservedAside.get(LEDGER) };
+    return [];
   }
   try {
     const o = JSON.parse(raw);
@@ -234,11 +249,17 @@ function ledgerRead() {
   // CORRUPT (truncated/invalid/shapeless): preserving it aside is not enough —
   // a [] read-back would make the remove* paths PERMANENTLY wipe the record on
   // the next write. Hand callers this sentinel so they refuse to write instead.
-  return { corrupt: true, path: preserveCorrupt(LEDGER) };
+  const dest = preserveCorrupt(LEDGER);
+  preservedAside.set(LEDGER, dest);
+  return { corrupt: true, path: dest };
 }
 function ledgerAdd(file, key) {
   const r = ledgerRead();
-  const l = Array.isArray(r) ? r : []; // corrupt preserved aside → start a fresh record
+  // corrupt (preserved aside) → REFUSE to rebuild: a fresh [] here would make
+  // the next rollback claim success while the pre-corruption MCP entries sit
+  // unreverted in the agent configs (matches removeMcpAdditions' refusal).
+  if (!Array.isArray(r)) return;
+  const l = r;
   if (!l.some((e) => e.file === file && e.key === key)) {
     l.push({ file, key });
     fs.mkdirSync(STATE_DIR, { recursive: true });
@@ -286,6 +307,12 @@ export function ensureJsonEntry(file, key, entry, label, rootKey, create = false
     obj = {}; // agent config dir present → bootstrap the file (gemini settings.json)
   } else {
     return { target: path.basename(file), status: 'file not found — skipped' };
+  }
+  // valid JSON but a scalar/array/null ROOT can't hold an entry: report like a
+  // parse error instead of crashing the whole run mid-setup (obj[rootKey] on
+  // null / assignment onto a primitive throws TypeError) (C-04).
+  if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) {
+    return { target: path.basename(file), status: 'parse error: root is not an object' };
   }
   if (rootKey && (obj[rootKey] === null || typeof obj[rootKey] !== 'object' || Array.isArray(obj[rootKey]))) {
     obj[rootKey] = {}; // parseable-but-wrong-shape config (e.g. "mcpServers": "string") — rebuild, never TypeError

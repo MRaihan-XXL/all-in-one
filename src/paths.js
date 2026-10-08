@@ -16,7 +16,10 @@ export const BACKUP_DIR = path.join(STATE_DIR, 'backups');
  *  (tmp on another mount) fall back to a direct write — a non-atomic write is
  *  still better than no write; only the torn-file case is what we prevent. */
 export function writeAtomic(file, data) {
-  const tmp = `${file}.tmp`;
+  // Unique per process + call: two concurrent aio runs (or a setup racing a
+  // doctor --fix) must never share a tmp name — shared tmp = interleaved bytes
+  // renamed into the real file (torn JSON) (C-03).
+  const tmp = `${file}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}.tmp`;
   try {
     fs.writeFileSync(tmp, data);
     fs.renameSync(tmp, file);
