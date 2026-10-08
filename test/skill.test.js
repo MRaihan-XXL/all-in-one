@@ -185,3 +185,60 @@ test('skillAdd: no target and no --file → usage, ok:false', async (t) => {
   assert.ok(r.text.startsWith('usage:'), `usage first: ${r.text}`);
   assert.match(r.text, /aio skill add/);
 });
+
+/* ---------------- --sha256 integrity pin (1b) ---------------- */
+
+test('skillAdd --sha256: malformed pin → refusal with the NORMALIZED value, nothing installed', async (t) => {
+  const home = fixtureHome(t);
+  const src = sourceDir('# Pinned skill\n\nA body long enough to pass the stub guard.\n');
+
+  const spaced = await skillAdd({ target: '', file: src, name: 'sha-bad', sha256: '  DEADBEEF  ' });
+  assert.equal(spaced.ok, false, spaced.text);
+  assert.equal(
+    spaced.text,
+    '[aio] skill: --sha256 must be 64 hex characters, got: deadbeef',
+    'trim + lowercase run before the 64-hex validation'
+  );
+
+  const short = await skillAdd({ target: '', file: src, name: 'sha-short', sha256: 'abc123' });
+  assert.equal(short.ok, false, short.text);
+  assert.match(short.text, /must be 64 hex characters, got: abc123/);
+
+  assert.equal(fs.existsSync(path.join(skillsDir(home), 'sha-bad')), false, 'refused before any write');
+  assert.equal(fs.existsSync(path.join(skillsDir(home), 'sha-short')), false, 'refused before any write');
+  assert.deepEqual(ledger(), [], 'a malformed pin records nothing');
+});
+
+test('skillAdd --sha256: 64 hex but wrong digest → refusal naming BOTH hashes, nothing installed', async (t) => {
+  const home = fixtureHome(t);
+  const CONTENT = '# Sha mismatch\n\nA body long enough to pass the stub guard.\n';
+  const src = sourceDir(CONTENT);
+  const got = crypto.createHash('sha256').update(CONTENT, 'utf8').digest('hex');
+  const want = 'f'.repeat(64);
+
+  const r = await skillAdd({ target: '', file: src, name: 'sha-mismatch', sha256: want });
+
+  assert.equal(r.ok, false, r.text);
+  assert.equal(
+    r.text,
+    `[aio] skill: sha256 mismatch - wanted ${want}, fetched ${got}. Refusing to install.`,
+    'both digests verbatim, refusal explicit'
+  );
+  assert.equal(fs.existsSync(path.join(skillsDir(home), 'sha-mismatch')), false, 'refused before any write');
+  assert.deepEqual(ledger(), [], 'a supply-chain refusal records nothing');
+});
+
+test('skillAdd --sha256: matching digest → installed; ledger keeps its own 16-char sha', async (t) => {
+  const home = fixtureHome(t);
+  const CONTENT = '# Sha match\n\nA body long enough to pass the stub guard.\n';
+  const src = sourceDir(CONTENT);
+  const want = crypto.createHash('sha256').update(CONTENT, 'utf8').digest('hex');
+
+  const r = await skillAdd({ target: '', file: src, name: 'sha-ok', sha256: want.toUpperCase() });
+
+  assert.equal(r.ok, true, r.text);
+  assert.match(r.text, /installed/, 'uppercase hex accepted (normalized before comparison)');
+  const file = path.join(skillsDir(home), 'sha-ok', 'SKILL.md');
+  assert.equal(fs.readFileSync(file, 'utf8'), CONTENT, 'content written only after the pin matched');
+  assert.equal(ledger().find((e) => e.name === 'sha-ok').sha, sha(CONTENT), 'ledger digest unchanged by the pin');
+});

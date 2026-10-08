@@ -14,6 +14,7 @@
 // (and its `evolve` alias) is safe because its npm-test step fails at the empty PATH.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -148,6 +149,42 @@ test('skill list → empty root exits 0; add/remove failure lanes exit 1 with th
   const rm = run(REPO, 'skill', 'remove', 'nope');
   assert.equal(rm.status, 1);
   assert.match(rm.stdout, /not installed/, 'missing skill named');
+});
+
+test('skill add --sha256 → malformed / mismatched pin refuses (exit 1 + reason), the right pin installs (exit 0)', () => {
+  const src = path.join(HOME, 'sha-src.md');
+  const CONTENT = '# E2E pin\n\nA body long enough to pass the 20-char stub guard.\n';
+  fs.writeFileSync(src, CONTENT);
+  const good = crypto.createHash('sha256').update(CONTENT, 'utf8').digest('hex');
+
+  // 1. not 64 hex → skillShaBadFormat, exit 1
+  const bad = run(REPO, 'skill', 'add', '--file', src, '--name', 'pin-bad', '--sha256', 'deadbeef');
+  assert.equal(bad.status, 1, 'a malformed pin is a refusal, not a warning');
+  assert.match(bad.stdout, /^\[aio\] skill: --sha256 must be 64 hex characters, got: deadbeef/);
+
+  // 2. 64 hex of the WRONG digest → skillShaMismatch naming both, exit 1
+  const mismatch = run(REPO, 'skill', 'add', '--file', src, '--name', 'pin-mis', '--sha256', 'f'.repeat(64));
+  assert.equal(mismatch.status, 1, 'a supply-chain mismatch refuses');
+  assert.match(
+    mismatch.stdout,
+    new RegExp(`^\\[aio\\] skill: sha256 mismatch - wanted f{64}, fetched ${good}\\.`),
+    `both digests reported: ${mismatch.stdout}`
+  );
+  assert.equal(
+    fs.existsSync(path.join(HOME, '.agents', 'skills', 'pin-mis')),
+    false,
+    'nothing installed for a refused pin'
+  );
+
+  // 3. the exact digest → installed, exit 0
+  const ok = run(REPO, 'skill', 'add', '--file', src, '--name', 'pin-ok', '--sha256', good);
+  assert.equal(ok.status, 0, `the right pin installs: ${ok.stdout}`);
+  assert.match(ok.stdout, /installed/);
+  assert.equal(
+    fs.readFileSync(path.join(HOME, '.agents', 'skills', 'pin-ok', 'SKILL.md'), 'utf8'),
+    CONTENT,
+    'bytes verified against the pin before landing on disk'
+  );
 });
 
 test('update → npm is unreachable (PATH=""), fails honestly before any network', () => {

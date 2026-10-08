@@ -7,6 +7,9 @@
 //   • every command-level catch: status / rollback / borrow / skill / doctor /
 //     init — each forced by a path that is a DIRECTORY where a file is read
 //     (EISDIR) or a FILE where a directory is read (ENOTDIR)
+//   • the two `await import` sites (init + default/setup) failing to LOAD:
+//     a syntax-broken module in a copied install → cmdFailed + exit 1,
+//     never an unhandled top-level-await rejection (C-06)
 //   • rollback's incomplete contract (corrupt ledger → refusal row → exit 1)
 //   • `completion` with no shell → usage refusal
 // SAFETY (hermetic child env, same shape as coverage-bin.test.js):
@@ -206,6 +209,51 @@ test('init --yes: ./AGENTS.md is a directory → apply() throws → catch, exit 
 
   assert.equal(r.status, 1, '--yes skips the plan and goes straight to apply()');
   assert.match(r.stderr, /\[aio\] init failed: /, 'the original error is surfaced verbatim');
+});
+
+/* ---------------- init / default: the `await import` itself fails ---------------- */
+
+/** A throwaway copy of the install (bin + src + package.json) with ONE module
+ *  made syntactically invalid — importing it throws at MODULE-LOAD time, which
+ *  is the only way to exercise the catch around `await import(...)` itself
+ *  (the EISDIR lanes above fail inside the CALL, not the load). */
+function brokenInstall(t, breakFile) {
+  const root = scratch(t, 'aio-d-broken-');
+  fs.cpSync(path.join(REPO, 'bin'), path.join(root, 'bin'), { recursive: true });
+  fs.cpSync(path.join(REPO, 'src'), path.join(root, 'src'), { recursive: true });
+  fs.copyFileSync(path.join(REPO, 'package.json'), path.join(root, 'package.json'));
+  fs.writeFileSync(path.join(root, breakFile), 'export const broken = ;\n'); // SyntaxError on load
+  return { root, bin: path.join(root, 'bin', 'aio.js') };
+}
+
+test('default (setup): a module that fails to LOAD → cmdFailed + exit 1, not an unhandled rejection', (t) => {
+  const { root, bin } = brokenInstall(t, 'src/setup.js');
+  const { env } = envFor(t);
+
+  const r = run(env, root, [bin]);
+
+  assert.equal(r.status, 1, 'a broken install fails the command, never exits 0');
+  assert.match(r.stderr, /\[aio\] setup failed: /, 'the load error goes through cmdFailed');
+  assert.doesNotMatch(
+    r.stderr,
+    /ERR_UNHANDLED_REJECTION|promises_reject/,
+    'no raw top-level-await rejection escaping the catch'
+  );
+});
+
+test('init: a module that fails to LOAD → cmdFailed + exit 1, not an unhandled rejection', (t) => {
+  const { root, bin } = brokenInstall(t, 'src/consent.js');
+  const { env } = envFor(t);
+
+  const r = run(env, root, [bin, 'init', '--yes']);
+
+  assert.equal(r.status, 1, 'imports run INSIDE the try → a load failure is a caught failure');
+  assert.match(r.stderr, /\[aio\] init failed: /, 'the load error goes through cmdFailed');
+  assert.doesNotMatch(
+    r.stderr,
+    /ERR_UNHANDLED_REJECTION|promises_reject/,
+    'no raw top-level-await rejection escaping the catch'
+  );
 });
 
 /* ---------------- ask / agent: a real success (r.ok ? 0 : 1 → 0) ---------------- */

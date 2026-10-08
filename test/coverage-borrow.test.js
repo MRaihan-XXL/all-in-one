@@ -129,7 +129,12 @@ test('borrowClone: statfs unavailable → guard passes (Infinity), then the git 
 
 /* ---------------- runBorrow --get (lines 156–168) ---------------- */
 
-test('runBorrow --get: already-cloned target → ok + status/path/free-disk report (no spawn)', async () => {
+test('runBorrow --get: already-cloned target → ok + status/path/free-disk report (no spawn)', async (t) => {
+  // The disk guard runs BEFORE the already-cloned short-circuit (borrowClone
+  // L91-96), so a real statfs made this test machine-dependent — historical
+  // failure: `low disk: 457 MB free (< 1 GB)`. Pin a healthy 4 GiB (same mock
+  // pattern as the statfs lanes above) → the report lane stays deterministic.
+  t.mock.method(fs, 'statfsSync', () => ({ bavail: 4 * 1024, bsize: 1024 * 1024 }));
   resetBorrowDir();
   fs.mkdirSync(path.join(BORROW_DIR, 'owner_repo', '.git'), { recursive: true }); // 4c: a real clone carries .git
 
