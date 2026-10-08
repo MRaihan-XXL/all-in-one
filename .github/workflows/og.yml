@@ -42,6 +42,8 @@ jobs:
             echo "og-cover.png unchanged - nothing to commit"
           } else {
             git commit -m "chore(og): re-render social cover [skip ci]"
-            # actions/checkout leaves a detached HEAD - push to the branch explicitly
+            # actions/checkout leaves a detached HEAD - push to the branch explicitly;
+            # rebase first in case stats/eval pushed while Edge was rendering
+            git pull --rebase origin $env:GITHUB_REF_NAME
             git push origin "HEAD:refs/heads/$env:GITHUB_REF_NAME"
           }

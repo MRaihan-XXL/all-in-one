@@ -3,8 +3,11 @@ name: npm-auth-check
 # Preflight for the release publish lane: prints npm whoami (USERNAME ONLY —
 # never the token) using the NPM_TOKEN secret, so an invalid/unscoped/foreign
 # token is diagnosed in seconds instead of surfacing as npm's misleading E404
-# on publish. Dispatch manually: gh workflow run npm-auth-check.yml.
+# on publish. Weekly schedule catches an expired/revoked token before release
+# day; dispatch manually: gh workflow run npm-auth-check.yml.
 on:
+  schedule:
+    - cron: '23 5 * * 1' # Mondays 05:23 UTC — token sanity before release week
   workflow_dispatch:
 
 permissions:
