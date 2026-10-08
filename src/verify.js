@@ -1,8 +1,8 @@
 // verify.js — `aio verify`: run the self-upgrade pipeline as one command and
 // report what changed. Never commits/pushes by itself (git stays with the human).
 // Pipeline: setup (manifest+blocks) → doctor --check → tests.
-// The install-plan scan (scripts/install-tools.mjs) is dev-machine tooling and
-// is NOT part of verify — it is not shipped in the npm package.
+// No install-plan scan exists here (the dev-only scripts/install-tools.mjs was
+// removed); verify never touches repositories beyond this repo's own checkout.
 import path from 'node:path';
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
