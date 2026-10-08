@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="./CHANGELOG.md"><img src="https://img.shields.io/badge/release-v1.8.0-cb3837" alt="release v1.8.0 (2026-10-06)"></a>
+  <a href="./CHANGELOG.md"><img src="https://img.shields.io/badge/release-v1.9.0-cb3837" alt="release v1.9.0 (2026-10-08)"></a>
   <a href="https://www.npmjs.com/package/aio-connect"><img src="https://img.shields.io/npm/v/aio-connect?color=cb3837" alt="npm version"></a>
   <a href="https://github.com/MRaihan-XXL/all-in-one/actions/workflows/ci.yml"><img src="https://github.com/MRaihan-XXL/all-in-one/actions/workflows/ci.yml/badge.svg" alt="CI 3-OS"></a>
   <img src="https://img.shields.io/badge/eval-hit%401%2097.4%25%20%C2%B7%20MRR%200.984%20%C2%B7%20n%3D114-2ea44f" alt="eval: hit@1 97.4%  MRR 0.984  n=114 (2026-10-06)">
@@ -21,6 +21,7 @@
 </p>
 
 <p align="center">
+  <a href="./OUTPUTS.md">📟 Output gallery</a> ·
   <a href="./PRD.md">📜 PRD</a> ·
   <a href="./docs/flow.md">🌊 How it works</a> ·
   <a href="./docs/CONFIG.md">⚙️ What changes</a> ·
@@ -38,7 +39,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 254 tests (253 pass · 1 skip · 0 fail)">
+  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 290 tests (289 pass · 1 skip · 0 fail)">
 </p>
 
 ## ✨ What it does
@@ -243,7 +244,7 @@ The binary and installer channels need no Node at all.
 | `NO_COLOR=1` | no ANSI colors (the banner is already colorless when piped) |
 | `AIO_OFFLINE=1` | `aio ask` short-circuits with an explicit offline message; `skill search` and `agent` do the same (live by design); `skill add` refuses remote installs |
 | `AIO_NO_GH=1` | skip the GitHub skills lane entirely |
-| `AIO_LANG=id` | full CLI output in Bahasa Indonesia (`aio --help` mirrors the English help line-for-line, and errors, doctor, update, skill and borrow messages come from the same 51-key catalog in `src/messages.js`; commands/flags/env names stay English) |
+| `AIO_LANG=id` | full CLI output in Bahasa Indonesia (`aio --help` mirrors the English help line-for-line, and errors, doctor, status, update, skill and borrow messages come from the same EN/ID catalog in `src/messages.js`; commands/flags/env names stay English) |
 | `AIO_STATE_DIR` | move the state dir off `~/.aio` |
 | `GH_TOKEN` / `gh auth login` | authenticated GitHub search (raises the rate budget, enables the skills lane) |
 | `OLLAMA_HOST`, `AIO_OLLAMA_MODEL`, `AIO_NO_AI=1` | optional local rerank for `aio ask` (warm only) |
@@ -415,17 +416,55 @@ agent's own (the `agent` web lane talks only to `en.wikipedia.org` and
 ## 🛠 Development
 
 ```bash
-npm test             # node --test — 279 tests: 278 pass, 1 skip, 0 fail (live search, agent, skill search, injection, consent gate, drift, borrow, doctor, …)
-npm run test:coverage # same suite + coverage gates 90 lines / 80 branches / 85 functions (last run: 97.97 / 90.26 / 97.56)
+npm test             # node --test — 290 tests: 289 pass, 1 skip, 0 fail (live search, agent, skill search, injection, consent gate, drift, borrow, doctor, …)
+npm run test:coverage # same suite + coverage gates 90 lines / 80 branches / 85 functions (last run: 98.19 / 90.61 / 97.56)
 node bin/aio.js      # run from a checkout without installing
 node bin/aio.js ask "pdf ke word"
 node bin/aio.js agent "csv to interactive chart"
 node bin/aio.js doctor --check
+node scripts/capture-outputs.mjs  # regenerate OUTPUTS.md (verbatim CLI output gallery, never hand-typed)
+powershell -ExecutionPolicy Bypass -File scripts/screenshots.ps1  # re-render assets/screenshots/*.png from the animated SVGs (Edge headless)
 node scripts/eval-relevance.mjs --write   # from a repo checkout (scripts/ ships in the repo, not the npm tarball): live 114-query golden set → hit@8 = 114/114 (100%), hit@1 = 111/114 (97.4%), MRR 0.984, measured 2026-10-06
 ```
 
+Static JSON endpoints (GitHub Pages, same origin as the site — no auth, no
+rate limit, `Cache-Control` from Pages):
+
+| Endpoint | Contents |
+|---|---|
+| `https://mraihan-xxl.github.io/all-in-one/docs/stats.json` | tests / coverage / scorecard snapshot — written by `node scripts/stats.mjs --write`, read by the homepage proof section and `scripts/verify-scorecard.mjs` |
+| `https://mraihan-xxl.github.io/all-in-one/sbom.cdx.json` | CycloneDX SBOM of the published package |
+| `https://mraihan-xxl.github.io/all-in-one/eval-result.json` | last relevance-eval result (hit@8, hit@1, MRR) |
+
 Contribution workflow and conventions: **[CONTRIBUTING.md](./CONTRIBUTING.md)**.
 Planned work: **[ROADMAP.md](./ROADMAP.md)**.
+Every command's real output, verbatim: **[OUTPUTS.md](./OUTPUTS.md)**.
+
+## 📸 Screenshots
+
+Real captures of the animated SVG sources in [`assets/`](./assets/) — rendered
+headless (Edge) at a settled frame, regenerate any time with
+`powershell -File scripts/screenshots.ps1`.
+
+**The live pipeline — prompt → ask → use → report → clean → repeat:**
+
+![aio live pipeline: prompt, parallel search lanes, ranked results, ephemeral use, report, clean, repeat](./assets/screenshots/flow.png)
+
+**Hero — the everything connector for AI agents:**
+
+![aio hero: dimensional logo, live catalog 630M+ repos, 3M+ npm, 340K+ crates, 6.8M+ skill files, prompt to aio ask to use to report to clean](./assets/screenshots/hero.png)
+
+| 60-second terminal demo | FR6 disclosure card |
+|---|---|
+| ![terminal demo: aio setup wires 8 agents, aio ask searches live, ranked results with verify note, disclosure line, aio borrow clean](./assets/screenshots/demo.png) | ![FR6 disclosure: every agent reply begins with the linked, attributed, auditable [aio] Using line](./assets/screenshots/disclosure.png) |
+
+**Verified stats — floors measured 2026-09-30:**
+
+![verified stats: 630M+ github repos, 3M+ npm packages, 340K+ crates, 6.8M+ skill files, 0 results kept, 290 tests run](./assets/screenshots/stats.png)
+
+**The live site — proof section auto-loads `docs/stats.json`, never hand-typed:**
+
+![aio site full page: hero, catalog, pipeline, demo, verified stats, machine-verified proof section loaded from stats.json](./assets/screenshots/site.png)
 
 ## 🎨 Brand kit
 

@@ -95,7 +95,27 @@ readme = patch(
   `(last run: ${covLine})`,
   'coverage triplet',
 );
+// the hero image alt texts carry the same counts in prose form - keep them in sync too
+readme = patch(
+  'README.md',
+  readme,
+  /\d+ tests \(\d+ pass \u00b7 \d+ skip \u00b7 \d+ fail\)/,
+  `${total} tests (${pass} pass \u00b7 ${skip} skip \u00b7 ${fail} fail)`,
+  'README img alt counts',
+);
 fs.writeFileSync(readmePath, readme);
+
+// index.html - the stats card alt attribute (same prose counts, comma form)
+const idxPath = path.join(ROOT, 'index.html');
+let idx = fs.readFileSync(idxPath, 'utf8');
+idx = patch(
+  'index.html',
+  idx,
+  /\d+ tests \(\d+ pass, \d+ skip, \d+ fail\)/,
+  `${total} tests (${pass} pass, ${skip} skip, ${fail} fail)`,
+  'index.html alt counts',
+);
+fs.writeFileSync(idxPath, idx);
 
 // assets/aio-stats.svg - aria-label + the two visible stats nodes
 const svgPath = path.join(ROOT, 'assets', 'aio-stats.svg');
@@ -127,4 +147,4 @@ fs.writeFileSync(svgPath, svg);
 const statsPath = path.join(ROOT, 'docs', 'stats.json');
 fs.writeFileSync(statsPath, JSON.stringify(stats, null, 2) + '\n');
 
-console.log(`patched README.md, assets/aio-stats.svg, docs/stats.json (${countLine}, cov ${covLine})`);
+console.log(`patched README.md, index.html, assets/aio-stats.svg, docs/stats.json (${countLine}, cov ${covLine})`);

@@ -1,7 +1,8 @@
 # --- local data NEVER uploaded (FR8) ---
 # zero-storage architecture: no catalog db ships (github/npm/crates are searched live);
-# screenshots/TRACKING/etc stay machine-local.
-screenshots/
+# local capture dumps at repo root + TRACKING/etc stay machine-local.
+# (curated gallery assets/screenshots/ DOES ship — README embeds it; regen via scripts/screenshots.ps1)
+/screenshots/
 TRACKING.md
 TOOLS-INDEX.md
 aio-context.md

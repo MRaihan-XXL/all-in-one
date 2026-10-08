@@ -228,12 +228,28 @@ check('quality', 'eval script covers all query families (QUERIES array)',
   } catch (e) { detail = e.message; }
   check('coverage-floor', 'README test line matches docs/stats.json exactly', ok, detail);
 }
+{
+  // the prose-form alt texts are patched by the same `stats.mjs --write` run;
+  // verify them too so a skipped regeneration fails the scorecard, not the reader
+  let ok = false, detail = '';
+  try {
+    const st = JSON.parse(read('docs/stats.json'));
+    const t = st.tests;
+    const wantComma = `${t.total} tests (${t.pass} pass, ${t.skip} skip, ${t.fail} fail)`;
+    const wantDot = `${t.total} tests (${t.pass} pass \u00b7 ${t.skip} skip \u00b7 ${t.fail} fail)`;
+    const idxOk = read('index.html').includes(wantComma);
+    const rmOk = read('README.md').includes(wantDot);
+    ok = idxOk && rmOk;
+    detail = `index.html=${idxOk ? 'ok' : 'STALE'} README-hero=${rmOk ? 'ok' : 'STALE'} (${wantComma})`;
+  } catch (e) { detail = e.message; }
+  check('coverage-floor', 'index.html + README hero alt counts match docs/stats.json', ok, detail);
+}
 
 // ── 13. i18n (catalog parity + HELP mirror) ─────────────────────────────────
 {
   const { parity, msg } = await import(new URL('../src/messages.js', import.meta.url));
   const p = parity();
-  check('i18n', `messages parity: ${p.total} keys in BOTH tables`, p.total >= 51 && p.missingID.length === 0 && p.missingEN.length === 0,
+  check('i18n', `messages parity: ${p.total} keys in BOTH tables`, p.total >= 100 && p.missingID.length === 0 && p.missingEN.length === 0,
     JSON.stringify({ missingID: p.missingID, missingEN: p.missingEN }));
   check('i18n', 'no placeholder drift EN vs ID', p.placeholderDrift.length === 0, p.placeholderDrift.join(', '));
   check('i18n', 'msg renders (EN default + AIO_LANG=id switch)',

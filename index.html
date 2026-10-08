@@ -7,7 +7,15 @@
 <meta name="description" content="aio writes the context blocks and manifest your AI coding agents read — one command, no slash-commands. Live search over GitHub (630M+ repos), npm and crates on every ask; zero bytes stored. Works with opencode, Claude Code, Codex, Gemini CLI, kimi, hermes, freebuff, jcode.">
 <meta property="og:title" content="aio — auto-connect your AI agents">
   <meta property="og:description" content="One command. Every agent. Live GitHub/npm/crates search on every ask, no search storage, disclosure built in.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://mraihan-xxl.github.io/all-in-one/">
+<meta property="og:site_name" content="aio — all-in-one">
 <meta property="og:image" content="https://mraihan-xxl.github.io/all-in-one/assets/og-cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="aio — auto-connect your AI agents">
+<meta name="twitter:description" content="One command. Every agent. Live GitHub/npm/crates search on every ask, no search storage, disclosure built in.">
+<meta name="twitter:image" content="https://mraihan-xxl.github.io/all-in-one/assets/og-cover.png">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <link rel="icon" type="image/svg+xml" href="./assets/logo-favicon.svg">
 <style>
   :root{
@@ -91,6 +99,15 @@
   footer{padding:44px 0 60px;color:var(--mute);font-size:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
   footer a{color:var(--paper);text-decoration:none}
   footer a:hover{color:var(--vermilion)}
+  /* scroll-reveal (JS adds .js + .reveal; no JS = content visible as-is) */
+  @media (prefers-reduced-motion: no-preference){
+    .js .reveal.pre{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}
+    .js .reveal.pre.in{opacity:1;transform:none}
+    .grid .cell.pre:nth-child(2n){transition-delay:.08s}
+    .steps .step.pre:nth-child(2){transition-delay:.08s}
+    .steps .step.pre:nth-child(3){transition-delay:.16s}
+    .hero .reveal.pre{transition-delay:.15s}
+  }
   @media(max-width:720px){
     .steps,.grid{grid-template-columns:1fr}
     .hero{padding:56px 0 48px}
@@ -140,8 +157,31 @@
   </div>
 
   <div style="max-width:1100px;margin:26px auto 0;padding:0 20px">
-    <img src="./assets/aio-stats.svg" width="100%" alt="Verified stats: 630M+ github repos, 3M+ npm packages, 340K+ crates, 6.8M+ skill files, no search storage, 254 tests (253 pass, 1 skip, 0 fail)" style="display:block;border-radius:20px">
+    <img src="./assets/aio-stats.svg" width="100%" alt="Verified stats: 630M+ github repos, 3M+ npm packages, 340K+ crates, 6.8M+ skill files, no search storage, 290 tests (289 pass, 1 skip, 0 fail)" style="display:block;border-radius:20px">
   </div>
+
+  <section id="proof">
+    <h2>Machine-verified proof</h2>
+    <p class="lede">These cells load live from <code style="font-family:var(--mono)">docs/stats.json</code> — written by a real suite run (<code style="font-family:var(--mono)">node scripts/stats.mjs --write</code>), never hand-typed. Same file the release scorecard and CI gate read.</p>
+    <div class="grid">
+      <div class="cell"><h3><span>TESTS</span><b id="p-tests">—</b></h3><p id="p-tests-sub">loading docs/stats.json …</p></div>
+      <div class="cell"><h3><span>COVERAGE</span><b id="p-cov">—</b></h3><p>lines / branches / functions — gates 90 / 80 / 85</p></div>
+      <div class="cell"><h3><span>SCORECARD</span><b id="p-score">—</b></h3><p id="p-score-sub">15 aspects × machine checks</p></div>
+      <div class="cell"><h3><span>GENERATED</span><b id="p-date">—</b></h3><p>docs/stats.json timestamp (re-run regenerates it)</p></div>
+    </div>
+    <script>
+    fetch('./docs/stats.json').then(function(r){return r.json()}).then(function(s){
+      document.getElementById('p-tests').textContent=s.tests.total;
+      document.getElementById('p-tests-sub').textContent=s.tests.pass+' pass · '+s.tests.skip+' skip · '+s.tests.fail+' fail';
+      document.getElementById('p-cov').textContent=s.coverage.lines+' / '+s.coverage.branches+' / '+s.coverage.functions;
+      document.getElementById('p-score').textContent=s.scorecard.earned+'/'+s.scorecard.possible;
+      document.getElementById('p-score-sub').textContent='15/15 aspects ≥ 10/10 ('+s.coverage.lines+'% lines)';
+      document.getElementById('p-date').textContent=String(s.generated).slice(0,10);
+    }).catch(function(){
+      document.getElementById('p-score-sub').textContent='stats.json unavailable — run node scripts/stats.mjs --write';
+    });
+    </script>
+  </section>
 
   <section id="how">
     <h2>How it works</h2>
@@ -195,7 +235,7 @@
 
   <footer>
     <span>© 2026 MRaihan-XXL · GPL-3.0</span>
-    <span><a href="https://github.com/MRaihan-XXL/all-in-one">GitHub</a> · <a href="https://www.npmjs.com/package/aio-connect">npm</a> · <a href="https://github.com/MRaihan-XXL/all-in-one/blob/main/PRD.md">PRD</a></span>
+    <span><a href="https://github.com/MRaihan-XXL/all-in-one">GitHub</a> · <a href="https://www.npmjs.com/package/aio-connect">npm</a> · <a href="https://github.com/MRaihan-XXL/all-in-one/blob/main/PRD.md">PRD</a> · <a href="https://github.com/MRaihan-XXL/all-in-one/blob/main/OUTPUTS.md">Output gallery</a></span>
   </footer>
 </div>
 <script>
@@ -205,6 +245,22 @@ document.getElementById('cmd').addEventListener('click',function(){
     setTimeout(function(){e.textContent='COPY'},1400);
   });
 });
+/* scroll-reveal: decorate on load, reveal on intersection. No JS / reduced
+   motion / no IntersectionObserver → content renders visible, unchanged. */
+(function(){
+  if(!('IntersectionObserver' in window)) return;
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var els=document.querySelectorAll('section, .step, .cell, .agents, .hero > *');
+  if(!els.length) return;
+  document.documentElement.classList.add('js');
+  els.forEach(function(el){el.classList.add('reveal','pre')});
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}
+    });
+  },{threshold:.12,rootMargin:'0px 0px -6% 0px'});
+  els.forEach(function(el){io.observe(el)});
+})();
 </script>
 </body>
 </html>
