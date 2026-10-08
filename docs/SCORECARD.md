@@ -1,4 +1,4 @@
-# Release scorecard — aio / aio-connect v1.8.0
+# Release scorecard — aio / aio-connect v1.9.0
 
 Machine-checkable release gate produced by `scripts/verify-scorecard.mjs`.
 Fifteen aspects, ten points each, one row per sub-check exactly as the script
@@ -89,8 +89,8 @@ Real spawns of `bin/aio.js` (`node`, 30 s timeout, `NO_COLOR=1`).
 
 | check | what it asserts |
 |---|---|
-| `tarball file count <= 34` | first pack entry has ≤ 34 files (actual count in detail) — current: **33 files** |
-| `tarball packed size <= 120 kB (test/assets/scripts excluded)` | first pack entry `size` ≤ 120000 bytes — current: **108,837 bytes** packed (≈ 106.3 KiB; unpacked 317,860) |
+| `tarball file count <= 34` | first pack entry has ≤ 34 files (live count in the check detail) |
+| `tarball packed size <= 120 kB (test/assets/scripts excluded)` | first pack entry `size` ≤ 120000 bytes (live size in the check detail) |
 | `test/assets/scripts excluded from tarball` | no tarball path starts with `test/`, `assets/`, or `scripts/` (first offenders in detail) |
 
 If `npm pack` fails or its JSON is unparsable, this aspect instead records a
@@ -127,7 +127,7 @@ The live eval gate — `eval-result.json` is written by
 
 | check | what it asserts |
 |---|---|
-| `eval golden set: n>=100, hit@8>=95%, mrr>=0.9, dated` | `eval-result.json` parses with `n >= 100`, `hit8 >= 95`, `mrr >= 0.9` and a `YYYY-MM-DD` `measured` date (current: n=114, hit@8 = 114/114, hit@1 = 111/114, MRR 0.984, measured 2026-10-06) |
+| `eval golden set: n>=100, hit@8>=95%, mrr>=0.9, dated` | `eval-result.json` parses with `n >= 100`, `hit8 >= 95`, `mrr >= 0.9` and a `YYYY-MM-DD` `measured` date (live numbers in `eval-result.json`, refreshed nightly) |
 | `eval workflow regenerates + commits the snapshot` | `.github/workflows/eval.yml` runs the script with `--write` **and** grants `contents: write` (the result snapshot is committed, not hand-typed) |
 | `eval script covers all query families (QUERIES array)` | `scripts/eval-relevance.mjs` declares `const QUERIES = [` |
 
@@ -139,7 +139,8 @@ Recorded numbers, never hand-typed: `docs/stats.json` is written by
 | check | what it asserts |
 |---|---|
 | `docs/stats.json: >= gates, 0 fail, scorecard clean` | `docs/stats.json` has `coverage.lines >= 90`, `coverage.branches >= 80`, `coverage.functions >= 85`, `tests.fail === 0`, `tests.total >= 150` and `scorecard.earned === scorecard.possible` |
-| `README test line matches docs/stats.json exactly` | `README.md` contains the literal `${total} tests: ${pass} pass, ${skip} skip, ${fail} fail` string built from `docs/stats.json` (current: `279 tests: 278 pass, 1 skip, 0 fail`) |
+| `README test line matches docs/stats.json exactly` | `README.md` contains the literal `${total} tests: ${pass} pass, ${skip} skip, ${fail} fail` string built from `docs/stats.json` (stale → FAIL) |
+| `index.html + README hero alt counts match docs/stats.json` | the prose-form alt attributes in `index.html` and the README hero image carry the same counts as `docs/stats.json` (patched by `stats.mjs --write`, stale → FAIL) |
 
 ## 13. i18n (10 pts)
 
@@ -147,7 +148,7 @@ The EN/ID message catalog (`src/messages.js`) and the mirrored help texts.
 
 | check | what it asserts |
 |---|---|
-| `messages parity: 51 keys in BOTH tables` | `parity()` reports ≥ 51 keys with no key missing from the ID table and none missing from the EN table |
+| `messages parity: N keys in BOTH tables` | `parity()` reports >= 100 keys (N = live total, grows with the catalog) with no key missing from the ID table and none missing from the EN table |
 | `no placeholder drift EN vs ID` | every EN/ID pair carries the same `{placeholder}` set (detail lists the offenders) |
 | `msg renders (EN default + AIO_LANG=id switch)` | `msg('evolveDeprecated')` contains `deprecated` with the default language and `usang` after `AIO_LANG=id` |
 | `HELP_EN/HELP_ID line-for-line mirror` | the `HELP_EN` and `HELP_ID` template literals in `bin/aio.js` have equal line counts |

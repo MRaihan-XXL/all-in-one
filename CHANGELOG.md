@@ -6,6 +6,57 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-10-08
+
+### Added
+
+- **Evidence gallery** — `OUTPUTS.md` carries verbatim CLI output, regenerated
+  with `node scripts/capture-outputs.mjs`; `assets/screenshots/` ships 6 PNG
+  captures (regen `scripts/screenshots.ps1`); `index.html` gains a
+  "Machine-verified proof" section that auto-loads `docs/stats.json`, and the
+  README a static table of the JSON endpoints (`stats.json`,
+  `sbom.cdx.json`, `eval-result.json`).
+- **Social + motion** — twitter/og cards plus a referrer policy, and
+  scroll-reveal animations (IntersectionObserver, honors
+  `prefers-reduced-motion`; without JS the content still shows).
+- **+11 tests** — 5 write-state units, sha256 unit + E2E, failed-import E2E
+  and `statfsSync` determinism → **290 tests** (289 pass, 1 skip, 0 fail).
+
+### Changed
+
+- **`aio doctor` / `aio status` fully i18n** — both commands now render
+  through the `msg()` catalog (+45 doctor keys, +18 status keys → **107 keys
+  EN/ID**, enforced by the parity test).
+- **Docs anti-basi** — SCORECARD/README drop stale snapshot numbers for
+  conditions; `scripts/stats.mjs` now also patches the alternate README and
+  `index.html`.
+
+### Fixed
+
+- **Write-state hardening** — temp files are unique per pid/timestamp (no
+  cross-process race); a corrupt ledger stays readable (ENOENT → sentinel,
+  non-array ignored); a scalar JSON entry root errors with
+  `root is not an object`; missing hashes read as `null`; `preservedAside`
+  keeps context across blocks.
+- **Honest failures** — `bin/aio.js` failed dynamic import prints a message
+  and exits 1 (not a stack trace); `src/scan.js` rejects symlinks presented
+  as directories; `aio doctor` / `aio status` rethrow `EISDIR` (read-race
+  guard); `aio update` killed by a signal no longer reports success
+  (exit 1).
+
+### Removed
+
+- **`scripts/install-tools.mjs`** — no longer used by setup.
+- **`docs/logo.svg`** — orphan asset.
+
+### Security
+
+- **CI workflows** — new `npm-auth-check.yml` (weekly cron);
+  `stats.yml` gains a concurrency group and rebases before push; `eval.yml`
+  and `og.yml` are rebase-guarded.
+
+**Gates:** 290 tests · cov 98.19/90.61/97.56 · scorecard 100/100 · pack 116.2 kB / 32 files.
+
 ## [1.8.0] - 2026-10-06
 
 ### Added
