@@ -9,7 +9,7 @@ node scripts/capture-outputs.mjs
 ```
 
 - package: `aio-connect@1.9.1`
-- captured: 2026-10-09T09:07:59.851Z
+- captured: 2026-10-09T10:20:46.465Z
 - host: win32 · node v26.3.0
 
 ## Help (English, default)
@@ -234,7 +234,7 @@ _exit 0_
 ```console
 $ node bin/aio.js status
   state      C:\Users\WORKPLUS\.aio (config.json ok)
-  manifest   C:\Users\WORKPLUS\.aio\aio-context.md — 2d old, live architecture (no search storage)
+  manifest   C:\Users\WORKPLUS\.aio\aio-context.md — 3d old, live architecture (no search storage)
   agents
     opencode   injected     C:\Users\WORKPLUS\.config\opencode\AGENTS.md
     claude     injected     C:\Users\WORKPLUS\.claude\CLAUDE.md
@@ -258,7 +258,7 @@ aio doctor — v1.9.1 (check mode)
 [ok] node           v26.3.0 (supported: >= 22)
 [ok] state          config.json ok (no local catalog)
 [ok] live           github reachable — ask searches GitHub + npm + crates (no search storage)
-[ok] manifest       live architecture (no search storage) · 2.9d old — C:\Users\WORKPLUS\.aio\aio-context.md
+[ok] manifest       live architecture (no search storage) · 3.0d old — C:\Users\WORKPLUS\.aio\aio-context.md
 [ok] agent blocks   7/7 installed agents carry the auto-context block
 [ok] agents         opencode, claude, kimi, jcode, freebuff, hermes, codex, gemini
 [ok] gh auth        logged in — skills lane enabled (gh api search/code)
@@ -408,7 +408,7 @@ _exit 0_
 
 ```console
 $ node bin/aio.js ask "awesome animated chart library"
-aio ask — "awesome animated chart library" (live: github+npm · 7 results · 4.6s)
+aio ask — "awesome animated chart library" (live: github+npm · 7 results · 2.6s)
 
 note: ranked by keyword match + source popularity — public results are unvetted;
       verify before running npx/uvx or cloning (docs/THREATS.md).

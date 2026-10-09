@@ -417,7 +417,7 @@ agent's own (the `agent` web lane talks only to `en.wikipedia.org` and
 
 ```bash
 npm test             # node --test — 307 tests: 306 pass, 1 skip, 0 fail (live search, agent, skill search, injection, consent gate, drift, borrow, doctor, …)
-npm run test:coverage # same suite + coverage gates 90 lines / 80 branches / 85 functions (last run: 98.65 / 91.29 / 97.97)
+npm run test:coverage # same suite + coverage gates 90 lines / 80 branches / 85 functions (last run: 98.65 / 91.13 / 97.97)
 node bin/aio.js      # run from a checkout without installing
 node bin/aio.js ask "pdf ke word"
 node bin/aio.js agent "csv to interactive chart"

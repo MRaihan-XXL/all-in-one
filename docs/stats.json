@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-09T09:07:13.259Z",
+  "generated": "2026-10-09T10:19:48.973Z",
   "tests": {
     "total": 307,
     "pass": 306,
@@ -8,7 +8,7 @@
   },
   "coverage": {
     "lines": 98.65,
-    "branches": 91.29,
+    "branches": 91.13,
     "functions": 97.97
   },
   "scorecard": {
