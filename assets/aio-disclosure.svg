@@ -13,7 +13,12 @@
       @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
       .fd{animation:fadeIn .8s cubic-bezier(.32,.72,0,1) both}
       .rv{transform-box:fill-box;transform-origin:0 50%;animation:rise .8s cubic-bezier(.32,.72,0,1) both}
-      @media (prefers-reduced-motion:reduce){.fd,.rv{animation:none}}
+      /* kinetic: heartbeat badge + soft signal-flicker on the live-rule tags */
+      @keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+      @keyframes flick{0%,100%{opacity:1}44%{opacity:.55}47%{opacity:1}}
+      .kb{transform-box:fill-box;transform-origin:50% 50%;animation:fadeIn .8s cubic-bezier(.32,.72,0,1) both, beat 3s cubic-bezier(.45,0,.55,1) infinite}
+      .kf{animation:fadeIn .8s cubic-bezier(.32,.72,0,1) both, flick 5s ease-in-out infinite}
+      @media (prefers-reduced-motion:reduce){.fd,.rv,.kb,.kf{animation:none}}
     </style>
   </defs>
 
@@ -28,7 +33,7 @@
 
   <!-- header -->
   <text x="64" y="46" class="mono eyebrow">FR6 <tspan fill="#343A43">—</tspan> THE RULE EVERY AGENT OBEYS</text>
-  <g class="fd" style="animation-delay:.6s">
+  <g class="kb" style="animation-delay:.6s">
     <rect x="984" y="28" width="152" height="26" rx="13" fill="none" stroke="#FF4A1C" stroke-opacity="0.45">
       <animate attributeName="stroke-opacity" values="0.45;0.15;0.45" keyTimes="0;0.5;1" dur="8s" repeatCount="indefinite"/>
     </rect>
@@ -93,6 +98,6 @@
   </g>
 
   <!-- footer micro -->
-  <text x="64" y="286" class="mono fd" font-size="11" letter-spacing="1.6" fill="#4A505A" style="animation-delay:1.2s">THE SAME LINE LIVES IN EVERY AGENT BLOCK — ONE SOURCE OF TRUTH, SLIM MANIFEST POINTS TO IT</text>
-  <text x="1136" y="286" text-anchor="end" class="mono fd" font-size="11" letter-spacing="1.6" fill="#4A505A" style="animation-delay:1.2s">NO SLASH-COMMANDS · ENFORCED BY THE MODEL</text>
+  <text x="64" y="286" class="mono fd" font-size="11" letter-spacing="1" fill="#4A505A" style="animation-delay:1.2s">THE SAME LINE LIVES IN EVERY AGENT BLOCK - ONE SOURCE OF TRUTH, SLIM MANIFEST POINTS TO IT</text>
+  <text x="1136" y="286" text-anchor="end" class="mono fd" font-size="11" letter-spacing="1" fill="#4A505A" style="animation-delay:1.2s">NO SLASH-COMMANDS · ENFORCED BY THE MODEL</text>
 </svg>

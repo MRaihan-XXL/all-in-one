@@ -4,7 +4,7 @@
       <circle cx="1" cy="1" r="1" fill="#171B21"/>
     </pattern>
     <clipPath id="wordClip"><rect x="56" y="120" width="330" height="180"/></clipPath>
-    <clipPath id="panelClip"><rect x="627" y="103" width="502" height="286" rx="12"/></clipPath>
+    <clipPath id="panelClip"><rect x="627" y="103" width="502" height="292" rx="12"/></clipPath>
     <linearGradient id="askSheen2" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#FF4A1C" stop-opacity="0"/>
       <stop offset="0.5" stop-color="#FF4A1C" stop-opacity="0.07"/>
@@ -57,7 +57,12 @@
       .fd{animation:fadeIn .8s cubic-bezier(.32,.72,0,1) both}
       .lg circle,.lg path{stroke-dasharray:100;stroke-dashoffset:100;animation:draw 1.5s cubic-bezier(.32,.72,0,1) .5s forwards}
       @keyframes draw{to{stroke-dashoffset:0}}
-      @media (prefers-reduced-motion:reduce){.r,.rs,.gw,.pp,.fd{animation:none}.lg circle,.lg path{animation:none;stroke-dashoffset:0}}
+      /* kinetic: heartbeat on the version badge, soft signal-flicker on LIVE labels */
+      @keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+      @keyframes flick{0%,100%{opacity:1}44%{opacity:.55}47%{opacity:1}76%{opacity:.7}78%{opacity:1}}
+      .kb{transform-box:fill-box;transform-origin:50% 50%;animation:fadeIn .8s cubic-bezier(.32,.72,0,1) both, beat 3s cubic-bezier(.45,0,.55,1) infinite}
+      .kf{animation:fadeIn .8s cubic-bezier(.32,.72,0,1) both, flick 5.5s ease-in-out infinite}
+      @media (prefers-reduced-motion:reduce){.r,.rs,.gw,.pp,.fd{animation:none}.lg circle,.lg path{animation:none;stroke-dashoffset:0}.kb,.kf{animation:none}}
     </style>
   </defs>
 
@@ -77,11 +82,11 @@
     <animate attributeName="opacity" values="1;0.2;1" keyTimes="0;0.5;1" dur="8s" repeatCount="indefinite"/>
   </circle>
   <text x="64" y="46" class="mono eyebrow">ALL-IN-ONE<tspan fill="#343A43">  //  </tspan>LIVE AUTO-CONTEXT CLI</text>
-  <g class="fd" style="animation-delay:.7s">
+  <g class="kb" style="animation-delay:.7s">
     <rect x="1064" y="28" width="72" height="26" rx="13" fill="none" stroke="#FF4A1C" stroke-opacity="0.45">
       <animate attributeName="stroke-opacity" values="0.45;0.15;0.45" keyTimes="0;0.5;1" dur="8s" repeatCount="indefinite"/>
     </rect>
-    <text x="1100" y="45" text-anchor="middle" class="mono" font-size="11" fill="#FF4A1C">v1.8.0</text>
+    <text x="1100" y="45" text-anchor="middle" class="mono" font-size="11" fill="#FF4A1C">v1.9.1</text>
   </g>
   <line x1="64" y1="62" x2="1136" y2="62" class="hair gw" style="animation-delay:.15s"/>
 
@@ -151,16 +156,16 @@
     <animate attributeName="opacity" values="1;0.45;1" keyTimes="0;0.5;1" dur="8s" repeatCount="indefinite"/>
   </rect>
   <text x="64" y="340" class="sans txt r" font-size="21" font-weight="500" style="animation-delay:.6s">the everything connector for AI agents</text>
-  <text x="64" y="370" class="mono dim rs" font-size="12.5" letter-spacing="2" style="animation-delay:.72s">live ask  ·  agent  ·  borrow  ·  doctor  ·  evolve</text>
+  <text x="64" y="370" class="mono dim rs" font-size="12.5" letter-spacing="2" style="animation-delay:.72s">live ask  ·  agent  ·  borrow  ·  doctor  ·  verify</text>
 
   <!-- ============ RIGHT: live panel (double bezel) ============ -->
   <g class="r" style="animation-delay:.45s">
-    <rect x="620.5" y="96.5" width="515" height="299" rx="17" fill="none" stroke="#21252C"/>
-    <rect x="627" y="103" width="502" height="286" rx="12" fill="#101318" stroke="#171B21"/>
+    <rect x="620.5" y="96.5" width="515" height="305" rx="17" fill="none" stroke="#21252C"/>
+    <rect x="627" y="103" width="502" height="292" rx="12" fill="#101318" stroke="#171B21"/>
     <!-- live sheen sweep -->
     <g clip-path="url(#panelClip)">
       <rect x="627" y="96" width="502" height="42" fill="url(#askSheen2)">
-        <animate attributeName="y" values="60;60;394;394" keyTimes="0;0.15;0.45;1" dur="8s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1;0 0 0 0"/>
+        <animate attributeName="y" values="60;60;400;400" keyTimes="0;0.15;0.45;1" dur="8s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1;0 0 0 0"/>
       </rect>
     </g>
     <text x="647" y="136" class="mono" font-size="10.5" letter-spacing="2.4" fill="#7C828C">CATALOG</text>
@@ -171,7 +176,7 @@
       <animate attributeName="r" values="3.5;11;3.5" keyTimes="0;0.62;1" dur="8s" repeatCount="indefinite"/>
       <animate attributeName="stroke-opacity" values="0.6;0;0;0.6" keyTimes="0;0.62;0.99;1" dur="8s" repeatCount="indefinite"/>
     </circle>
-    <text x="1109" y="136" text-anchor="end" class="mono" font-size="10.5" letter-spacing="2.4" fill="#FF4A1C">LIVE — NO SEARCH STORAGE</text>
+    <text x="1109" y="136" text-anchor="end" class="mono kf" font-size="10.5" letter-spacing="2.4" fill="#FF4A1C">LIVE — NO SEARCH STORAGE</text>
     <line x1="647" y1="150" x2="1109" y2="150" stroke="#1D2127"/>
 
     <!-- row 1: repositories 231 -->
@@ -244,7 +249,7 @@
     <text x="462" y="456" class="mono" font-size="13" font-weight="700" fill="#EDEBE6">clean
       <animate attributeName="fill" values="#EDEBE6;#EDEBE6;#FF4A1C;#EDEBE6;#EDEBE6" keyTimes="0;0.69;0.73;0.77;1" dur="8s" repeatCount="indefinite"/>
     </text>
-    <text x="566" y="456" class="mono" font-size="11" letter-spacing="1" fill="#4A505A">LIVE: github ∥ npm ∥ crates ∥ web ∥ tools</text>
+    <text x="566" y="456" class="mono kf" font-size="11" letter-spacing="1" fill="#4A505A">LIVE: github ∥ npm ∥ crates ∥ web ∥ tools</text>
 
     <!-- sliding accent underline -->
     <rect y="466" height="2.5" width="64" rx="1.25" fill="#FF4A1C">

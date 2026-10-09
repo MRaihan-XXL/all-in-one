@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 620" role="img" aria-label="aio live pipeline: prompt, aio ask searching github, npm and crates in parallel (web and agent lane shown dimmed), ranked results, ephemeral use, report with links, clean, repeat">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 620" role="img" aria-label="aio live pipeline: prompt, aio ask searching github, npm and crates in parallel (web lane dimmed — URL hands off to your own search), ranked results, ephemeral use, report with links, clean, repeat">
   <defs>
     <clipPath id="askClip"><rect x="350" y="102" width="288" height="164" rx="10"/></clipPath>
     <linearGradient id="askSheen" x1="0" y1="0" x2="0" y2="1">
@@ -28,12 +28,18 @@
       @keyframes fadeIn{from{opacity:0}to{opacity:1}}
       @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
       @keyframes hl{0%{stroke:#2A2F37}2%{stroke:#FF4A1C}11%{stroke:#2A2F37}100%{stroke:#2A2F37}}
+      @keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+      @keyframes flick{0%,100%{opacity:1}44%{opacity:.55}47%{opacity:1}76%{opacity:.7}78%{opacity:1}}
       .card{transform-box:fill-box;transform-origin:0 50%;animation:rise .85s cubic-bezier(.32,.72,0,1) both}
       .cardout{animation:hl 8s cubic-bezier(.45,0,.55,1) infinite}
       .gw{transform-box:fill-box;transform-origin:0 50%;animation:grow .8s cubic-bezier(.32,.72,0,1) both}
       .ch{animation:fadeIn .45s ease both}
       .fd{animation:fadeIn .7s cubic-bezier(.32,.72,0,1) both}
-      @media (prefers-reduced-motion:reduce){.card,.ch,.fd,.march,.gw{animation:none}.wire,.wireL{stroke-dashoffset:0;animation:none}.cardout{animation:none}}
+      /* kinetic badge: fades in, then a slow heartbeat (beat beats to the 8s master) */
+      .kb{transform-box:fill-box;transform-origin:50% 50%;animation:fadeIn .7s cubic-bezier(.32,.72,0,1) .7s both, beat 3.2s cubic-bezier(.45,0,.55,1) 2s infinite}
+      /* kinetic lane: live lane labels flicker softly like a signal lock */
+      .kf{animation:flick 6s ease-in-out infinite}
+      @media (prefers-reduced-motion:reduce){.card,.ch,.fd,.march,.gw{animation:none}.wire,.wireL{stroke-dashoffset:0;animation:none}.cardout{animation:none}.kb{animation:none}.kf{animation:none}}
     </style>
   </defs>
 
@@ -51,7 +57,7 @@
   <rect x="980" y="28" width="156" height="26" rx="13" fill="none" stroke="#FF4A1C" stroke-opacity="0.45" class="fd" style="animation-delay:.7s">
     <animate attributeName="stroke-opacity" values="0.45;0.15;0.45" keyTimes="0;0.5;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
   </rect>
-  <text x="1058" y="45" text-anchor="middle" class="mono fd" font-size="10" letter-spacing="1.4" fill="#FF4A1C" style="animation-delay:.7s">NO SEARCH STORAGE</text>
+  <text x="1058" y="45" text-anchor="middle" class="mono kb" font-size="10" letter-spacing="1.4" fill="#FF4A1C">NO SEARCH STORAGE</text>
   <line x1="64" y1="62" x2="1136" y2="62" stroke="#21252C" class="fd" style="animation-delay:.15s"/>
 
   <!-- ===== wires ===== -->
@@ -132,7 +138,7 @@
     <text x="366" y="126" class="mono idx">02</text>
     <text x="366" y="152" class="sans t">aio ask</text>
     <rect x="467.5" y="112.5" width="167" height="19" rx="9.5" fill="none" stroke="#FF4A1C" stroke-opacity="0.4"/>
-    <text x="478" y="126" class="mono" font-size="9.5" letter-spacing="1.1" fill="#FF4A1C">LIVE · ADAPTIVE · ≤4s</text>
+    <text x="478" y="126" class="mono kf" font-size="9.5" letter-spacing="1.1" fill="#FF4A1C">LIVE · ADAPTIVE · ≤4s</text>
 
     <!-- sheen sweep — parked above/below the clip, sweeps once per 8s master
          loop during card-02's live window (synced with the comets) -->
@@ -147,7 +153,7 @@
       <circle cx="370" cy="172" r="3" fill="#FF4A1C">
         <animate attributeName="opacity" values="0.55;0.55;1;0.55;0.55" keyTimes="0;0.17;0.27;0.42;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
       </circle>
-      <text x="382" y="176" class="mono lane">GITHUB</text>
+      <text x="382" y="176" class="mono lane kf">GITHUB</text>
       <line x1="452" y1="172" x2="626" y2="172" stroke="#1D2127" stroke-width="2"/>
       <rect x="452" y="170.5" width="24" height="3" rx="1.5" fill="#FF4A1C">
         <animate attributeName="x" values="452;452;602;602;452;452" keyTimes="0;0.16;0.34;0.40;0.46;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
@@ -158,7 +164,7 @@
       <circle cx="370" cy="196" r="3" fill="#FF4A1C">
         <animate attributeName="opacity" values="0.55;0.55;1;0.55;0.55" keyTimes="0;0.21;0.31;0.46;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
       </circle>
-      <text x="382" y="200" class="mono lane">NPM</text>
+      <text x="382" y="200" class="mono lane kf">NPM</text>
       <line x1="452" y1="196" x2="626" y2="196" stroke="#1D2127" stroke-width="2"/>
       <rect x="452" y="194.5" width="24" height="3" rx="1.5" fill="#FF4A1C">
         <animate attributeName="x" values="452;452;602;602;452;452" keyTimes="0;0.20;0.38;0.44;0.50;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
@@ -169,21 +175,21 @@
       <circle cx="370" cy="220" r="3" fill="#FF4A1C">
         <animate attributeName="opacity" values="0.55;0.55;1;0.55;0.55" keyTimes="0;0.25;0.35;0.50;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
       </circle>
-      <text x="382" y="224" class="mono lane">CRATES</text>
+      <text x="382" y="224" class="mono lane kf">CRATES</text>
       <line x1="452" y1="220" x2="626" y2="220" stroke="#1D2127" stroke-width="2"/>
       <rect x="452" y="218.5" width="24" height="3" rx="1.5" fill="#FF4A1C">
         <animate attributeName="x" values="452;452;602;602;452;452" keyTimes="0;0.24;0.42;0.48;0.54;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
       </rect>
     </g>
-    <!-- lane: web → agent -->
+    <!-- lane: web → your search (dimmed: URL hand-off, not fetched by ask) -->
     <g>
       <circle cx="370" cy="244" r="3" fill="none" stroke="#5A606A">
         <animate attributeName="opacity" values="1;1;0.35;1;1" keyTimes="0;0.29;0.39;0.54;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
       </circle>
-      <text x="382" y="248" class="mono lane" fill="#5A606A">WEB → AGENT</text>
-      <line x1="490" y1="244" x2="626" y2="244" stroke="#1D2127" stroke-width="2" stroke-dasharray="3 5"/>
-      <rect x="490" y="242.5" width="24" height="3" rx="1.5" fill="none" stroke="#FF4A1C" stroke-opacity="0.7">
-        <animate attributeName="x" values="490;490;602;602;490;490" keyTimes="0;0.28;0.46;0.52;0.58;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
+      <text x="382" y="248" class="mono lane" fill="#5A606A">WEB → YOUR SEARCH</text>
+      <line x1="512" y1="244" x2="626" y2="244" stroke="#1D2127" stroke-width="2" stroke-dasharray="3 5"/>
+      <rect x="512" y="242.5" width="24" height="3" rx="1.5" fill="none" stroke="#FF4A1C" stroke-opacity="0.7">
+        <animate attributeName="x" values="512;512;602;602;512;512" keyTimes="0;0.28;0.46;0.52;0.58;1" dur="8s" begin="1.4s" repeatCount="indefinite"/>
       </rect>
     </g>
   </g>
@@ -202,7 +208,7 @@
       <text x="782" y="214" class="mono" font-size="10" fill="#9AA0A8">BM25 rank · ≥2 rows/source</text>
       <rect x="782" y="219" width="118" height="2" rx="1" fill="#FF4A1C" opacity="0.55" class="gw" style="animation-delay:1.45s"/>
       <circle cx="770" cy="232" r="2.5" fill="#FF4A1C"/>
-      <text x="782" y="236" class="mono" font-size="10" fill="#9AA0A8">qwen3 rerank (warm, ≤3.5s)</text>
+      <text x="782" y="236" class="mono" font-size="10" fill="#9AA0A8">qwen3 rerank (optional · ≤3.5s)</text>
       <rect x="782" y="241" width="92" height="2" rx="1" fill="#FF4A1C" opacity="0.4" class="gw" style="animation-delay:1.65s"/>
     </g>
   </g>
