@@ -1,6 +1,6 @@
 {
   "name": "aio-connect",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "description": "aio - auto-connect your AI agents to LIVE search across GitHub (630M+ repos, public skills), npm & crates. Zero search storage (results printed, never saved), no slash-commands.",
   "type": "module",
   "bin": {

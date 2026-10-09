@@ -7,16 +7,16 @@
       {
         "vendor": "MRaihan-XXL",
         "name": "aio scripts/sbom.mjs",
-        "version": "1.9.0"
+        "version": "1.9.1"
       }
     ],
     "component": {
-      "bom-ref": "pkg:npm/aio-connect@1.9.0",
+      "bom-ref": "pkg:npm/aio-connect@1.9.1",
       "type": "application",
       "name": "aio-connect",
-      "version": "1.9.0",
+      "version": "1.9.1",
       "description": "aio - auto-connect your AI agents to LIVE search across GitHub (630M+ repos, public skills), npm & crates. Zero search storage (results printed, never saved), no slash-commands.",
-      "purl": "pkg:npm/aio-connect@1.9.0",
+      "purl": "pkg:npm/aio-connect@1.9.1",
       "licenses": [
         {
           "license": {
@@ -29,7 +29,7 @@
   "components": [],
   "dependencies": [
     {
-      "ref": "pkg:npm/aio-connect@1.9.0",
+      "ref": "pkg:npm/aio-connect@1.9.1",
       "dependsOn": []
     }
   ]
