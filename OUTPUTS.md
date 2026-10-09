@@ -9,7 +9,7 @@ node scripts/capture-outputs.mjs
 ```
 
 - package: `aio-connect@1.9.1`
-- captured: 2026-10-09T10:20:46.465Z
+- captured: 2026-10-09T10:41:19.192Z
 - host: win32 · node v26.3.0
 
 ## Help (English, default)
@@ -408,7 +408,7 @@ _exit 0_
 
 ```console
 $ node bin/aio.js ask "awesome animated chart library"
-aio ask — "awesome animated chart library" (live: github+npm · 7 results · 2.6s)
+aio ask — "awesome animated chart library" (live: github+npm · 7 results · 4.7s)
 
 note: ranked by keyword match + source popularity — public results are unvetted;
       verify before running npx/uvx or cloning (docs/THREATS.md).
