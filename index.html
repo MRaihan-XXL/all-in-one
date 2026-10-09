@@ -42,8 +42,12 @@
   }
   header img{height:26px;display:block}
   nav{display:flex;gap:22px;font-size:14px}
-  nav a{color:var(--mute);text-decoration:none;transition:color .15s}
-  nav a:hover{color:var(--vermilion)}
+  nav a{
+    color:var(--mute);text-decoration:none;padding-bottom:3px;
+    background:linear-gradient(var(--vermilion),var(--vermilion)) left bottom/0% 2px no-repeat;
+    transition:background-size .32s cubic-bezier(.22,1,.36,1),color .15s;
+  }
+  nav a:hover{color:var(--paper);background-size:100% 2px}
   .hero{padding:88px 0 72px;border-bottom:1px solid var(--line)}
   .kicker{font:600 13px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--vermilion);margin-bottom:22px}
   h1{font-size:clamp(40px,7vw,76px);line-height:1.02;letter-spacing:-.03em;font-weight:800;max-width:14ch}
@@ -54,18 +58,23 @@
     display:inline-flex;align-items:center;gap:14px;
     background:#0a0d10;border:1px solid var(--line);border-radius:8px;
     padding:14px 18px;font:15px var(--mono);cursor:pointer;color:var(--paper);
-    transition:border-color .15s;
+    transition:border-color .15s,transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s;
   }
-  .cmd:hover{border-color:var(--vermilion)}
+  .cmd:hover{border-color:var(--vermilion);transform:translateY(-2px);box-shadow:0 8px 26px -12px rgba(255,74,28,.5)}
   .cmd .cp{color:var(--vermilion);font-size:12px;letter-spacing:.08em}
+  @media (prefers-reduced-motion: no-preference){
+    .cmd .cp{animation:hint 2.6s ease-in-out infinite}
+    @keyframes hint{0%,100%{opacity:.55}50%{opacity:1}}
+  }
   .btn{
     display:inline-block;padding:14px 22px;border-radius:8px;text-decoration:none;
-    font-weight:650;font-size:15px;transition:transform .15s;
+    font-weight:650;font-size:15px;
+    transition:transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s,background-color .3s,border-color .3s,color .3s;
   }
   .btn-primary{background:var(--vermilion);color:#fff}
-  .btn-primary:hover{transform:translateY(-2px)}
+  .btn-primary:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 10px 32px -10px rgba(255,74,28,.6)}
   .btn-ghost{border:1px solid var(--line);color:var(--mute)}
-  .btn-ghost:hover{color:var(--paper);border-color:var(--paper)}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--paper);transform:translateY(-3px)}
   .agents{
     padding:26px 0;border-bottom:1px solid var(--line);
     display:flex;flex-wrap:wrap;gap:10px 26px;align-items:center;
@@ -101,13 +110,55 @@
   footer a:hover{color:var(--vermilion)}
   /* scroll-reveal (JS adds .js + .reveal; no JS = content visible as-is) */
   @media (prefers-reduced-motion: no-preference){
-    .js .reveal.pre{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}
+    .js .reveal.pre{
+      opacity:0;transform:translateY(26px) scale(.985);
+      transition:opacity .65s cubic-bezier(.22,1.25,.36,1),transform .65s cubic-bezier(.22,1.25,.36,1);
+    }
     .js .reveal.pre.in{opacity:1;transform:none}
-    .grid .cell.pre:nth-child(2n){transition-delay:.08s}
-    .steps .step.pre:nth-child(2){transition-delay:.08s}
-    .steps .step.pre:nth-child(3){transition-delay:.16s}
-    .hero .reveal.pre{transition-delay:.15s}
+    .grid .cell.pre:nth-child(2){transition-delay:.07s}
+    .grid .cell.pre:nth-child(3){transition-delay:.12s}
+    .grid .cell.pre:nth-child(4){transition-delay:.17s}
+    .grid .cell.pre:nth-child(5){transition-delay:.22s}
+    .grid .cell.pre:nth-child(6){transition-delay:.27s}
+    .grid .cell.pre:nth-child(7){transition-delay:.32s}
+    .grid .cell.pre:nth-child(8){transition-delay:.37s}
+    .steps .step.pre:nth-child(2){transition-delay:.1s}
+    .steps .step.pre:nth-child(3){transition-delay:.2s}
+    .hero > *:nth-child(1){transition-delay:.02s}
+    .hero > *:nth-child(2){transition-delay:.08s}
+    .hero > *:nth-child(3){transition-delay:.14s}
+    .hero > *:nth-child(4){transition-delay:.2s}
+    .hero > *:nth-child(5){transition-delay:.26s}
+    .hero > *:nth-child(6){transition-delay:.32s}
+    /* kinetic typography: the h1 rises word by word (JS splits into .w) */
+    .w{
+      display:inline-block;
+      transition:transform .7s cubic-bezier(.22,1.3,.36,1),opacity .7s cubic-bezier(.22,1.3,.36,1);
+    }
+    .w.pre{opacity:0;transform:translateY(.5em) rotate(2.5deg)}
+    /* kicker neon pulse */
+    @keyframes kpulse{0%,100%{text-shadow:0 0 0 rgba(255,74,28,0)}50%{text-shadow:0 0 14px rgba(255,74,28,.55)}}
+    .kicker{animation:kpulse 4s ease-in-out infinite}
+    /* marquee ticker — duplicated track loops seamlessly */
+    .ticker-track{animation:marquee 30s linear infinite}
+    @keyframes marquee{to{transform:translateX(-50%)}}
   }
+  .ticker{
+    overflow:hidden;white-space:nowrap;padding:13px 0;
+    border-bottom:1px solid var(--line);
+    font:600 12.5px var(--mono);letter-spacing:.16em;color:var(--vermilion);
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);
+    mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);
+  }
+  .ticker-track{display:inline-block;will-change:transform}
+  .ticker-track span{display:inline-block;padding-right:0}
+  @media (prefers-reduced-motion: reduce){.ticker-track{animation:none}}
+  /* kinetic hover: cards and steps pop up on hover */
+  .step,.cell{transition:transform .35s cubic-bezier(.34,1.45,.64,1),background-color .3s}
+  .step:hover,.cell:hover{transform:translateY(-4px)}
+  .cell:hover{background:#0E1216}
+  pre{transition:transform .35s cubic-bezier(.34,1.45,.64,1),border-color .3s}
+  pre:hover{transform:translateY(-3px);border-color:rgba(255,74,28,.45)}
   @media(max-width:720px){
     .steps,.grid{grid-template-columns:1fr}
     .hero{padding:56px 0 48px}
@@ -122,6 +173,7 @@
     <nav>
       <a href="#how">How it works</a>
       <a href="#features">Features</a>
+      <a href="#outputs">Outputs</a>
       <a href="https://github.com/MRaihan-XXL/all-in-one#readme">Docs</a>
       <a href="https://www.npmjs.com/package/aio-connect">npm</a>
     </nav>
@@ -138,7 +190,7 @@
     </div>
     <p class="sub" style="margin-top:14px;font-size:14px">Preview prints the plan and writes <strong>nothing</strong>. Apply it with <code style="font-family:var(--mono)">--yes</code> (or confirm the prompt in a terminal).</p>
     <div style="margin-top:44px">
-      <img src="./assets/aio-hero.svg" width="100%" alt="aio — the everything connector for AI agents: live catalog across 630M+ github repos, 3M+ npm packages, 340K+ crates, 6.8M+ skill files; no search storage; live ask, agent, borrow, doctor, evolve" style="display:block;border-radius:20px">
+      <img src="./assets/aio-hero.svg" width="100%" alt="aio — the everything connector for AI agents: live catalog across 630M+ github repos, 3M+ npm packages, 340K+ crates, 6.8M+ skill files; no search storage; live ask, agent, borrow, doctor, verify" style="display:block;border-radius:20px">
     </div>
   </div>
 
@@ -148,37 +200,79 @@
     <em class="note">7 of 8 pass the FR6 disclosure probe — kimi wires up but quotes the rule instead of applying it (model-dependent). <a href="https://github.com/MRaihan-XXL/all-in-one#supported-agents">support matrix</a></em>
   </div>
 
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-track">
+      <span>GITHUB 630M+ REPOS · NPM 3M+ PACKAGES · CRATES 340K+ · SKILLS 6.8M+ FILES · LIVE ≤4s · ZERO SEARCH STORAGE · DISCLOSURE BUILT-IN · 290 TESTS · </span>
+      <span>GITHUB 630M+ REPOS · NPM 3M+ PACKAGES · CRATES 340K+ · SKILLS 6.8M+ FILES · LIVE ≤4s · ZERO SEARCH STORAGE · DISCLOSURE BUILT-IN · 290 TESTS · </span>
+    </div>
+  </div>
+
   <div style="max-width:960px;margin:30px auto 0;padding:0 20px">
     <img src="./assets/flow.svg" width="100%" alt="Animated flowchart: prompt → aio ask (parallel live search: github, npm, crates, web) → top-8 + diversity ranking → use ephemerally → report with links → clean → repeat" style="display:block;border-radius:18px">
   </div>
 
   <div style="max-width:1100px;margin:26px auto 0;padding:0 20px">
-    <img src="./assets/aio-demo.svg" width="100%" alt="60-second terminal demo: aio setup wires every agent, aio ask searches github npm and crates live, results ranked with a verify note, reply opens with the disclosure line" style="display:block;border-radius:20px">
+      <img src="./assets/aio-demo.svg" width="100%" alt="60-second terminal demo: aio setup --dry-run prints the plan without writing, aio ask searches github and npm live, results ranked with a verify note, reply opens with the disclosure line" style="display:block;border-radius:20px">
   </div>
 
   <div style="max-width:1100px;margin:26px auto 0;padding:0 20px">
-    <img src="./assets/aio-stats.svg" width="100%" alt="Verified stats: 630M+ github repos, 3M+ npm packages, 340K+ crates, 6.8M+ skill files, no search storage, 290 tests (289 pass, 1 skip, 0 fail)" style="display:block;border-radius:20px">
+    <img src="./assets/aio-stats.svg" width="100%" alt="Verified stats: 630M+ github repos, 3M+ npm packages, 340K+ crates, 6.8M+ skill files, no search storage, 307 tests (306 pass, 1 skip, 0 fail)" style="display:block;border-radius:20px">
   </div>
 
   <section id="proof">
     <h2>Machine-verified proof</h2>
     <p class="lede">These cells load live from <code style="font-family:var(--mono)">docs/stats.json</code> — written by a real suite run (<code style="font-family:var(--mono)">node scripts/stats.mjs --write</code>), never hand-typed. Same file the release scorecard and CI gate read.</p>
+    <noscript>
+      <p class="lede">JavaScript off — static snapshot in docs/stats.json: 307 tests (306 pass · 1 skip · 0 fail) · coverage 98.65 / 91.29 / 97.97 · scorecard 100/100 · 2026-10-09</p>
+    </noscript>
     <div class="grid">
       <div class="cell"><h3><span>TESTS</span><b id="p-tests">—</b></h3><p id="p-tests-sub">loading docs/stats.json …</p></div>
-      <div class="cell"><h3><span>COVERAGE</span><b id="p-cov">—</b></h3><p>lines / branches / functions — gates 90 / 80 / 85</p></div>
+      <div class="cell"><h3><span>COVERAGE</span><b id="p-cov"><span id="p-cov-l">—</span> / <span id="p-cov-b">—</span> / <span id="p-cov-f">—</span></b></h3><p>lines / branches / functions — gates 90 / 80 / 85</p></div>
       <div class="cell"><h3><span>SCORECARD</span><b id="p-score">—</b></h3><p id="p-score-sub">15 aspects × machine checks</p></div>
       <div class="cell"><h3><span>GENERATED</span><b id="p-date">—</b></h3><p>docs/stats.json timestamp (re-run regenerates it)</p></div>
     </div>
     <script>
+    /* count-up: numbers roll when stats.json lands (reduced-motion → jump) */
+    function up(el,to,dec,after){
+      if(!el)return;
+      var final=String(to);
+      if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){el.textContent=final;if(after)after();return}
+      var t0=performance.now(),dur=850;
+      requestAnimationFrame(function f(t){
+        var p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,3);
+        el.textContent=dec?(to*e).toFixed(dec):String(Math.round(to*e));
+        if(p<1)requestAnimationFrame(f);else{el.textContent=final;if(after)after();}
+      });
+    }
     fetch('./docs/stats.json').then(function(r){return r.json()}).then(function(s){
-      document.getElementById('p-tests').textContent=s.tests.total;
+      up(document.getElementById('p-tests'),s.tests.total,0);
       document.getElementById('p-tests-sub').textContent=s.tests.pass+' pass · '+s.tests.skip+' skip · '+s.tests.fail+' fail';
-      document.getElementById('p-cov').textContent=s.coverage.lines+' / '+s.coverage.branches+' / '+s.coverage.functions;
-      document.getElementById('p-score').textContent=s.scorecard.earned+'/'+s.scorecard.possible;
+      up(document.getElementById('p-cov-l'),s.coverage.lines,2);
+      up(document.getElementById('p-cov-b'),s.coverage.branches,2);
+      up(document.getElementById('p-cov-f'),s.coverage.functions,2);
+      up(document.getElementById('p-score'),s.scorecard.earned,0,function(){
+        document.getElementById('p-score').textContent=s.scorecard.earned+'/'+s.scorecard.possible;
+      });
       document.getElementById('p-score-sub').textContent='15/15 aspects ≥ 10/10 ('+s.coverage.lines+'% lines)';
       document.getElementById('p-date').textContent=String(s.generated).slice(0,10);
     }).catch(function(){
       document.getElementById('p-score-sub').textContent='stats.json unavailable — run node scripts/stats.mjs --write';
+    });
+    </script>
+  </section>
+
+  <section id="outputs">
+    <h2>Outputs, verbatim</h2>
+    <p class="lede">The complete output gallery of <code style="font-family:var(--mono)">aio</code> — help (en/id), doctor, live ask, borrow, scorecard — captured from real command runs by <code style="font-family:var(--mono)">scripts/capture-outputs.mjs</code> and committed to the repo, never hand-typed. Scroll it right here or read <a href="https://github.com/MRaihan-XXL/all-in-one/blob/main/OUTPUTS.md">OUTPUTS.md on GitHub</a>.</p>
+    <noscript>
+      <p class="lede">JavaScript off — open <a href="https://github.com/MRaihan-XXL/all-in-one/blob/main/OUTPUTS.md">OUTPUTS.md on GitHub</a> directly.</p>
+    </noscript>
+    <pre id="outputs-box" style="max-height:440px;overflow:auto">loading OUTPUTS.md …</pre>
+    <script>
+    fetch('./OUTPUTS.md').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text()}).then(function(t){
+      document.getElementById('outputs-box').textContent=t;
+    }).catch(function(e){
+      document.getElementById('outputs-box').textContent='OUTPUTS.md unavailable on this origin ('+e+') — read it on GitHub: /blob/main/OUTPUTS.md';
     });
     </script>
   </section>
@@ -208,13 +302,118 @@
   <section>
     <h2>Usage, disclosed</h2>
     <p class="lede">The moment an agent uses an entry aio surfaced, its answer starts with a markdown link back to the source — attributable, auditable, first line, every time.</p>
-    <pre><span class="mu"># the rule aio writes into every agent block (the manifest only points to it)</span>
+    <pre style="white-space:pre-wrap"><span class="mu"># the rule aio writes into every agent block (the manifest only points to it)</span>
 <span class="hi">[aio] Using [&lt;name&gt;](&lt;url&gt;) (&lt;type&gt;) — &lt;function&gt;</span>
 
 <span class="mu"># real output, verbatim from a live agent session</span>
 [aio] Using [Stirling-PDF](https://github.com/Stirling-Tools/Stirling-PDF) (repo) — HTML/CSS/JS to PDF converter</pre>
     <div style="margin-top:26px">
-      <img src="./assets/aio-disclosure.svg" width="100%" alt="Disclosure card: every agent reply begins with the [aio] Using name-url-type-function line — linked, attributed, auditable; first line, every time" style="display:block;border-radius:20px">
+      <!-- inlined from assets/aio-disclosure.svg (keep in sync by hand): the
+           SMIL typewriter (typeClip) stays frozen when this card is loaded via
+           <img> under headless capture — inline, the reveal always runs. -->
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" role="img" style="display:block;width:100%" aria-label="aio disclosure card: every agent reply starts with the [aio] Using name-url-type-function link line — required first line, every time">
+  <defs>
+    <clipPath id="typeClip"><rect x="84" y="168" width="0" height="30">
+      <animate attributeName="width" values="0;1000" dur="3.4s" begin="1.1s" fill="freeze" calcMode="spline" keySplines="0.4 0 0.2 1"/>
+    </rect></clipPath>
+    <style>
+      .sans{font-family:ui-sans-serif,system-ui,"Segoe UI",sans-serif}
+      .mono{font-family:ui-monospace,"Cascadia Mono","SF Mono",Consolas,monospace}
+      .eyebrow{font-size:11px;letter-spacing:2.6px;fill:#7C828C}
+      .bezel{fill:none;stroke:#2A2F37;stroke-width:1}
+      .core{fill:#101318;stroke:#171B21;stroke-width:1}
+      @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+      @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+      .fd{animation:fadeIn .8s cubic-bezier(.32,.72,0,1) both}
+      .rv{transform-box:fill-box;transform-origin:0 50%;animation:rise .8s cubic-bezier(.32,.72,0,1) both}
+      /* kinetic: heartbeat badge + soft signal-flicker on the live-rule tags */
+      @keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+      @keyframes flick{0%,100%{opacity:1}44%{opacity:.55}47%{opacity:1}}
+      .kb{transform-box:fill-box;transform-origin:50% 50%;animation:fadeIn .8s cubic-bezier(.32,.72,0,1) both, beat 3s cubic-bezier(.45,0,.55,1) infinite}
+      .kf{animation:fadeIn .8s cubic-bezier(.32,.72,0,1) both, flick 5s ease-in-out infinite}
+      @media (prefers-reduced-motion:reduce){.fd,.rv,.kb,.kf{animation:none}}
+    </style>
+  </defs>
+
+  <rect width="1200" height="340" rx="20" fill="#0B0D10"/>
+  <rect x="0.5" y="0.5" width="1199" height="339" rx="19.5" fill="none" stroke="#21252C"/>
+
+  <!-- corner ticks -->
+  <g stroke="#343A43" stroke-width="1.5" fill="none" class="fd" style="animation-delay:1s">
+    <path d="M18 34 V18 H34"/><path d="M1166 18 H1182 V34"/>
+    <path d="M1182 306 V322 H1166"/><path d="M34 322 H18 V306"/>
+  </g>
+
+  <!-- header -->
+  <text x="64" y="46" class="mono eyebrow">FR6 <tspan fill="#343A43">—</tspan> THE RULE EVERY AGENT OBEYS</text>
+  <g class="kb" style="animation-delay:.6s">
+    <rect x="984" y="28" width="152" height="26" rx="13" fill="none" stroke="#FF4A1C" stroke-opacity="0.45">
+      <animate attributeName="stroke-opacity" values="0.45;0.15;0.45" keyTimes="0;0.5;1" dur="8s" repeatCount="indefinite"/>
+    </rect>
+    <text x="1060" y="45.5" text-anchor="middle" class="mono" font-size="10.5" letter-spacing="1.6" fill="#FF4A1C">REQUIRED</text>
+  </g>
+  <line x1="64" y1="62" x2="1136" y2="62" stroke="#21252C" class="fd" style="animation-delay:.15s"/>
+
+  <!-- terminal card (double bezel) -->
+  <g class="rv" style="animation-delay:.3s">
+    <rect class="bezel" x="64.5" y="96.5" width="1071" height="159" rx="14"/>
+    <rect class="core" x="70" y="102" width="1060" height="148" rx="10"/>
+
+    <!-- title bar -->
+    <circle cx="90" cy="124" r="4" fill="#FF4A1C" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;0.3;0.8" keyTimes="0;0.5;1" dur="8s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="90" cy="124" r="4" fill="none" stroke="#FF4A1C">
+      <animate attributeName="r" values="4;11;4" keyTimes="0;0.62;1" dur="8s" repeatCount="indefinite"/>
+      <animate attributeName="stroke-opacity" values="0.5;0;0;0.5" keyTimes="0;0.62;0.99;1" dur="8s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="106" cy="124" r="4" fill="#2A2F37"/>
+    <circle cx="122" cy="124" r="4" fill="#2A2F37"/>
+    <text x="144" y="128" class="mono" font-size="11" letter-spacing="1.2" fill="#5A606A">AI AGENT · REPLY BEGINS WITH</text>
+    <text x="1114" y="128" text-anchor="end" class="mono" font-size="10.5" letter-spacing="1.4" fill="#4A505A">FIRST LINE · EVERY TIME
+      <animate attributeName="opacity" values="1;1;0.45;1;1" keyTimes="0;0.72;0.78;0.84;1" dur="8s" repeatCount="indefinite"/>
+    </text>
+    <line x1="70" y1="140" x2="1130" y2="140" stroke="#1D2127"/>
+
+    <!-- dim: the user prompt -->
+    <text x="86" y="164" class="mono" font-size="12.5" fill="#4A505A">› convert this pdf to word for me</text>
+
+    <!-- the disclosure line (typewriter reveal) -->
+    <g clip-path="url(#typeClip)">
+      <text x="86" y="194" class="mono" font-size="13.5" fill="#EDEBE6">[aio] Using <tspan fill="#FF4A1C" font-weight="700">[Stirling-PDF](https://github.com/Stirling-Tools/Stirling-PDF)</tspan> (repo) — HTML/CSS/JS to PDF converter</text>
+      <!-- [aio] prefix breathes in accent on the master loop (same glyphs, sits on top) -->
+      <text x="86" y="194" class="mono" font-size="13.5" font-weight="700" fill="#FF4A1C" opacity="0">[aio]
+        <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.82;0.86;0.96;1" dur="8s" repeatCount="indefinite"/>
+      </text>
+    </g>
+    <rect x="1089" y="180" width="9" height="17" fill="#FF4A1C">
+      <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.52;0.52;1" dur="1.06s" repeatCount="indefinite"/>
+    </rect>
+
+    <!-- link underline sweep, after the reveal -->
+    <rect x="193" y="202" width="0" height="2.5" rx="1.25" fill="#FF4A1C" class="fd" style="animation-delay:4.4s" opacity="0.8">
+      <animate attributeName="width" values="0;552" dur=".7s" begin="4.4s" fill="freeze"/>
+      <animate attributeName="opacity" values="0.8;0.8;0.35;0.8;0.8" keyTimes="0;0.78;0.84;0.90;1" dur="8s" repeatCount="indefinite"/>
+    </rect>
+
+    <!-- anatomy row -->
+    <g class="fd" style="animation-delay:4.6s">
+      <text x="86" y="232" class="mono" font-size="10.5" letter-spacing="1.6" fill="#5A606A">NAME<tspan fill="#343A43"> ↗</tspan> URL<tspan fill="#343A43"> ↗</tspan> TYPE<tspan fill="#343A43"> ↗</tspan> ONE-LINE FUNCTION — LINKED, ATTRIBUTED, AUDITABLE
+        <animate attributeName="fill" values="#5A606A;#5A606A;#FF4A1C;#5A606A;#5A606A" keyTimes="0;0.60;0.64;0.70;1" dur="8s" repeatCount="indefinite"/>
+      </text>
+    </g>
+
+    <!-- CRT scanline sweep over the terminal -->
+    <rect x="70" y="150" width="1060" height="2" fill="#FF4A1C" opacity="0.09">
+      <animate attributeName="y" values="150;150;248;248" keyTimes="0;0.30;0.58;1" dur="8s" repeatCount="indefinite" calcMode="spline" keySplines="0 0 0 0;0.45 0 0.55 1;0 0 0 0"/>
+      <animate attributeName="opacity" values="0;0;0.09;0;0" keyTimes="0;0.30;0.44;0.58;1" dur="8s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+
+  <!-- footer micro -->
+  <text x="64" y="286" class="mono fd" font-size="11" letter-spacing="1" fill="#4A505A" style="animation-delay:1.2s">THE SAME LINE LIVES IN EVERY AGENT BLOCK - ONE SOURCE OF TRUTH, SLIM MANIFEST POINTS TO IT</text>
+  <text x="1136" y="286" text-anchor="end" class="mono fd" font-size="11" letter-spacing="1" fill="#4A505A" style="animation-delay:1.2s">NO SLASH-COMMANDS · ENFORCED BY THE MODEL</text>
+</svg>
     </div>
   </section>
 
@@ -250,7 +449,7 @@ document.getElementById('cmd').addEventListener('click',function(){
 (function(){
   if(!('IntersectionObserver' in window)) return;
   if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  var els=document.querySelectorAll('section, .step, .cell, .agents, .hero > *');
+  var els=document.querySelectorAll('section, .step, .cell, .agents, .ticker, .hero > *');
   if(!els.length) return;
   document.documentElement.classList.add('js');
   els.forEach(function(el){el.classList.add('reveal','pre')});
@@ -260,6 +459,35 @@ document.getElementById('cmd').addEventListener('click',function(){
     });
   },{threshold:.12,rootMargin:'0px 0px -6% 0px'});
   els.forEach(function(el){io.observe(el)});
+})();
+/* kinetic h1: split into word spans that rise one by one (70ms stagger).
+   Gated on .js (set above only when motion is allowed) → reduced-motion and
+   no-JS visitors keep the untouched, fully visible headline. */
+(function(){
+  if(!document.documentElement.classList.contains('js')) return;
+  var h1=document.querySelector('.hero h1');
+  if(!h1) return;
+  var i=0,words=[];
+  (function walk(node){
+    Array.prototype.slice.call(node.childNodes).forEach(function(n){
+      if(n.nodeType===3){
+        var frag=document.createDocumentFragment();
+        n.textContent.split(/(\s+)/).forEach(function(w){
+          if(!w) return;
+          if(/^\s+$/.test(w)){frag.appendChild(document.createTextNode(w));return}
+          var s=document.createElement('span');
+          s.className='w';s.textContent=w;s.style.transitionDelay=(i*70)+'ms';i++;
+          words.push(s);frag.appendChild(s);
+        });
+        node.replaceChild(frag,n);
+      }else if(n.nodeType===1&&n.tagName!=='BR'){walk(n)}
+    });
+  })(h1);
+  if(!words.length) return;
+  words.forEach(function(w){w.classList.add('pre')});
+  requestAnimationFrame(function(){requestAnimationFrame(function(){
+    words.forEach(function(w){w.classList.remove('pre')});
+  })});
 })();
 </script>
 </body>

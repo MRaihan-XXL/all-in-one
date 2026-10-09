@@ -8,8 +8,8 @@ any CLI/UX change:
 node scripts/capture-outputs.mjs
 ```
 
-- package: `aio-connect@1.9.0`
-- captured: 2026-10-08T11:28:09.391Z
+- package: `aio-connect@1.9.1`
+- captured: 2026-10-09T09:07:59.851Z
 - host: win32 · node v26.3.0
 
 ## Help (English, default)
@@ -111,7 +111,7 @@ $ node bin/aio.js --help
 
   Disclosure (injected rule — first line of replies that used aio-surfaced entries):
     [aio] Using [<name>](<url>) (<type>) — <function>
-    <type> = repo | cli | service | skill | site
+    <type> = repo | cli | service | skill | site | tool
 ```
 
 _exit 0_
@@ -215,7 +215,7 @@ $ AIO_LANG=id node bin/aio.js --help
 
   Disclosure (aturan disuntik — baris pertama balasan yang memakai entri dari aio):
     [aio] Using [<name>](<url>) (<type>) — <function>
-    <type> = repo | cli | service | skill | site
+    <type> = repo | cli | service | skill | site | tool
 ```
 
 _exit 0_
@@ -224,7 +224,7 @@ _exit 0_
 
 ```console
 $ node bin/aio.js -v
-aio 1.9.0 — all-in-one (https://github.com/MRaihan-XXL/all-in-one)
+aio 1.9.1 — all-in-one (https://github.com/MRaihan-XXL/all-in-one)
 ```
 
 _exit 0_
@@ -254,11 +254,11 @@ _exit 0_
 
 ```console
 $ node bin/aio.js doctor --check
-aio doctor — v1.9.0 (check mode)
+aio doctor — v1.9.1 (check mode)
 [ok] node           v26.3.0 (supported: >= 22)
 [ok] state          config.json ok (no local catalog)
 [ok] live           github reachable — ask searches GitHub + npm + crates (no search storage)
-[ok] manifest       live architecture (no search storage) · 2.0d old — C:\Users\WORKPLUS\.aio\aio-context.md
+[ok] manifest       live architecture (no search storage) · 2.9d old — C:\Users\WORKPLUS\.aio\aio-context.md
 [ok] agent blocks   7/7 installed agents carry the auto-context block
 [ok] agents         opencode, claude, kimi, jcode, freebuff, hermes, codex, gemini
 [ok] gh auth        logged in — skills lane enabled (gh api search/code)
@@ -326,6 +326,64 @@ root: C:\Users\WORKPLUS\.agents\skills
 
 _exit 0_
 
+## Setup (dry-run plan, nothing written)
+
+```console
+$ node bin/aio.js --dry-run
+
+ ▄████▄  ████  ▄████▄ 
+██    ██  ██  ██    ██
+██    ██  ██  ██    ██
+████████  ██  ██    ██
+██    ██  ██  ██    ██
+██    ██ ████  ▀████▀ 
+  ▌ all-in-one v1.9.1 — auto-connect every AI agent to live search
+  ▌ live: github · npm · crates · web · tools · skills
+  ▌ prompt → aio ask / aio agent → use → report → clean
+──────────────────────────────────────────────────────────────────────────
+  GPL-3.0 · https://github.com/MRaihan-XXL/all-in-one
+
+
+aio setup v1.9.1 — DRY RUN (nothing written)
+────────────────────────────────────────────────────────────────────────────
+
+Agents
+  [x] opencode                   detected  → .config/opencode/AGENTS.md
+  [x] claude                     detected  → .claude/CLAUDE.md
+  [x] kimi                       detected  → .kimi-code/AGENTS.md
+  [x] jcode                      detected  → .jcode/AGENTS.md
+  [x] freebuff                   detected  → ~/AGENTS.md (fallback)
+  [x] hermes                     detected  → ~/AGENTS.md
+  [x] codex                      detected  → .codex/AGENTS.md
+  [x] gemini                     detected  → .gemini/GEMINI.md
+
+Context block (auto-use rules + usage disclosure)
+  [x] opencode                   would update (dry-run) — C:\Users\WORKPLUS\.config\opencode\AGENTS.md
+  [x] claude                     would update (dry-run) — C:\Users\WORKPLUS\.claude\CLAUDE.md
+  [x] kimi                       would update (dry-run) — C:\Users\WORKPLUS\.kimi-code\AGENTS.md
+  [x] jcode                      would update (dry-run) — C:\Users\WORKPLUS\.jcode\AGENTS.md
+  [x] codex                      would update (dry-run) — C:\Users\WORKPLUS\.codex\AGENTS.md
+  [x] gemini                     would update (dry-run) — C:\Users\WORKPLUS\.gemini\GEMINI.md
+  [ ] zed                        skipped (no config dir yet) — C:\Users\WORKPLUS\AppData\Roaming\Zed\AGENTS.md
+  [x] global                     would update (dry-run) — C:\Users\WORKPLUS\AGENTS.md
+
+MCP (codebase-memory-mcp)
+  [x] opencode.jsonc             present
+  [x] .claude.json               present
+  [x] mcp.json                   present
+  [x] mcp.json                   present
+  [x] settings.json              present
+  [x] config.toml                present
+
+Manifest (slim — no local catalog, search stays live)
+  [ ] aio-context.md             would write — C:\Users\WORKPLUS\.aio\aio-context.md
+
+Backups: none created (dry-run)
+Dry run complete — no files were written. Re-run with --yes (or confirm the prompt) to apply.
+```
+
+_exit 0_
+
 ## Ask (live search, ranked, discarded)
 
 ```console
@@ -346,27 +404,76 @@ note: ranked by keyword match + source popularity — public results are unvette
 
 _exit 0_
 
+## Ask (gallery query — the demo card query, verbatim)
+
+```console
+$ node bin/aio.js ask "awesome animated chart library"
+aio ask — "awesome animated chart library" (live: github+npm · 7 results · 4.6s)
+
+note: ranked by keyword match + source popularity — public results are unvetted;
+      verify before running npx/uvx or cloning (docs/THREATS.md).
+1. lightweight-charts [tool] <npm> — Performant financial charts built with HTML5 canvas
+   v5.2.1 · financial-charting-library · charting-library · html5-charts
+   https://www.npmjs.com/package/lightweight-charts
+   why: BM25 keyword match (#1) + trust high
+2. vizzuhq/vizzu-lib [repo] <github> — Library for animated data visualizations and data stories.
+   ★2039 · JavaScript
+   https://github.com/vizzuhq/vizzu-lib
+   why: BM25 keyword match (#2) + trust high
+3. bmarrdev/android-DecoView-charting [repo] <github> — DecoView: Android arc based animated charting library
+   ★984 · Java
+   https://github.com/bmarrdev/android-DecoView-charting
+   why: BM25 keyword match (#3) + trust mid
+4. react-native-gifted-charts [tool] <npm> — The most complete library for Bar, Line, Area, Pie, Donut, Stacked Bar, Population Pyramid, Radar, Bubble, Scatter and …
+   v1.4.81 · chart · charts · graph
+   https://www.npmjs.com/package/react-native-gifted-charts
+   why: BM25 keyword match (#4) + trust high
+5. dexplo/bar_chart_race [repo] <github> — Create animated bar chart races in Python with matplotlib
+   ★1453 · Python
+   https://github.com/dexplo/bar_chart_race
+   why: BM25 keyword match (#6) + trust mid
+6. rendro/easy-pie-chart [repo] <github> — easy pie chart is a lightweight plugin to draw simple, animated pie charts for single values
+   ★2060 · TypeScript
+   https://github.com/rendro/easy-pie-chart
+   why: BM25 keyword match (#7) + trust high
+7. xyfeng/XYPieChart [repo] <github> — A simple and animated Pie Chart for your iOS app.
+   ★1711 · Objective-C
+   https://github.com/xyfeng/XYPieChart
+   why: BM25 keyword match (#8) + trust mid
+```
+
+_exit 0_
+
+## Borrow cleanup (reversible, TTL temp dir)
+
+```console
+$ node bin/aio.js borrow --clean
+aio borrow --clean — 0 clone(s) removed, 1 KB freed from C:\Users\WORKPLUS\AppData\Local\Temp\aio-borrow
+```
+
+_exit 0_
+
 ## Release scorecard (15 aspects)
 
 ```console
 $ node scripts/verify-scorecard.mjs
-[aio] scorecard — 15 aspects × machine checks (v1.9.0)
+[aio] scorecard — 15 aspects × machine checks (v1.9.1)
 
   integrity    10/10  (4/4) ok
-  tests        10/10  (4/4) ok
+  tests        10/10  (5/5) ok
   robustness   10/10  (5/5) ok
   security     10/10  (4/4) ok
   honesty      10/10  (6/6) ok
   cli-ux       10/10  (5/5) ok
   doctor       10/10  (1/1) ok
   pack         10/10  (3/3) ok
-  docs-sync    10/10  (5/5) ok
+  docs-sync    10/10  (13/13) ok
   release      10/10  (5/5) ok
   quality      10/10  (3/3) ok
   coverage-floor 10/10  (3/3) ok
   i18n         10/10  (4/4) ok
   ci-gates     10/10  (5/5) ok
-  freshness    10/10  (5/5) ok
+  freshness    10/10  (11/11) ok
 
 SUMMARY  100/100 — 15/15 aspects >= 10/10
 ```
