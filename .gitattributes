@@ -1,0 +1,7 @@
+# One line-ending policy for every checkout: the pack-line gate compares
+# README.md figures against a live `npm pack --dry-run`, and npm packs the
+# worktree bytes — a Windows CRLF checkout inflated the tarball by 664 bytes
+# (119,320 vs 118,656) and failed docs-sync on windows-latest only. LF in the
+# worktree on every OS keeps one number.
+* text=auto eol=lf
+*.png binary
