@@ -103,7 +103,7 @@ const HELP_EN = `
 
   Disclosure (injected rule — first line of replies that used aio-surfaced entries):
     [aio] Using [<name>](<url>) (<type>) — <function>
-    <type> = repo | cli | service | skill | site
+    <type> = repo | cli | service | skill | site | tool
 `;
 
 // 10-b: help text in Bahasa Indonesia when AIO_LANG=id — structure mirrors
@@ -204,7 +204,7 @@ const HELP_ID = `
 
   Disclosure (aturan disuntik — baris pertama balasan yang memakai entri dari aio):
     [aio] Using [<name>](<url>) (<type>) — <function>
-    <type> = repo | cli | service | skill | site
+    <type> = repo | cli | service | skill | site | tool
 `;
 
 const HELP = process.env.AIO_LANG === 'id' ? HELP_ID : HELP_EN;
