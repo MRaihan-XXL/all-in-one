@@ -291,7 +291,7 @@ Changes: added chart.js, wired the data feed.
   history — `aio ask` results are printed and discarded (**zero search
   storage — results printed, never saved**), and the npm package ships no
   database (`files` = bin, src, docs, README, CHANGELOG, LICENSE, sbom.cdx.json —
-  `test/` and `assets/` dropped in v1.7.0; current pack 118,656 bytes ≈
+  `test/` and `assets/` dropped in v1.7.0; current pack 118,659 bytes ≈
   115.9 KiB / 31 files).
   What aio *does* write: the
   manifest `~/.aio/aio-context.md`, one `AIO AUTO-CONTEXT` block per agent
