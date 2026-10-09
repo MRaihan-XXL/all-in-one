@@ -58,6 +58,35 @@ an item is done when the stated check passes.
   **Verification pending — keep reporting kimi as model-dependent** until a
   retest measures otherwise; matrix unchanged, no new compliance claim.
 
+## Candidate ideas (deferred from the v1.9.1 planning round)
+
+> Honest note: the original planning list was lost with the session notes —
+> these five items were reconstructed from the changelog/session trail, not
+> copied from the source. Reconcile with the chat history if exact wording
+> matters.
+
+- **Generated SCORECARD.md** — `node scripts/verify-scorecard.mjs --write-docs`
+  emits `docs/SCORECARD.md` from the check table itself, so the row-parity gate
+  validates a generated artifact instead of hand-kept prose (check:
+  re-emitting leaves `git diff --exit-code docs/SCORECARD.md` clean).
+- **CI-rendered screenshot gallery** — port the `scripts/screenshots.ps1` Edge
+  recipe into a workflow (og.yml-style) so `assets/screenshots/*.png`
+  regenerate on push; today the gallery only refreshes from a Windows machine
+  (check: the workflow run ends with `git diff --exit-code
+  assets/screenshots/`).
+- **Recorded motion clip for social** — capture the animated SVG family as a
+  short vertical MP4/WebM (headless frame sequence) for social posts; the
+  TikTok reference account (@krishnachaytanya) could not be fetched (login
+  wall), so the applied motion language is generic kinetic until the reference
+  clips are viewable (check: the committed clip renders the same frames as the
+  SVGs at the target duration).
+- **Per-block OUTPUTS viewer** — the site gallery scrolls one 26 KB `<pre>`;
+  render collapsible per-block sections with the raw `<pre>` kept as the no-JS
+  fallback (check: no-JS output unchanged).
+- **Landing SEO: JSON-LD + sitemap** — structured data (SoftwareApplication,
+  sameAs npm/GitHub) plus sitemap.xml for the GitHub Pages site (check: Google
+  Rich Results test passes on the deployed page).
+
 ## Deliberately out of scope
 
 Background daemon, cloud sync and a web UI stay out (see `PRD.md` §8).

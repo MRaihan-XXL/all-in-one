@@ -6,6 +6,76 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-10-08
+
+### Added
+
+- **Index proof motion** — the homepage proof section counts up to its values
+  and ships a `<noscript>` snapshot, so a no-JS reader sees the same numbers.
+- **Two-phase `OUTPUTS.md` capture** — `scripts/capture-outputs.mjs` now also
+  records the `setup --dry-run`, gallery `ask` query and `borrow --clean`
+  blocks; CLI blocks are written first, the scorecard appended after it passes.
+- **README numbers machine-patched** — `scripts/eval-relevance.mjs --write`
+  and `scripts/stats.mjs --write` patch the eval badge/gallery line and the
+  pack line (measure → patch → converge), so hand-typed figures cannot drift.
+- **Release notes from the changelog** — the release workflow publishes this
+  section as the GitHub release body (`generate-notes` as the fallback).
+- **Kinetic animation overhaul** — the whole asset family (hero, flow, demo,
+  disclosure, stats) gains beat/flick/heartbeat keyframes, the landing h1 rises
+  word by word (70 ms stagger), plus a marquee ticker, spring hover states and
+  a reveal stagger — all behind `prefers-reduced-motion`.
+- **Screenshot capture hardened** — `scripts/screenshots.ps1` gives every shot
+  a unique headless Edge profile, wipes the profile before each capture, and
+  retries the SMIL typewriter shot with a size guard (a clip stuck at width 0
+  ships as ~10 KB instead of ~11.6 KB → retried, then failed loudly).
+- **Site `#outputs` section** — the landing page's `#outputs` gallery fetches
+  `OUTPUTS.md` live into a `<pre>`, with an explicit "read it on GitHub"
+  fallback when the origin does not serve the file.
+- **Inline disclosure SVG** — the landing page inlines the disclosure card
+  instead of loading it through `<img>`: the SMIL typewriter freezes when the
+  SVG is served via `<img>` under headless capture, so the reveal only runs
+  inline.
+- **+17 tests (290 → 307)** — 5 new files: `rate-lock.test.js` (RATE_LOCK `wx`
+  exclusivity), `npm-registry.test.js` (registry cross-check + normalization),
+  `i18n-cli.test.js` (`AIO_LANG=id` uncovered surfaces), `env-guards.test.js`
+  (env-guard/banner behavior) and `coverage-gates.test.js` (coverage-gate
+  contract) → **307 tests** (306 pass, 1 skip, 0 fail).
+
+### Changed
+
+- **Verbatim demo capture** — the demo card is a byte-verbatim capture of
+  real runs (real header/timings, `scichart` as #2, real dry-run and borrow
+  lines) — no paraphrased annotations.
+- **Disclosure enum gains `tool`** — `src/write.js`, both help texts, README
+  and PRD quote `repo | cli | service | skill | site | tool`.
+- **Flow diagram single-sourced** — `docs/flow.svg` retired;
+  `docs/flow.md` documents `assets/flow.svg` only.
+- **Badges + ticker** — hero/demo badges bumped to v1.9.1; the ticker lists
+  `verify` instead of the removed `evolve` alias.
+- **Scorecard hardening** — the `npm pack` spawn routes through `cmd.exe`
+  (retires the deprecated `shell: true` + args array, DEP0190); the freshness
+  gate compares dirty-tree-aware touch times, so an uncommitted edit is
+  measured by its mtime instead of being masked by `git log`; the token-literal
+  scan now covers `scripts/` and `test/` alongside `src/` and `bin/`; a new
+  `>= 250 tests` floor is read from `docs/stats.json`; and `docs/SCORECARD.md`
+  gains two gates — its title must carry `pkg.version` and it must hold exactly
+  one row per check (77).
+- **Screenshots re-rendered with the fixes** — flow WEB-row bar overlap, hero
+  panel bottom border, demo caret over `--clean`, stats caption overflow and
+  the usage `<pre>` wrap.
+
+**Gates:** 307 tests (306 pass · 1 skip · 0 fail) · scorecard 100/100 (15/15) · pack 31 files.
+
+### Fixed
+
+- **Stale marketing art** — v1.9.0 → v1.9.1 SVG/marketing badges and the stale
+  `evolve` mentions in hero/index art.
+- **Stale README numbers** — the eval badge/gallery line (was 0.984 /
+  2026-10-06, now matches `eval-result.json` 0.985 / 2026-10-08) and the pack
+  line (was 108,837 bytes / 33 files) are patched by the machine — all now
+  verified by 7 new scorecard gates (badge sync, no-evolve, enum parity,
+  demo-verbatim vs `OUTPUTS.md`, eval sync, pack sync, screenshot freshness).
+
 ## [1.9.0] - 2026-10-08
 
 ### Added

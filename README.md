@@ -10,10 +10,10 @@
 </p>
 
 <p align="center">
-  <a href="./CHANGELOG.md"><img src="https://img.shields.io/badge/release-v1.9.0-cb3837" alt="release v1.9.0 (2026-10-08)"></a>
+  <a href="./CHANGELOG.md"><img src="https://img.shields.io/badge/release-v1.9.1-cb3837" alt="release v1.9.1 (2026-10-08)"></a>
   <a href="https://www.npmjs.com/package/aio-connect"><img src="https://img.shields.io/npm/v/aio-connect?color=cb3837" alt="npm version"></a>
   <a href="https://github.com/MRaihan-XXL/all-in-one/actions/workflows/ci.yml"><img src="https://github.com/MRaihan-XXL/all-in-one/actions/workflows/ci.yml/badge.svg" alt="CI 3-OS"></a>
-  <img src="https://img.shields.io/badge/eval-hit%401%2097.4%25%20%C2%B7%20MRR%200.984%20%C2%B7%20n%3D114-2ea44f" alt="eval: hit@1 97.4%  MRR 0.984  n=114 (2026-10-06)">
+  <img src="https://img.shields.io/badge/eval-hit%401%2097.4%25%20%C2%B7%20MRR%200.985%20%C2%B7%20n%3D114-2ea44f" alt="eval: hit@1 97.4%  MRR 0.985  n=114 (2026-10-08)">
   <img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="license: GPL-3.0">
   <img src="https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg" alt="node >= 22">
   <img src="https://img.shields.io/badge/agents-8-orange.svg" alt="8 agents supported">
@@ -39,7 +39,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 290 tests (289 pass · 1 skip · 0 fail)">
+  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 307 tests (306 pass · 1 skip · 0 fail)">
 </p>
 
 ## ✨ What it does
@@ -96,7 +96,7 @@ aio agent "<task>" = every lane at once (github ∥ skills ∥ npm ∥ crates �
 Example — real `aio ask` output, abridged (links + functions always included):
 
 ```text
-aio ask — "awesome animated chart library" (live: github+npm · 8 results · 5.0s)
+aio ask — "awesome animated chart library" (live: github+npm · 7 results · 4.8s)
 
 note: ranked by keyword match + source popularity — public results are unvetted;
       verify before running npx/uvx or cloning (docs/THREATS.md).
@@ -105,9 +105,9 @@ note: ranked by keyword match + source popularity — public results are unvette
    v5.2.1 · financial-charting-library · charting-library · html5-charts
    https://www.npmjs.com/package/lightweight-charts
    why: BM25 keyword match (#1) + trust high
-2. vizzuhq/vizzu-lib [repo] <github> — Library for animated data visualizations and data stories.
-   ★2037 · JavaScript
-   https://github.com/vizzuhq/vizzu-lib
+2. scichart [tool] <npm> — Fast WebGL JavaScript Charting Library and Framework
+   v6.0.6 · Chart · Charts · Data
+   https://www.npmjs.com/package/scichart
    why: BM25 keyword match (#2) + trust high
 ```
 
@@ -279,7 +279,7 @@ markdown link with a one-line function**:
 Changes: added chart.js, wired the data feed.
 ```
 
-`<type>` = `repo | cli | service | skill | site`.
+`<type>` = `repo | cli | service | skill | site | tool`.
 
 <p align="center">
   <img src="./assets/aio-disclosure.svg" width="98%" alt="Disclosure card: every agent reply begins with the [aio] Using name-url-type-function line — linked, attributed, auditable; first line, every time">
@@ -291,8 +291,8 @@ Changes: added chart.js, wired the data feed.
   history — `aio ask` results are printed and discarded (**zero search
   storage — results printed, never saved**), and the npm package ships no
   database (`files` = bin, src, docs, README, CHANGELOG, LICENSE, sbom.cdx.json —
-  `test/` and `assets/` dropped in v1.7.0; current pack 108,837 bytes ≈
-  106.3 KiB / 33 files).
+  `test/` and `assets/` dropped in v1.7.0; current pack 118,656 bytes ≈
+  115.9 KiB / 31 files).
   What aio *does* write: the
   manifest `~/.aio/aio-context.md`, one `AIO AUTO-CONTEXT` block per agent
   file, timestamped backups under `~/.aio/backups/`, `~/.aio/config.json`,
@@ -416,15 +416,15 @@ agent's own (the `agent` web lane talks only to `en.wikipedia.org` and
 ## 🛠 Development
 
 ```bash
-npm test             # node --test — 290 tests: 289 pass, 1 skip, 0 fail (live search, agent, skill search, injection, consent gate, drift, borrow, doctor, …)
-npm run test:coverage # same suite + coverage gates 90 lines / 80 branches / 85 functions (last run: 98.19 / 90.61 / 97.56)
+npm test             # node --test — 307 tests: 306 pass, 1 skip, 0 fail (live search, agent, skill search, injection, consent gate, drift, borrow, doctor, …)
+npm run test:coverage # same suite + coverage gates 90 lines / 80 branches / 85 functions (last run: 98.65 / 91.29 / 97.97)
 node bin/aio.js      # run from a checkout without installing
 node bin/aio.js ask "pdf ke word"
 node bin/aio.js agent "csv to interactive chart"
 node bin/aio.js doctor --check
 node scripts/capture-outputs.mjs  # regenerate OUTPUTS.md (verbatim CLI output gallery, never hand-typed)
 powershell -ExecutionPolicy Bypass -File scripts/screenshots.ps1  # re-render assets/screenshots/*.png from the animated SVGs (Edge headless)
-node scripts/eval-relevance.mjs --write   # from a repo checkout (scripts/ ships in the repo, not the npm tarball): live 114-query golden set → hit@8 = 114/114 (100%), hit@1 = 111/114 (97.4%), MRR 0.984, measured 2026-10-06
+node scripts/eval-relevance.mjs --write   # from a repo checkout (scripts/ ships in the repo, not the npm tarball): live 114-query golden set → hit@8 = 114/114 (100%), hit@1 = 111/114 (97.4%), MRR 0.985, measured 2026-10-08
 ```
 
 Static JSON endpoints (GitHub Pages, same origin as the site — no auth, no
@@ -460,7 +460,7 @@ headless (Edge) at a settled frame, regenerate any time with
 
 **Verified stats — floors measured 2026-09-30:**
 
-![verified stats: 630M+ github repos, 3M+ npm packages, 340K+ crates, 6.8M+ skill files, 0 results kept, 290 tests run](./assets/screenshots/stats.png)
+![verified stats: 630M+ github repos, 3M+ npm packages, 340K+ crates, 6.8M+ skill files, 0 results kept, 307 tests run](./assets/screenshots/stats.png)
 
 **The live site — proof section auto-loads `docs/stats.json`, never hand-typed:**
 
