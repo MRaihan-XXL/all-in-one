@@ -49,14 +49,22 @@ jobs:
             }
             console.log('releasing aio-connect@' + p.version);
           "
-      - name: GitHub Release (auto notes)
+      - name: GitHub Release (notes from CHANGELOG, generate-notes fallback)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: >
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 ||
-          gh release create "$GITHUB_REF_NAME"
-          --title "aio v$(node -p "require('./package.json').version")"
-          --generate-notes
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            exit 0
+          fi
+          VER="${GITHUB_REF_NAME#v}"
+          # the release body is the verbatim CHANGELOG section for this version
+          NOTES="$(awk -v v="$VER" 'BEGIN{p=0} $0 ~ "^## \\[" v "\\]" {p=1; next} p && /^## \[/ {exit} p {print}' CHANGELOG.md)"
+          TITLE="aio v$(node -p "require('./package.json').version")"
+          if [ -n "$NOTES" ]; then
+            gh release create "$GITHUB_REF_NAME" --title "$TITLE" --notes "$NOTES"
+          else
+            gh release create "$GITHUB_REF_NAME" --title "$TITLE" --generate-notes
+          fi
 
   # ---- standalone binaries: no Node required on the user's machine ----
   # bun --compile keeps native ESM (import.meta.url / JSON imports intact).

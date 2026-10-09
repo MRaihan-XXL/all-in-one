@@ -38,8 +38,14 @@ function runNode(args, env = {}) {
 }
 
 function runNpmPack() {
-  const r = spawnSync('npm', ['pack', '--dry-run', '--json'], {
-    cwd: ROOT, encoding: 'utf8', timeout: 60000, shell: process.platform === 'win32',
+  // npm is npm.cmd on Windows; routing through cmd.exe keeps the args as an
+  // array without shell:true+args, which Node deprecates (DEP0190).
+  const cmd = process.platform === 'win32' ? (process.env.ComSpec || 'cmd.exe') : 'npm';
+  const args = process.platform === 'win32'
+    ? ['/d', '/s', '/c', 'npm', 'pack', '--dry-run', '--json']
+    : ['pack', '--dry-run', '--json'];
+  const r = spawnSync(cmd, args, {
+    cwd: ROOT, encoding: 'utf8', timeout: 60000,
     env: { ...process.env, NO_COLOR: '1' },
   });
   if (r.status !== 0) return { error: `npm pack exit ${r.status}: ${(r.stderr || '').slice(0, 200)}` };
@@ -85,6 +91,14 @@ check('tests', 'npm test runs node --test', /node --test/.test(pkg.scripts?.test
   const at = (k, min) => { const m = c.match(new RegExp(`--test-coverage-${k}=(\\d+)`)); return m ? +m[1] >= min : false; };
   check('tests', 'coverage gates >= 90/80/85', at('lines', 90) && at('branches', 80) && at('functions', 85));
 }
+{
+  // recorded suite size: catches a silently shrinking suite (numbers come from
+  // the real run recorded in docs/stats.json, never hand-typed here).
+  let n = null, err = '';
+  try { n = JSON.parse(read('docs/stats.json')).tests.total; } catch (e) { err = e.message; }
+  check('tests', 'stats.json records >= 250 tests', typeof n === 'number' && n >= 250,
+    n === null ? err : `${n} tests`);
+}
 
 // ── 3. robustness (fix-wave invariants) ─────────────────────────────────────
 check('robustness', 'writeAtomic used >= 15 times in src',
@@ -104,9 +118,11 @@ check('robustness', 'corrupt-ledger preserve-aside present', has('src/paths.js',
 
 // ── 4. security ─────────────────────────────────────────────────────────────
 {
-  const files = [...list('src', /\.js$/).map((f) => path.join('src', f)), 'bin/aio.js'];
+  const files = [...list('src', /\.js$/).map((f) => path.join('src', f)), 'bin/aio.js',
+    ...list('scripts', /\.(?:js|mjs)$/).map((f) => path.join('scripts', f)),
+    ...list('test', /\.js$/).map((f) => path.join('test', f))];
   const leaked = files.filter((f) => /ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|ghu_[A-Za-z0-9]{20,}|npm_[A-Za-z0-9]{36}/.test(read(f)));
-  check('security', 'no hardcoded token literals in src/bin', leaked.length === 0, leaked.join(', '));
+  check('security', 'no hardcoded token literals in src/bin/scripts/test', leaked.length === 0, leaked.join(', '));
 }
 check('security', 'GH_TOKEN read from env (never hardcoded)',
   has('src/live.js', /process\.env\.GH_TOKEN/));
@@ -179,6 +195,91 @@ check('docs-sync', `CHANGELOG has ${pkg.version} entry`, has('CHANGELOG.md', new
 check('docs-sync', `README states current version ${pkg.version}`, read('README.md').includes(pkg.version));
 check('docs-sync', 'THREATS covers provenance', has('docs/THREATS.md', /provenance/i));
 check('docs-sync', 'docs/SCORECARD.md present', fs.existsSync(path.join(ROOT, 'docs', 'SCORECARD.md')));
+
+// ── 9b. honesty gates (added v1.9.1: the things that once drifted by hand) ──
+{
+  // (a) every version badge painted in an SVG must equal package.json
+  const stale = [];
+  for (const f of list('assets', /\.svg$/)) {
+    for (const line of read(path.join('assets', f)).split('\n')) {
+      if (line.includes(' · ')) continue; // result-meta line (npm result versions, not badges)
+      for (const m of line.matchAll(/\bv\d+\.\d+\.\d+\b/g)) {
+        if (m[0] !== `v${pkg.version}`) stale.push(`${f}=${m[0]}`);
+      }
+    }
+  }
+  check('docs-sync', `SVG version badges match package.json (v${pkg.version})`, stale.length === 0, stale.join(', '));
+}
+{
+  // (b) the removed alias must not be sold as a feature any more
+  const files = [...list('assets', /\.svg$/).map((f) => path.join('assets', f)), 'index.html'];
+  const bad = files.filter((f) => /\bevolve\b/.test(read(f)));
+  check('docs-sync', 'no `evolve` in assets/*.svg or index.html (use verify)', bad.length === 0, bad.join(', '));
+}
+{
+  // (c) the disclosure enum has ONE source (write.js); help ×2, README and PRD
+  // must quote it verbatim, and every result type live.js emits must be a member
+  const enumStr = (read('src/write.js').match(/repo \| cli \| service \| skill \| site \| tool/) || [])[0];
+  const spots = ['bin/aio.js', 'README.md', 'PRD.md'];
+  const missing = enumStr ? spots.filter((f) => !read(f).includes(enumStr)) : [...spots];
+  const binCount = (read('bin/aio.js').match(/repo \| cli \| service \| skill \| site \| tool/g) || []).length;
+  const members = enumStr ? enumStr.split(' | ') : [];
+  const emitted = [...read('src/live.js').matchAll(/type: '([a-z]+)'/g)].map((m) => m[1]);
+  const foreign = emitted.filter((t) => !members.includes(t));
+  check('docs-sync', 'disclosure enum verbatim in help×2/README/PRD, live.js types are members',
+    !!enumStr && missing.length === 0 && binCount === 2 && foreign.length === 0 && emitted.length > 0,
+    `missing=[${missing.join(',')}] binHits=${binCount} foreign=[${foreign.join(',')}]`);
+}
+{
+  // (d) the demo card is a verbatim capture: every real-output line it paints
+  // must appear byte-for-byte in OUTPUTS.md (chrome lines like `$` excluded)
+  const demo = read('assets/aio-demo.svg').replace(/<[^>]+>/g, '');
+  const out = read('OUTPUTS.md');
+  const askLine = (demo.match(/aio ask — "[^"]*" \(live:[^)]*\)/) || [])[0];
+  const needles = [
+    `aio setup v${pkg.version} — DRY RUN (nothing written)`,
+    'note: ranked by keyword match + source popularity — public results are unvetted;',
+    'aio borrow --clean — ',
+    '[x] opencode',
+    ...(askLine ? [askLine] : []),
+  ];
+  const missDemo = needles.filter((n) => !demo.includes(n));
+  const missOut = askLine ? needles.filter((n) => !out.includes(n)) : ['ask header not found in demo'];
+  check('docs-sync', 'demo card lines byte-identical in OUTPUTS.md (verbatim capture)',
+    !!askLine && missDemo.length === 0 && missOut.length === 0,
+    `demo:[${missDemo.join(' | ')}] output:[${missOut.join(' | ')}]`);
+}
+{
+  // (e) README eval badge + gallery line must equal eval-result.json (the
+  // nightly workflow's snapshot); stats.mjs --write applies the same patch
+  let ok = false, detail = '';
+  try {
+    const ev = JSON.parse(read('eval-result.json'));
+    const rm = read('README.md');
+    const n1 = Math.round((ev.hit1 / 100) * ev.n);
+    const n8 = Math.round((ev.hit8 / 100) * ev.n);
+    ok = rm.includes(`MRR%20${ev.mrr}%20%C2%B7%20n%3D${ev.n}`)
+      && rm.includes(`MRR ${ev.mrr}  n=${ev.n} (${ev.measured})`)
+      && rm.includes(`hit@8 = ${n8}/${ev.n} (${ev.hit8}%), hit@1 = ${n1}/${ev.n} (${ev.hit1}%), MRR ${ev.mrr}, measured ${ev.measured}`);
+    detail = `mrr=${ev.mrr} measured=${ev.measured}`;
+  } catch (e) { detail = e.message; }
+  check('docs-sync', 'README eval badge + gallery line match eval-result.json', ok, detail);
+}
+{
+  // (f) the pack number printed in README must be the measured tarball, not a
+  // remembered one (stats.mjs --write patches it with a converge loop)
+  let ok = false, detail = '';
+  const p = runNpmPack();
+  if (p.error) detail = p.error;
+  else {
+    const e = p.json[0] || {};
+    const rm = read('README.md');
+    const sizeStr = (e.size || 0).toLocaleString('en-US');
+    ok = rm.includes(`current pack ${sizeStr} bytes`) && rm.includes(`/ ${e.entryCount} files)`);
+    detail = `pack=${sizeStr} bytes / ${e.entryCount} files`;
+  }
+  check('docs-sync', 'README pack line matches a live npm pack --dry-run', ok, detail);
+}
 
 // ── 10. release readiness ───────────────────────────────────────────────────
 check('release', 'publish uses --access public --provenance', has('.github/workflows/release.yml', /npm publish --access public --provenance/));
@@ -289,7 +390,12 @@ check('quality', 'eval script covers all query families (QUERIES array)',
   // A git checkout rewrites mtimes in tree-write order, which can invert
   // og-cover.png vs og.html on a fresh clone — last-commit time is the honest
   // "when was this last touched" signal; fall back to mtime outside git.
+  // A DIRTY file (edited, not yet committed) has no honest commit time: git
+  // log would report the previous commit and mask the edit — use mtime there.
   const touchTime = (f) => {
+    const d = spawnSync('git', ['-C', ROOT, 'status', '--porcelain', '--', f],
+      { encoding: 'utf8' });
+    if ((d.stdout || '').trim()) return fs.statSync(path.join(ROOT, f)).mtimeMs;
     const g = spawnSync('git', ['-C', ROOT, 'log', '-1', '--format=%ct', '--', f],
       { encoding: 'utf8' });
     const s = (g.stdout || '').trim();
@@ -299,6 +405,23 @@ check('quality', 'eval script covers all query families (QUERIES array)',
   check('freshness', 'og-cover.png exists and is not older than its source',
     fs.existsSync(path.join(ROOT, 'assets', 'og-cover.png'))
     && touchTime('assets/og-cover.png') >= touchTime('scripts/og.html'));
+  // (g) gallery screenshots must be re-rendered after their source edits
+  const shotPairs = [
+    ['assets/screenshots/flow.png', 'assets/flow.svg'],
+    ['assets/screenshots/hero.png', 'assets/aio-hero.svg'],
+    ['assets/screenshots/demo.png', 'assets/aio-demo.svg'],
+    ['assets/screenshots/disclosure.png', 'assets/aio-disclosure.svg'],
+    ['assets/screenshots/stats.png', 'assets/aio-stats.svg'],
+    ['assets/screenshots/site.png', 'index.html'],
+  ];
+  for (const [png, src] of shotPairs) {
+    check('freshness', `${png} not older than ${src}`,
+      fs.existsSync(path.join(ROOT, png)) && fs.existsSync(path.join(ROOT, src))
+      && touchTime(png) >= touchTime(src),
+      fs.existsSync(path.join(ROOT, png)) && fs.existsSync(path.join(ROOT, src))
+        ? `shot ${new Date(touchTime(png)).toISOString().slice(0, 16)} vs src ${new Date(touchTime(src)).toISOString().slice(0, 16)}`
+        : 'missing file');
+  }
   let ok = false, detail = 'unreadable';
   try {
     const ev = JSON.parse(read('eval-result.json'));
@@ -315,6 +438,17 @@ check('quality', 'eval script covers all query families (QUERIES array)',
   check('freshness', 'sbom.cdx.json version matches package.json', sb, sd);
   check('freshness', 'package-lock.json present (audit/signature capable)',
     fs.existsSync(path.join(ROOT, 'package-lock.json')));
+}
+
+// ── 16. docs parity (runs last: every check above must have its SCORECARD row) ─
+{
+  const sc = read('docs/SCORECARD.md');
+  const rows = (sc.match(/^\| `/gm) || []).length;
+  const expected = results.length + 2; // both checks below land as rows too
+  check('docs-sync', `SCORECARD.md title carries current version (${pkg.version})`,
+    sc.includes(pkg.version), sc.split('\n')[0].slice(0, 80));
+  check('docs-sync', `SCORECARD.md has one row per check (${expected} expected)`,
+    rows === expected, `${rows} rows`);
 }
 
 // ── report ──────────────────────────────────────────────────────────────────

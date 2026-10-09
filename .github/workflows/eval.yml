@@ -31,7 +31,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add eval-result.json
+          git add eval-result.json README.md
           git diff --cached --quiet || git commit -m "chore(eval): nightly relevance snapshot"
           # another pusher (stats/og/merge) may have landed during the eval run
           git pull --rebase origin "$GITHUB_REF_NAME"

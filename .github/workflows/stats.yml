@@ -34,7 +34,7 @@ jobs:
           else
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add README.md index.html assets/aio-stats.svg docs/stats.json
+            git add README.md index.html assets/aio-stats.svg docs/stats.json OUTPUTS.md
             git commit -m "chore(stats): regenerate live numbers [skip ci]"
             # another pusher (eval/og/merge) may have landed while we ran the suite
             git pull --rebase origin "$GITHUB_REF_NAME"
