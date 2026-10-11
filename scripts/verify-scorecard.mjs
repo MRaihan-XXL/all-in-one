@@ -327,7 +327,9 @@ check('quality', 'eval workflow regenerates + commits the snapshot',
   /--write/.test(read('.github/workflows/eval.yml'))
   && /contents:\s*write/.test(read('.github/workflows/eval.yml')));
 check('quality', 'eval script covers all query families (QUERIES array)',
-  /const QUERIES = \[/.test(read('scripts/eval-relevance.mjs')));
+  /export const QUERIES = \[/.test(read('scripts/golden.mjs'))
+  && (read('scripts/golden.mjs').match(/\/\/ ---- /g) || []).length >= 4 // v1.7 / directional / natural / noise
+  && /golden\.mjs/.test(read('scripts/eval-relevance.mjs'))); // the badge runs that exact array
 
 // ── 12. coverage floor (recorded numbers, never hand-typed) ──────────────────
 {
