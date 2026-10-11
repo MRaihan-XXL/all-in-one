@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="./CHANGELOG.md"><img src="https://img.shields.io/badge/release-v1.9.1-cb3837" alt="release v1.9.1 (2026-10-08)"></a>
+  <a href="./CHANGELOG.md"><img src="https://img.shields.io/badge/release-v1.9.2-cb3837" alt="release v1.9.2 (2026-10-11)"></a>
   <a href="https://www.npmjs.com/package/aio-connect"><img src="https://img.shields.io/npm/v/aio-connect?color=cb3837" alt="npm version"></a>
   <a href="https://github.com/MRaihan-XXL/all-in-one/actions/workflows/ci.yml"><img src="https://github.com/MRaihan-XXL/all-in-one/actions/workflows/ci.yml/badge.svg" alt="CI 3-OS"></a>
   <img src="https://img.shields.io/badge/eval-hit%401%2099.1%25%20%C2%B7%20MRR%200.994%20%C2%B7%20n%3D114-2ea44f" alt="eval: hit@1 99.1%  MRR 0.994  n=114 (2026-10-11)">
@@ -39,7 +39,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 307 tests (306 pass · 1 skip · 0 fail)">
+  <img src="./assets/aio-stats.svg" width="98%" alt="Verified live corpus — floors measured 2026-09-30: 630M+ GitHub repos · 3M+ npm packages · 340K+ crates · 6.8M+ skill files · no search storage · 325 tests (324 pass · 1 skip · 0 fail)">
 </p>
 
 ## ✨ What it does
@@ -80,7 +80,7 @@ aio agent "<task>" = every lane at once (github ∥ skills ∥ npm ∥ crates �
 |---|---|
 | `aio` | scan → slim manifest → inject the auto-use block into every agent. **Consent gate**: prints the plan first — interactive → asks `Proceed with these writes? [y/N] `, non-TTY → plan only (exit 0, nothing written); `--yes` writes silent, `--dry-run`/`aio preview` = plan only |
 | `aio init [--copilot]` | **project scope**: inject the block into `./AGENTS.md` (official standard — Zed/Copilot/Cursor read it); `--copilot` also writes `.github/copilot-instructions.md` (pointer only). Same consent gate; not reversed by `rollback` |
-| `aio ask "csv ke chart"` | **live search** across GitHub (630M+ repos + public skills), npm (3M+ pkgs) and crates (340K+) in parallel (4 s per source; the GitHub lane spaces requests under rate limits, so a full run can take up to ~8 s), merge-ranked with BM25 + source diversity, blended 65% keyword relevance + 35% source popularity (stars/downloads/npm score); every hit prints **link + one-line function + `<github>`/`<npm>`/`<crates>` tag**; `--json` → `{schemaVersion: 1, …, stored: 0, hits}` (`stored: 0` = no search results stored) |
+| `aio ask "csv ke chart"` | **live search** across GitHub (630M+ repos + public skills), npm (3M+ pkgs) and crates (340K+) in parallel (4 s per source; the GitHub lane spaces requests under rate limits, so a full run can take up to ~8 s), merge-ranked with BM25 + source diversity — keyword overlap is the gate, blended with a source-popularity trust weight (trust share defaults to **0.1**, locally tunable via `AIO_SELF_TUNE=1`; stars/downloads/npm score); every hit prints **link + one-line function + `<github>`/`<npm>`/`<crates>` tag**; `--json` → `{schemaVersion: 1, …, stored: 0, hits}` (`stored: 0` = no search results stored) |
 | `aio agent "csv ke interactive chart"` | **agentic coordinator** — runs EVERY lane in parallel (GitHub repos ∥ skills ∥ npm ∥ crates ∥ web: Wikipedia + Hacker News ∥ local tools on your PATH — curated tools are confirmed against your PATH with a PATHEXT-aware scan (no phantom suggestions) and print `local · on PATH` with `— on PATH: <full path>`; a CLI outside aio's curated list can still surface on an exact query-token match ≥ 3 chars, generic words filtered), then prints an ordered **cheapest-first route**: what to run now, read first, try via `npx`/`cargo`, clone with `aio borrow --get`, or install with `aio skill add`. Synthesis is rule-based by design (never a fake LLM decision) and `stored: 0` — `--json` → `{schemaVersion: 1, task, engine: 'agent', plan, sources, errors, route, count, stored: 0, hits}` |
 | `aio borrow "etl tool"` | **optional ephemeral fetch** — `--get owner/repo` shallow-clones to temp (**24 h TTL**, auto-purged), `--list` inspects, `--clean` wipes it. Not a fallback for `ask`: use it when you actually need the files locally |
 | `aio skill add <owner/repo\|url>` | **install a public `SKILL.md`** into `~/.agents/skills/<name>/SKILL.md` (the agentskills.io shared layout read by 40+ agents). Tries 3 locations on `raw.githubusercontent.com/…/HEAD` (`SKILL.md`, `<name>/SKILL.md`, `.agents/skills/<name>/SKILL.md`); `--file <path\|dir>` installs a local file instead; `--name <n>` overrides the name; `--sha256 <hex>` pins the download (the fetched content is hashed before install — bad format → `skillShaBadFormat`, mismatch → `skillShaMismatch`, exit 1); `--dry-run` prints the target and writes nothing. Idempotent, sha256-recorded in `~/.aio/skills-ledger.json`; never touches skills it did not write |
@@ -244,7 +244,7 @@ The binary and installer channels need no Node at all.
 | `NO_COLOR=1` | no ANSI colors (the banner is already colorless when piped) |
 | `AIO_OFFLINE=1` | `aio ask` short-circuits with an explicit offline message; `skill search` and `agent` do the same (live by design); `skill add` refuses remote installs |
 | `AIO_NO_GH=1` | skip the GitHub skills lane entirely |
-| `AIO_LANG=id` | runtime messages in Bahasa Indonesia — **156 message keys** in EN + ID (`src/messages.js`), covering help (`aio --help` mirrors the English line-for-line), `ask`, `agent`, `skill search`, `borrow`, doctor, status, update and the live-fallback copy. `AIO_LANG=en` is the default; commands/flags/env names, lane/source labels and every `--json` payload stay English by contract |
+| `AIO_LANG=id` | runtime messages in Bahasa Indonesia — **157 message keys** in EN + ID (`src/messages.js`), covering help (`aio --help` mirrors the English line-for-line), `ask`, `agent`, `skill search`, `borrow`, doctor, status, update and the live-fallback copy. `AIO_LANG=en` is the default; commands/flags/env names, lane/source labels and every `--json` payload stay English by contract |
 | `AIO_STATE_DIR` | move the state dir off `~/.aio` |
 | `GH_TOKEN` / `gh auth login` | authenticated GitHub search (raises the rate budget, enables the skills lane) |
 
@@ -290,8 +290,8 @@ Changes: added chart.js, wired the data feed.
   history — `aio ask` results are printed and discarded (**zero search
   storage — results printed, never saved**), and the npm package ships no
   database (`files` = bin, src, docs, README, CHANGELOG, LICENSE, sbom.cdx.json —
-  `test/` and `assets/` dropped in v1.7.0; current pack 119,772 bytes ≈
-  117.0 KiB / 31 files).
+  `test/` and `assets/` dropped in v1.7.0; current pack 117,337 bytes ≈
+  114.6 KiB / 29 files).
   What aio *does* write: the
   manifest `~/.aio/aio-context.md`, one `AIO AUTO-CONTEXT` block per agent
   file, timestamped backups under `~/.aio/backups/`, `~/.aio/config.json`,
@@ -373,9 +373,14 @@ agent's own (the `agent` web lane talks only to `en.wikipedia.org` and
 
 - Threat model: **[docs/THREATS.md](./docs/THREATS.md)** — assets, trust
   boundaries, the T1–T9 threat table, known gaps, reporting.
-- **Trust-weighted ranking** — final order = 65% BM25 keyword relevance
-  (keyword overlap is the gate) + 35% source popularity prior (`trust01`:
-  GitHub stars, npm score, crates downloads; skills neutral), and every
+- **Trust-weighted ranking** — final order = BM25 keyword relevance
+  (keyword overlap is the gate) blended with a source-popularity prior
+  (`trust01`: GitHub stars, npm score, crates downloads; skills neutral); the
+  trust weight (`TRUST_W`) defaults to **0.1** — promoted from 0.35 by the
+  self-tune grid on the shared 114-query golden set — and is locally tunable
+  via `AIO_SELF_TUNE=1` (see [docs/CONFIG.md](./docs/CONFIG.md),
+  "Self-tuned ranking"); the effective weight is echoed as `rankWeight` in
+  `aio ask --json`. Every
   `aio ask` output ends with:
   `note: ranked by keyword match + source popularity — public results are unvetted; verify before running npx/uvx or cloning (docs/THREATS.md).`
 - **`aio --dry-run`** — plan-only setup: prints exactly what would change
@@ -420,15 +425,17 @@ agent's own (the `agent` web lane talks only to `en.wikipedia.org` and
 ## 🛠 Development
 
 ```bash
-npm test             # node --test — 307 tests: 306 pass, 1 skip, 0 fail (live search, agent, skill search, injection, consent gate, drift, borrow, doctor, …)
-npm run test:coverage # same suite + coverage gates 90 lines / 80 branches / 85 functions (last run: 98.65 / 91.37 / 97.97)
+npm test             # node --test — 325 tests: 324 pass, 1 skip, 0 fail (live search, agent, skill search, injection, consent gate, drift, borrow, doctor, …)
+npm run test:coverage # same suite + coverage gates 90 lines / 80 branches / 85 functions (last run: 98.87 / 90.48 / 98.43)
 node bin/aio.js      # run from a checkout without installing
 node bin/aio.js ask "pdf ke word"
 node bin/aio.js agent "csv to interactive chart"
 node bin/aio.js doctor --check
 node scripts/capture-outputs.mjs  # regenerate OUTPUTS.md (verbatim CLI output gallery, never hand-typed)
 powershell -ExecutionPolicy Bypass -File scripts/screenshots.ps1  # re-render assets/screenshots/*.png from the animated SVGs (Edge headless)
+node scripts/demo-gif.mjs        # regenerate assets/screenshots/demo.gif — a real ~30 s terminal run (aio ask live results + aio status + zero-storage end card; needs Edge headless, ffmpeg on PATH, network)
 node scripts/eval-relevance.mjs --write   # from a repo checkout (scripts/ ships in the repo, not the npm tarball): live 114-query golden set → hit@8 = 114/114 (100%), hit@1 = 113/114 (99.1%), MRR 0.994, measured 2026-10-11
+# scripts/golden.mjs — module: the shared 114-query golden set imported by eval-relevance.mjs, self-tune.mjs and the scorecard gate (one corpus, no drift)
 AIO_SELF_TUNE=1 node scripts/self-tune.mjs   # Cell harness (repo-only, network required): 13-point BM25:trust grid over the same 114-query golden set (fetch-once + offline re-rank; fitness = hit@1 + MRR) → KEEP or PROMOTE vs TRUST_W; --write patches src/search.js when strictly fitter; AIO_SELF_TUNE=1 also writes the local per-class ledger
 ```
 
@@ -451,6 +458,10 @@ Real captures of the animated SVG sources in [`assets/`](./assets/) — rendered
 headless (Edge) at a settled frame, regenerate any time with
 `powershell -File scripts/screenshots.ps1`.
 
+**Animated demo — a real 30.5 s terminal run: `aio ask` live results, `aio status`, zero-storage end card:**
+
+![aio demo](assets/screenshots/demo.gif)
+
 **The live pipeline — prompt → ask → use → report → clean → repeat:**
 
 ![aio live pipeline: prompt, parallel search lanes, ranked results, ephemeral use, report, clean, repeat](./assets/screenshots/flow.png)
@@ -465,7 +476,7 @@ headless (Edge) at a settled frame, regenerate any time with
 
 **Verified stats — floors measured 2026-09-30:**
 
-![verified stats: 630M+ github repos, 3M+ npm packages, 340K+ crates, 6.8M+ skill files, 0 results kept, 307 tests run](./assets/screenshots/stats.png)
+![verified stats: 630M+ github repos, 3M+ npm packages, 340K+ crates, 6.8M+ skill files, 0 results kept, 325 tests run](./assets/screenshots/stats.png)
 
 **The live site — proof section auto-loads `docs/stats.json`, never hand-typed:**
 

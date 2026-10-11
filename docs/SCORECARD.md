@@ -1,4 +1,4 @@
-# Release scorecard — aio / aio-connect v1.9.1
+# Release scorecard — aio / aio-connect v1.9.2
 
 Machine-checkable release gate produced by `scripts/verify-scorecard.mjs`.
 Fifteen aspects, ten points each, one row per sub-check exactly as the script
@@ -104,23 +104,23 @@ single failing check `npm pack --dry-run parses` (1 check, not 3).
 ## 9. docs-sync (10 pts)
 
 Reads the live files, so stale docs fail the release. Labels that carry a
-version show `pkg.version` (1.9.1) today; the last two rows run after every
+version show `pkg.version` (1.9.2) today; the last two rows run after every
 other check has been recorded, so their own rows count towards the total.
 
 | check | what it asserts |
 |---|---|
 | `README documents aio agent + skill search + AIO_LANG` | `README.md` matches `aio agent`, `skill search`, **and** `AIO_LANG` |
-| `CHANGELOG has 1.9.1 entry` (label uses live `pkg.version`) | `CHANGELOG.md` contains `pkg.version` with dots escaped (`1\.9\.1`) |
-| `README states current version 1.9.1` (label uses live `pkg.version`) | `README.md` contains the literal `pkg.version` substring |
+| `CHANGELOG has 1.9.2 entry` (label uses live `pkg.version`) | `CHANGELOG.md` contains `pkg.version` with dots escaped (`1\.9\.2`) |
+| `README states current version 1.9.2` (label uses live `pkg.version`) | `README.md` contains the literal `pkg.version` substring |
 | `THREATS covers provenance` | `docs/THREATS.md` matches `/provenance/i` |
 | `docs/SCORECARD.md present` | this file exists at `docs/SCORECARD.md` |
-| `SVG version badges match package.json (v1.9.1)` | every `vX.Y.Z` painted on a line of `assets/*.svg` equals `v${pkg.version}` (lines containing ` · ` — the result-meta line — are excluded); stale badges are listed in detail |
+| `SVG version badges match package.json (v1.9.2)` | every `vX.Y.Z` painted on a line of `assets/*.svg` equals `v${pkg.version}` (lines containing ` · ` — the result-meta line — are excluded); stale badges are listed in detail |
 | `no \`evolve\` in assets/*.svg or index.html (use verify)` | neither any `assets/*.svg` nor `index.html` matches `/\bevolve\b/` — the removed alias must not be sold as a feature |
 | `disclosure enum verbatim in help×2/README/PRD, live.js types are members` | the enum string read out of `src/write.js` (`repo \| cli \| service \| skill \| site \| tool`) appears verbatim in `bin/aio.js` exactly twice, `README.md` and `PRD.md`, and every `type: '…'` `src/live.js` emits is a member of that enum |
 | `demo card lines byte-identical in OUTPUTS.md (verbatim capture)` | every real-output line the demo card paints — setup dry-run header, the ranked-results note, `aio borrow --clean — `, `[x] opencode`, and the `aio ask — "…" (live:…)` header — appears byte-for-byte both in `assets/aio-demo.svg` (tags stripped) and in `OUTPUTS.md` |
 | `README eval badge + gallery line match eval-result.json` | the README eval badge URL and gallery line reproduce `mrr`, `n`, `hit@8`, `hit@1` and `measured` from `eval-result.json` (the nightly workflow's snapshot, patched by `eval-relevance.mjs --write`) |
 | `README pack line matches a live npm pack --dry-run` | the README `current pack N bytes / M files` line equals a freshly measured `npm pack --dry-run --json` (patched by `stats.mjs --write`, so a remembered number fails) |
-| `SCORECARD.md title carries current version (1.9.1)` | the first line of this file contains the literal `pkg.version` |
+| `SCORECARD.md title carries current version (1.9.2)` | the first line of this file contains the literal `pkg.version` |
 | `SCORECARD.md has one row per check (77 expected)` | this file has exactly `results.length + 2` rows whose first cell starts with a backtick — one per check including these two, so the parity gate counts itself |
 
 ## 10. release (10 pts)

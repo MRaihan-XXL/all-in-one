@@ -133,7 +133,7 @@ ledger is read.
 |---|---|
 | `AIO_QUIET=1` or `AIO_NO_BANNER=1` | no banner printed (any value counts as set) |
 | `NO_COLOR=1` | no ANSI colors; the banner is already colorless when stdout is not a TTY |
-| `AIO_LANG=id` | runtime messages in Bahasa Indonesia via the 156-key EN/ID catalog (`src/messages.js`): `aio --help` mirrors the English help line-for-line (`HELP_ID`), plus `ask`, `agent`, `skill search`, `borrow`, doctor, status, update and the live-fallback copy. `AIO_LANG=en` is the default. Stays English by contract: commands, flags and env var names, lane/source labels, and every `--json` payload |
+| `AIO_LANG=id` | runtime messages in Bahasa Indonesia via the 157-key EN/ID catalog (`src/messages.js`): `aio --help` mirrors the English help line-for-line (`HELP_ID`), plus `ask`, `agent`, `skill search`, `borrow`, doctor, status, update and the live-fallback copy. `AIO_LANG=en` is the default. Stays English by contract: commands, flags and env var names, lane/source labels, and every `--json` payload |
 
 ### Machine-readable output (`--json`, `schemaVersion`)
 

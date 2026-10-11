@@ -1,18 +1,18 @@
 {
-  "generated": "2026-10-09T10:40:36.220Z",
+  "generated": "2026-10-11T11:57:01.844Z",
   "tests": {
-    "total": 307,
-    "pass": 306,
+    "total": 325,
+    "pass": 324,
     "fail": 0,
     "skip": 1
   },
   "coverage": {
-    "lines": 98.65,
-    "branches": 91.37,
-    "functions": 97.97
+    "lines": 98.87,
+    "branches": 90.48,
+    "functions": 98.43
   },
   "scorecard": {
-    "earned": 100,
-    "possible": 100
+    "earned": 0,
+    "possible": 0
   }
 }

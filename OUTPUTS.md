@@ -8,8 +8,8 @@ any CLI/UX change:
 node scripts/capture-outputs.mjs
 ```
 
-- package: `aio-connect@1.9.1`
-- captured: 2026-10-09T10:41:19.192Z
+- package: `aio-connect@1.9.2`
+- captured: 2026-10-11T11:58:51.107Z
 - host: win32 · node v26.3.0
 
 ## Help (English, default)
@@ -91,10 +91,11 @@ $ node bin/aio.js --help
     -v, --version                Version
 
   Environment
-    AIO_OFFLINE=1, AIO_NO_GH=1, AIO_STATE_DIR, GH_TOKEN, OLLAMA_HOST,
-    AIO_OLLAMA_MODEL, AIO_NO_AI=1, AIO_RATE=<calls/min|0> (GitHub search
-    budget; 0 disables spacing), AIO_QUIET=1 / AIO_NO_BANNER=1 (no banner),
-    AIO_LANG=id (help text in Bahasa Indonesia), NO_COLOR=1
+    AIO_OFFLINE=1, AIO_NO_GH=1, AIO_STATE_DIR, GH_TOKEN,
+    AIO_RATE=<calls/min|0> (GitHub search budget; 0 disables spacing),
+    AIO_QUIET=1 / AIO_NO_BANNER=1 (no banner), AIO_LANG=id (help text in
+    Bahasa Indonesia), NO_COLOR=1, AIO_SELF_TUNE=1 (adaptive rank ledger —
+    local only, never leaves this machine)
 
   Note
     aioc is an alias of the same binary — Adobe's App Builder CLI (@adobe/aio)
@@ -195,10 +196,11 @@ $ AIO_LANG=id node bin/aio.js --help
     -v, --version                Versi
 
   Lingkungan
-    AIO_OFFLINE=1, AIO_NO_GH=1, AIO_STATE_DIR, GH_TOKEN, OLLAMA_HOST,
-    AIO_OLLAMA_MODEL, AIO_NO_AI=1, AIO_RATE=<panggilan/menit|0> (anggaran
-    pencarian GitHub; 0 menonaktifkan jeda), AIO_QUIET=1 / AIO_NO_BANNER=1
-    (tanpa banner), AIO_LANG=id (teks bantuan Bahasa Indonesia), NO_COLOR=1
+    AIO_OFFLINE=1, AIO_NO_GH=1, AIO_STATE_DIR, GH_TOKEN,
+    AIO_RATE=<panggilan/menit|0> (anggaran pencarian GitHub; 0 menonaktifkan
+    jeda), AIO_QUIET=1 / AIO_NO_BANNER=1 (tanpa banner), AIO_LANG=id (teks
+    bantuan Bahasa Indonesia), NO_COLOR=1, AIO_SELF_TUNE=1 (ledger ranking
+    adaptif — lokal saja, tidak pernah keluar dari mesin ini)
 
   Catatan
     aioc adalah alias dari binari yang sama — Adobe's App Builder CLI (@adobe/aio)
@@ -224,7 +226,7 @@ _exit 0_
 
 ```console
 $ node bin/aio.js -v
-aio 1.9.1 — all-in-one (https://github.com/MRaihan-XXL/all-in-one)
+aio 1.9.2 — all-in-one (https://github.com/MRaihan-XXL/all-in-one)
 ```
 
 _exit 0_
@@ -234,7 +236,7 @@ _exit 0_
 ```console
 $ node bin/aio.js status
   state      C:\Users\WORKPLUS\.aio (config.json ok)
-  manifest   C:\Users\WORKPLUS\.aio\aio-context.md — 3d old, live architecture (no search storage)
+  manifest   C:\Users\WORKPLUS\.aio\aio-context.md — 5d old, live architecture (no search storage)
   agents
     opencode   injected     C:\Users\WORKPLUS\.config\opencode\AGENTS.md
     claude     injected     C:\Users\WORKPLUS\.claude\CLAUDE.md
@@ -250,19 +252,18 @@ $ node bin/aio.js status
 
 _exit 0_
 
-## Doctor (9 checks, CI gate)
+## Doctor (8 checks, CI gate)
 
 ```console
 $ node bin/aio.js doctor --check
-aio doctor — v1.9.1 (check mode)
+aio doctor — v1.9.2 (check mode)
 [ok] node           v26.3.0 (supported: >= 22)
 [ok] state          config.json ok (no local catalog)
 [ok] live           github reachable — ask searches GitHub + npm + crates (no search storage)
-[ok] manifest       live architecture (no search storage) · 3.0d old — C:\Users\WORKPLUS\.aio\aio-context.md
+[ok] manifest       live architecture (no search storage) · 5.1d old — C:\Users\WORKPLUS\.aio\aio-context.md
 [ok] agent blocks   7/7 installed agents carry the auto-context block
 [ok] agents         opencode, claude, kimi, jcode, freebuff, hermes, codex, gemini
 [ok] gh auth        logged in — skills lane enabled (gh api search/code)
-[ok] ollama         reachable — models: qwen3:1.7b, qwen3:4b
 [ok] mcp ledger     2 aio-added MCP entry file(s) present & valid
 0 issue(s), 0 warning(s)
 ```
@@ -337,14 +338,14 @@ $ node bin/aio.js --dry-run
 ████████  ██  ██    ██
 ██    ██  ██  ██    ██
 ██    ██ ████  ▀████▀ 
-  ▌ all-in-one v1.9.1 — auto-connect every AI agent to live search
+  ▌ all-in-one v1.9.2 — auto-connect every AI agent to live search
   ▌ live: github · npm · crates · web · tools · skills
   ▌ prompt → aio ask / aio agent → use → report → clean
 ──────────────────────────────────────────────────────────────────────────
   GPL-3.0 · https://github.com/MRaihan-XXL/all-in-one
 
 
-aio setup v1.9.1 — DRY RUN (nothing written)
+aio setup v1.9.2 — DRY RUN (nothing written)
 ────────────────────────────────────────────────────────────────────────────
 
 Agents
@@ -388,18 +389,19 @@ _exit 0_
 
 ```console
 $ node bin/aio.js ask "sqlite to parquet converter"
-aio ask — "sqlite to parquet converter" (live: github+npm · 2 results · 4.4s)
+aio ask — "sqlite to parquet converter" (live: github+npm · 2 results · 0.9s)
 
 note: ranked by keyword match + source popularity — public results are unvetted;
       verify before running npx/uvx or cloning (docs/THREATS.md).
-1. kindly/flatterer [repo] <github> — Opinionated JSON to CSV/XLSX/SQLITE/PARQUET converter. Flattens JSON fast.
-   ★206 · Python
-   https://github.com/kindly/flatterer
-   why: BM25 keyword match (#1) + trust mid
-2. i64/sqlite3-dump [repo] <github> — "fast" sqlite to parquet and csv converter
+1. i64/sqlite3-dump [repo] <github> — "fast" sqlite to parquet and csv converter
    ★32 · Rust
    https://github.com/i64/sqlite3-dump
-   why: BM25 keyword match (#2) + trust low
+   why: BM25 keyword match (#1) + trust low
+2. kindly/flatterer [repo] <github> — Opinionated JSON to CSV/XLSX/SQLITE/PARQUET converter. Flattens JSON fast.
+   ★206 · Python
+   https://github.com/kindly/flatterer
+   why: BM25 keyword match (#2) + trust mid
+time: github 0.8s · npm 0.2s
 ```
 
 _exit 0_
@@ -408,7 +410,7 @@ _exit 0_
 
 ```console
 $ node bin/aio.js ask "awesome animated chart library"
-aio ask — "awesome animated chart library" (live: github+npm · 7 results · 4.7s)
+aio ask — "awesome animated chart library" (live: github+npm · 7 results · 1.1s)
 
 note: ranked by keyword match + source popularity — public results are unvetted;
       verify before running npx/uvx or cloning (docs/THREATS.md).
@@ -417,7 +419,7 @@ note: ranked by keyword match + source popularity — public results are unvette
    https://www.npmjs.com/package/lightweight-charts
    why: BM25 keyword match (#1) + trust high
 2. vizzuhq/vizzu-lib [repo] <github> — Library for animated data visualizations and data stories.
-   ★2039 · JavaScript
+   ★2041 · JavaScript
    https://github.com/vizzuhq/vizzu-lib
    why: BM25 keyword match (#2) + trust high
 3. bmarrdev/android-DecoView-charting [repo] <github> — DecoView: Android arc based animated charting library
@@ -431,15 +433,16 @@ note: ranked by keyword match + source popularity — public results are unvette
 5. dexplo/bar_chart_race [repo] <github> — Create animated bar chart races in Python with matplotlib
    ★1453 · Python
    https://github.com/dexplo/bar_chart_race
-   why: BM25 keyword match (#6) + trust mid
+   why: BM25 keyword match (#5) + trust mid
 6. rendro/easy-pie-chart [repo] <github> — easy pie chart is a lightweight plugin to draw simple, animated pie charts for single values
    ★2060 · TypeScript
    https://github.com/rendro/easy-pie-chart
-   why: BM25 keyword match (#7) + trust high
+   why: BM25 keyword match (#6) + trust high
 7. xyfeng/XYPieChart [repo] <github> — A simple and animated Pie Chart for your iOS app.
-   ★1711 · Objective-C
+   ★1710 · Objective-C
    https://github.com/xyfeng/XYPieChart
-   why: BM25 keyword match (#8) + trust mid
+   why: BM25 keyword match (#7) + trust mid
+time: github 1.0s · npm 0.2s
 ```
 
 _exit 0_
@@ -457,14 +460,14 @@ _exit 0_
 
 ```console
 $ node scripts/verify-scorecard.mjs
-[aio] scorecard — 15 aspects × machine checks (v1.9.1)
+[aio] scorecard — 15 aspects × machine checks (v1.9.2)
 
   integrity    10/10  (4/4) ok
   tests        10/10  (5/5) ok
   robustness   10/10  (5/5) ok
   security     10/10  (4/4) ok
   honesty      10/10  (6/6) ok
-  cli-ux       10/10  (5/5) ok
+  cli-ux       10/10  (7/7) ok
   doctor       10/10  (1/1) ok
   pack         10/10  (3/3) ok
   docs-sync    10/10  (13/13) ok
@@ -472,13 +475,20 @@ $ node scripts/verify-scorecard.mjs
   quality      10/10  (3/3) ok
   coverage-floor 10/10  (3/3) ok
   i18n         10/10  (4/4) ok
-  ci-gates     10/10  (5/5) ok
-  freshness    10/10  (11/11) ok
+  ci-gates     10/10  (7/7) ok
+  freshness     5/10  (5/11) FAIL
 
-SUMMARY  100/100 — 15/15 aspects >= 10/10
+  FAIL [freshness] assets/screenshots/flow.png not older than assets/flow.svg → uncommitted: assets/screenshots/flow.png — commit both (commit-time-only)
+  FAIL [freshness] assets/screenshots/hero.png not older than assets/aio-hero.svg → uncommitted: assets/screenshots/hero.png, assets/aio-hero.svg — commit both (commit-time-only)
+  FAIL [freshness] assets/screenshots/demo.png not older than assets/aio-demo.svg → uncommitted: assets/screenshots/demo.png, assets/aio-demo.svg — commit both (commit-time-only)
+  FAIL [freshness] assets/screenshots/disclosure.png not older than assets/aio-disclosure.svg → uncommitted: assets/screenshots/disclosure.png — commit both (commit-time-only)
+  FAIL [freshness] assets/screenshots/stats.png not older than assets/aio-stats.svg → uncommitted: assets/screenshots/stats.png, assets/aio-stats.svg — commit both (commit-time-only)
+  FAIL [freshness] assets/screenshots/site.png not older than index.html → uncommitted: assets/screenshots/site.png, index.html — commit both (commit-time-only)
+
+SUMMARY  97/100 — 14/15 aspects >= 10/10 — RELEASE BLOCKED
 ```
 
-_exit 0_
+_exit 1_
 
 ---
 

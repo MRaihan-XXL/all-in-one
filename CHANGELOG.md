@@ -6,6 +6,104 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.9.2] - 2026-10-11
+
+### Added
+
+- **Per-lane timing transparency** — `ask` / `agent` / `skill search` `--json`
+  now surfaces `ok` plus `sourcesDetail` (one `{name, ms, ok, hits}` row per
+  scheduled lane), and text mode ends with a localized `time:` footer listing
+  every lane in schedule order — the per-source budget is measurable per lane
+  now (the GitHub lane spaces requests under rate limits, so a full run can
+  take up to ~8 s).
+- **i18n for ask/agent/skill/borrow/live text** — 50 new EN+ID message keys
+  (catalog parity now **157 keys**, test-enforced): agent plan/route text,
+  ask headers/notes/source issues, skill-search rows, borrow usage/list/clean,
+  live-fallback copy and the rate-limit/timeout notes; `aio --help` renders
+  in Bahasa Indonesia line-for-line (`HELP_ID`); `--json` payloads stay
+  English by contract.
+- **Self-tuned ranking (Cell × Mahoraga)** — opt-in `AIO_SELF_TUNE=1`: `aio
+  ask` may read a machine-local experience ledger
+  (`~/.aio/self-tune-ledger.json`, written only by the repo-side harness,
+  never uploaded — zero search storage unchanged) and swap the rank trust
+  weight per query class (`directional`/`entity`/`natural`) only when the
+  ledger proves it (`n >= 5` + fitness ≥ the global winner); a corrupt ledger
+  is preserved as `*.corrupt-*.json` with a warning and ranking falls back to
+  the default. `scripts/self-tune.mjs` runs the 13-point BM25:trust grid over
+  the shared 114-query golden set (`scripts/golden.mjs` — one corpus for the
+  eval badge, the grid and the scorecard gate), fetch-once then offline
+  re-rank, and refuses to promote when any query hit a failed source or came
+  back entryless (`UNRELIABLE` → exit 1, nothing written).
+- **`rankWeight` in `ask --json`** — the effective trust weight for the query
+  (committed default; ledger-proven per-class value only when opted in).
+- **+18 tests (307 → 325)** — new `self-tune.test.js` (15 hermetic cases:
+  `queryClass` shapes, ledger fallbacks, the weight grid, corrupt-preserve)
+  plus new pins across live/status/messages/agent/ask/skill-search → **325
+  tests** (324 pass, 1 skip, 0 fail).
+- **Traction** — npm keywords expanded (`code-search`, `repo-search`,
+  `search-cli`, `ai-search`, `developer-tools`, `crates.io`); secondary alias
+  package `agent-live-search` (published right after the main package in
+  `release.yml`, version + dep synced to the released version); GitHub
+  bug-report issue form (first issue #1: native smoke gates for the macOS x64
+  and linux-arm64 binaries); a 30.5 s animated demo GIF built from a real
+  terminal run (`node scripts/demo-gif.mjs`); Show HN draft prepared.
+
+### Changed
+
+- **Rank trust weight promoted 0.35 → 0.1** — the 13-point BM25:trust grid
+  picked the new committed weight on the shared golden set, and the eval
+  re-ran at it: hit@1 **113/114 = 99.1%**, MRR **0.994** (was 97.4% / 0.985)
+  — `eval-result.json`, measured 2026-10-11. Ranking stays deterministic
+  BM25 + source trust; keyword overlap remains the gate.
+- **Scorecard hardening** — two behavioral CLI probes replace prose-only
+  assertions (`AIO_OFFLINE=1 ask` must exit 1 with the rendered offline
+  verdict; `doctor --json` must parse with boolean `ok` + numeric `issues`);
+  the secret scan broadens to github/npm/aws/slack/PEM families across
+  src/bin/scripts/test/docs/workflows; freshness is commit-time-only (a dirty
+  artifact-vs-source pair fails loudly instead of guessing from mtime);
+  `npm-auth-check` must carry a weekly cron, and `release.yml` publish now
+  runs behind GitHub's `npm` environment (required-reviewer protection on
+  NPM_TOKEN).
+- **Docs honesty batch** — the 4 s per-source claim is qualified with the
+  real ~8 s worst case everywhere it was asserted; two errata recorded (the
+  v1.9.1 DEP0190 retirement was premature — `src/update.js` and
+  `src/verify.js` kept `shell: true` until v1.9.2; the v1.8.0
+  symlink-rejection claim was never implemented in `src/scan.js`); THREATS
+  documents that keyless cosign verification is trust-on-first-use; the
+  `AIO_LANG` scope is restated as the EN/ID catalog with English `--json`
+  payloads by contract.
+- **Golden set extracted** — `scripts/golden.mjs` owns the 114-query
+  relevance set (labels corrected 110 → 114, natural 50 → 54);
+  `eval-relevance.mjs` and the scorecard quality gate import it — one corpus,
+  no drift.
+
+**Gates:** 325 tests (324 pass · 1 skip · 0 fail) · eval hit@1 113/114 (99.1%) · MRR 0.994 (2026-10-11).
+
+### Fixed
+
+- **Live-search lane honesty** — the GitHub skills lane now tags its rows
+  `src: skills` (was `github`), so the `install skill` route works again and
+  real lane hits are no longer hidden behind `[~] 0 hits`.
+- **Terminal-injection hardening** — third-party metadata (repo descriptions,
+  npm keywords, wiki/HN titles + URLs, skill paths, borrow descriptions) is
+  stripped of OSC/CSI/C0/C1 control bytes before it reaches a terminal, and
+  trims slice on code points — a surrogate pair is never split.
+- **DEP0190 actually retired + read-race guards** — `aio update` and
+  `aio verify` npm spawns route through `cmd.exe` with an argv array (the
+  v1.9.1 erratum); `status` tolerates an ENOENT read race with `init` but
+  still rethrows `EISDIR`/`EACCES`; `borrow` honors
+  `GH_TOKEN`/`GITHUB_TOKEN` env-first and `AIO_NO_GH=1` skips the gh probe.
+
+### Removed
+
+- **Ollama rerank** — A/B answered **0/114** queries within the 3.5 s rerank
+  budget (p50 3502 ms) while the BM25 + source-trust baseline was already at
+  MRR 0.985 — the lane could only add latency, never ranking quality, so it
+  is gone rather than shipped as a silent slow path. `aiRerank`, the
+  `OLLAMA_HOST`/`AIO_OLLAMA_MODEL` plumbing and the `+ ollama:` engine
+  suffix are removed; `aio doctor` drops the Ollama probe (9 → 8 checks) and
+  help (EN/ID), `eval-relevance.mjs` and the `AIO_NO_AI` env are cleaned up.
+
 ## [1.9.1] - 2026-10-08
 
 ### Added
