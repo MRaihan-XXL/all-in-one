@@ -8,7 +8,6 @@ import os from 'node:os';
 import path from 'node:path';
 
 process.env.AIO_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-regress-')); // state → temp dir, never ~/.aio (must precede src imports)
-process.env.AIO_NO_AI = '1'; // deterministic: no Ollama
 
 const { diversify, dedupe } = await import('../src/search.js');
 const { STATE_DIR, CONFIG_FILE, BACKUP_DIR } = await import('../src/paths.js');

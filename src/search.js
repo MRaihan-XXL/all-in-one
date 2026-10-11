@@ -1,12 +1,9 @@
 // search.js — `aio ask`: adaptive live search (GitHub repos/skills, npm, crates)
-// merged + ranked with BM25 blended with source trust (stars/downloads/npm score),
-// optional local Ollama rerank (qwen3). No search storage: every result is
-// printed only — never written to disk or database.
+// merged + ranked with BM25 blended with source trust (stars/downloads/npm score).
+// No search storage: every result is printed only — never written to disk or
+// database.
 import { liveSearch } from './live.js';
 import { msg } from './messages.js';
-
-const OLLAMA = process.env.OLLAMA_HOST || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.AIO_OLLAMA_MODEL || 'qwen3:4b';
 
 /* ---------------- BM25 (in-memory merge ranker) ---------------- */
 
@@ -87,58 +84,6 @@ export function bm25Search(query, entries, limit = 8) {
     }));
 }
 
-/* ---------------- optional local-AI rerank ---------------- */
-
-/** Rerank hits with local Ollama; returns { ai, hits } — falls back silently. */
-export async function aiRerank(query, hits) {
-  if (!hits.length || process.env.AIO_NO_AI === '1') return { ai: false, hits };
-  // token budget: rank the best 12 candidates, truncate long functions — the rest pass through unranked
-  const cands = hits
-    .slice(0, 12)
-    .map((h, i) => `${i}. [${h.type}] ${h.name} — ${String(h.func || '').slice(0, 100)}`)
-    .join('\n');
-  try {
-    const res = await fetch(`${OLLAMA}/api/chat`, {
-      method: 'POST',
-      signal: AbortSignal.timeout(3500), // warm model only — cold load must not stall `ask`
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        stream: false,
-        format: 'json',
-        think: false, // qwen3 reasoning mode would blow the latency budget
-        options: { temperature: 0.2 },
-        messages: [
-          {
-            role: 'system',
-            content:
-              'Rank catalog candidates for a developer need. Reply ONLY with JSON: {"top":[{"i":<index>,"why":"<max 10 words>"}]} — best first, max 5, only genuine fits.',
-          },
-          { role: 'user', content: `Need: ${query.slice(0, 160)}\nCandidates:\n${cands}` },
-        ],
-      }),
-    });
-    if (!res.ok) return { ai: false, hits };
-    const data = await res.json();
-    const parsed = JSON.parse(data.message?.content || '{}');
-    if (!Array.isArray(parsed.top) || !parsed.top.length) return { ai: false, hits };
-    const byIdx = new Map(hits.map((h, i) => [i, h]));
-    const seen = new Set();
-    const top = [];
-    for (const t of parsed.top) {
-      const h = byIdx.get(Number(t.i));
-      if (h && !seen.has(Number(t.i))) {
-        seen.add(Number(t.i));
-        top.push({ ...h, why: `${OLLAMA_MODEL}: ${t.why}` });
-      }
-    }
-    const rest = hits.filter((_, i) => !seen.has(i));
-    return { ai: true, hits: [...top, ...rest] };
-  } catch {
-    return { ai: false, hits }; // Ollama down/slow/invalid → merged order stands
-  }
-}
-
 /* ---------------- command helpers ---------------- */
 
 /** Source diversity: every answering source keeps ≥2 rows. Membership is tracked
@@ -176,11 +121,11 @@ export function sourceErrorNote(errors) {
   return errors.map((e) => {
     const m = String(e.msg || '');
     const kind = /403|401|rate|abuse/i.test(m)
-      ? 'rate-limited — set GH_TOKEN / `gh auth login`, or retry later'
+      ? msg('errRateLimited')
       : /timeout|abort|timed out/i.test(m)
-        ? 'timeout (4s/source budget)'
+        ? msg('errTimeout')
         : /fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|EAI_AGAIN|network/i.test(m)
-          ? 'unreachable (network)'
+          ? msg('errUnreachable')
           : m.slice(0, 120);
     return `      ${e.src}: ${kind}`;
   });
@@ -192,7 +137,7 @@ export async function runAsk({ query, json }) {
     return { ok: false, text: msg('usageAsk'), json: null };
   }
   const t0 = Date.now();
-  const { entries, sources, errors = [], web, offline } = await liveSearch(query);
+  const { entries, sources, errors = [], sourcesDetail = [], web, offline } = await liveSearch(query);
 
   if (offline) {
     return {
@@ -215,54 +160,58 @@ export async function runAsk({ query, json }) {
   const strict = pool.filter((h) => (h.cov ?? 1) >= 0.6);
   pool = strict.length ? strict : pool;
 
-  // Rerank only if we are still inside the speed budget (warm Ollama, ≤3.5s).
-  let ai = false;
-  let hits = pool;
-  if (pool.length && Date.now() - t0 <= 2500) {
-    const r = await aiRerank(query, pool);
-    ai = r.ai;
-    hits = r.hits;
-  }
+  const hits = pool;
 
   const engine = sources.length ? `live: ${sources.join('+')}` : 'live: no source answered';
   const ms = ((Date.now() - t0) / 1000).toFixed(1);
+  // ok = a source answered (even with 0 hits) OR nothing failed — the same rule
+  // for --json and text, so machine consumers never see a masked failure (B-01).
+  const ok = sources.length > 0 || errors.length === 0;
   const out = {
     schemaVersion: 1, // machine consumers pin to this — bump only on breaking shape change
     query,
-    engine: ai ? `${engine} + ollama:${OLLAMA_MODEL}` : engine,
+    engine,
+    ok, // the verdict the text mode already shows — JSON consumers get it too
     sources,
+    sourcesDetail, // per-lane {name, ms, ok, hits} — auditable timing (Stage 3)
     errors,
     count: hits.length,
     stored: 0, // zero storage — results are never persisted
     hits,
   };
-  // ok = a source answered (even with 0 hits) OR nothing failed — the same rule
-  // for --json and text, so machine consumers never see a masked failure (B-01).
-  const ok = sources.length > 0 || errors.length === 0;
   if (json) return { ok, text: JSON.stringify(out, null, 2), json: out };
+  // text mode only below: the engine stays EN in the payload above (machine
+  // contract) — the human rendering flips with AIO_LANG.
+  const engineText = sources.length ? msg('engineLive', { lanes: sources.join('+') }) : msg('engineNoSource');
+  const timeLine = sourcesDetail.length
+    ? msg('timeFooter', { detail: sourcesDetail.map((s) => `${s.name} ${(s.ms / 1000).toFixed(1)}s`).join(' · ') })
+    : null;
   if (!hits.length) {
     const errBlock = errors.length ? `\n${sourceErrorNote(errors).join('\n')}\n` : '';
     return {
       ok,
       json: out,
       text:
-        `aio ask — "${query}" (${engine} · ${ms}s)\n` +
+        `${msg('askHeaderZero', { query, engine: engineText, sec: ms })}\n` +
         errBlock +
         (errors.length && !sources.length
-          ? 'Live sources failed — fix the issue above, then retry.'
-          : 'No result from live sources. Refine keywords — or search the web with your own web-search tool' +
-            `${web ? ' (URL detected in the prompt)' : ''}.`),
+          ? msg('liveSourcesFailed')
+          : msg('askNoResult') + (web ? msg('askUrlHint') : '') + '.') +
+        (timeLine ? `\n${timeLine}` : ''),
     };
   }
-  const lines = [`aio ask — "${query}" (${engine} · ${hits.length} results · ${ms}s${web ? ' · web → your web search' : ''})`, ''];
-  lines.push('note: ranked by keyword match + source popularity — public results are unvetted;');
-  lines.push('      verify before running npx/uvx or cloning (docs/THREATS.md).');
-  if (errors.length) lines.push(`source issues: ${errors.map((e) => e.src).join(', ')} — see --json errors[]`);
+  const lines = [
+    msg('askHeader', { query, engine: engineText, n: hits.length, sec: ms, web: web ? msg('askHeaderWeb') : '' }),
+    '',
+  ];
+  lines.push(msg('askNote'));
+  if (errors.length) lines.push(msg('askSourceIssues', { srcs: errors.map((e) => e.src).join(', ') }));
   hits.forEach((h, i) => {
     lines.push(`${i + 1}. ${h.name} [${h.type}] ${h.src ? `<${h.src}>` : ''} — ${h.func}`);
     if (h.meta) lines.push(`   ${h.meta}`);
-    lines.push(h.url ? `   ${h.url}` : '   (no public URL)');
+    lines.push(h.url ? `   ${h.url}` : `   ${msg('askNoUrl')}`);
     lines.push(`   why: ${h.why}`);
   });
+  if (timeLine) lines.push(timeLine); // footer: per-lane timing, honest worst-case visible
   return { ok, text: lines.join('\n'), json: out };
 }

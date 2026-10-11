@@ -15,7 +15,7 @@
 // SAFETY (hermetic child env, same shape as coverage-bin.test.js):
 //   PATH=''                 → git/npm/gh unreachable, zero network
 //   USERPROFILE/HOME/APPDATA/AIO_STATE_DIR → fresh temp dirs per scenario
-//   AIO_OFFLINE/NO_GH/RATE  → no probes; OLLAMA_HOST → closed port
+//   AIO_OFFLINE/NO_GH/RATE  → no probes
 // No real home, no real roaming profile, no writes outside temp.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -51,7 +51,6 @@ function envFor(t, extra = {}) {
       AIO_OFFLINE: '1',
       AIO_NO_GH: '1',
       AIO_RATE: '0',
-      OLLAMA_HOST: 'http://127.0.0.1:1',
       NO_COLOR: '1',
       ...extra,
     },
@@ -277,8 +276,8 @@ test('ask/agent with a stubbed network → a source answers → ok:true → exit
   const dir = scratch(t, 'aio-d-net-');
   const stub = path.join(dir, 'fetch-stub.mjs');
   fs.writeFileSync(stub, FETCH_STUB);
-  // online (AIO_OFFLINE must not be '1'); AIO_NO_AI skips the Ollama rerank lane
-  const { env } = envFor(t, { AIO_OFFLINE: '', AIO_NO_AI: '1' });
+  // online (AIO_OFFLINE must not be '1')
+  const { env } = envFor(t, { AIO_OFFLINE: '' });
   const argv = ['--import', pathToFileURL(stub).href, BIN];
 
   const ask = run(env, REPO, [...argv, 'ask', 'demo tool']);

@@ -6,8 +6,7 @@
 // Writes eval-result.json (n, hit8, hit1, mrr, measured) — the machine source
 // for the README badge and the scorecard's quality gate.
 // Usage: node scripts/eval-relevance.mjs
-// Network required; AIO_NO_AI=1 keeps ranking deterministic (BM25 + trust, no Ollama).
-process.env.AIO_NO_AI = process.env.AIO_NO_AI ?? '1';
+// Network required; ranking is deterministic (BM25 + trust).
 
 const { runAsk } = await import('../src/search.js');
 

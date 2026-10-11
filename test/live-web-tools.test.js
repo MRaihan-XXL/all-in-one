@@ -12,7 +12,6 @@ import path from 'node:path';
 
 process.env.AIO_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-web-tools-state-')); // must precede the src import
 process.env.AIO_NO_GH = '1'; // no gh subprocess
-process.env.AIO_NO_AI = '1';
 process.env.AIO_RATE = '0'; // no throttle sleep
 
 const { webSearch, localTools, liveSearch, ghRepos } = await import('../src/live.js');

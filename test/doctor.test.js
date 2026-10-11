@@ -24,12 +24,11 @@ const SLIM_MANIFEST = [
   '',
 ].join('\n');
 
-/** Mock every outbound HTTP call: github reachable, ollama answered. */
+/** Mock every outbound HTTP call: github reachable. */
 function mockNet(t) {
   return t.mock.method(globalThis, 'fetch', async (input) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.includes('api.github.com')) return json({ resources: {} });
-    if (url.includes('/api/tags')) return json({ models: [{ name: 'qwen3:4b' }] });
     throw new Error(`unexpected network call in test: ${url}`);
   });
 }
@@ -78,7 +77,7 @@ test('runChecks: returns structured checks (levels + ids), never throws', async 
   assert.ok(r.checks.some((c) => c.id === 'manifest'), 'manifest check exists');
   assert.ok(r.checks.some((c) => c.id === 'agent blocks'), 'agent blocks check exists');
   assert.equal(typeof r.ok, 'boolean');
-  assert.equal(net.mock.callCount(), 2, 'github + ollama probed once each');
+  assert.equal(net.mock.callCount(), 1, 'github probed once');
   // gh lane: AIO_NO_GH=1 skips `gh auth status` — must still be reported, as [ok]/[~~] only
   const gh = r.checks.find((c) => c.id === 'gh auth');
   assert.ok(gh, 'gh auth check exists');
@@ -133,7 +132,7 @@ test('runChecks: AIO_OFFLINE=1 + fresh slim manifest → ok=true (deterministic,
   assert.equal(r.ok, true);
 });
 
-test('runDoctor --json --check: text parses — schemaVersion 1, all 9 checks in runChecks order', async (t) => {
+test('runDoctor --json --check: text parses — schemaVersion 1, all 8 checks in runChecks order', async (t) => {
   // same hermetic env as the offline happy path above: no network, fresh manifest,
   // fixture home whose ~/AGENTS.md carries the block (no [!!] from the real machine)
   process.env.AIO_OFFLINE = '1';
@@ -154,10 +153,10 @@ test('runDoctor --json --check: text parses — schemaVersion 1, all 9 checks in
   assert.equal(p.version, pkg.version, 'version === package.json version');
   assert.equal(p.mode, 'check', 'check flag surfaces as the mode');
   assert.ok(Array.isArray(p.checks), 'checks is an array');
-  assert.equal(p.checks.length, 9, `always 9 checks (B-09):\n${r.text}`);
+  assert.equal(p.checks.length, 8, `always 8 checks (B-09):\n${r.text}`);
   assert.deepEqual(
     p.checks.map((c) => c.id),
-    ['node', 'state', 'live', 'manifest', 'agent blocks', 'agents', 'gh auth', 'ollama', 'mcp ledger'],
+    ['node', 'state', 'live', 'manifest', 'agent blocks', 'agents', 'gh auth', 'mcp ledger'],
     'ids in runChecks order, one per label'
   );
   for (const c of p.checks) {

@@ -7,7 +7,7 @@
 //   • unknown flag     → '[aio] flag tidak dikenal: … — diabaikan' on stderr
 // and each EN string must be ABSENT — the locale flips wholesale, no mixed output.
 // Hermetic: fresh temp HOME/STATE/APPDATA per scenario, PATH='' (no subprocess),
-// AIO_OFFLINE/NO_GH/RATE → no probes, OLLAMA_HOST → closed port, shell:false.
+// AIO_OFFLINE/NO_GH/RATE → no probes, shell:false.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -37,7 +37,6 @@ function envFor(t, extra = {}) {
     AIO_OFFLINE: '1',
     AIO_NO_GH: '1',
     AIO_RATE: '0',
-    OLLAMA_HOST: 'http://127.0.0.1:1',
     NO_COLOR: '1',
     AIO_LANG: 'id',
     ...extra,
@@ -64,7 +63,9 @@ test('AIO_LANG=id: unknown command → "perintah tidak dikenal" on stderr, exit 
   assert.equal(r.status, 1, `unknown command exits 1:\n${r.stdout}\n${r.stderr}`);
   assert.match(r.stderr, /\[aio\] perintah tidak dikenal: frobnicate/, `ID message:\n${r.stderr}`);
   assert.doesNotMatch(r.stderr, /unknown command/, 'never the English message');
-  assert.match(r.stderr, /run 'aio --help' for usage/, 'the help hint is part of the pinned contract');
+  // tryHelp is localized too — the hint stays part of the pinned contract, in Bahasa
+  assert.match(r.stderr, /jalankan 'aio --help' untuk cara pakai/, `ID help hint:\n${r.stderr}`);
+  assert.doesNotMatch(r.stderr, /run 'aio --help' for usage/, 'never the English help hint');
 });
 
 test('AIO_LANG=id: `ask` with no query → Bahasa usage on stdout, exit 1, no network', (t) => {

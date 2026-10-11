@@ -1,5 +1,5 @@
 // coverage-doctor.test.js — src/doctor.js gaps: node check warn/bad/bun lines,
-// live+ollama+gh probe failure lanes, manifest stale/legacy, agent-block missing,
+// live+gh probe failure lanes, manifest stale/legacy, agent-block missing,
 // all four mcp-ledger branches, and the `--fix` spawn paths (success text+json,
 // spawn failure). Isolated: AIO_STATE_DIR → temp; every home is a temp dir behind
 // t.mock.method(os, 'homedir'); PATH emptied so the real gh is never found.
@@ -35,17 +35,13 @@ function json(body) {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
 }
 
-/** Probe control: github / ollama answer or fail independently; never real network. */
-function mockNet(t, { github = 'ok', ollama = 'ok' } = {}) {
+/** Probe control: the github probe answers or fails; never real network. */
+function mockNet(t, { github = 'ok' } = {}) {
   return t.mock.method(globalThis, 'fetch', async (input) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.includes('api.github.com')) {
       if (github === 'ok') return json({ resources: {} });
       throw new Error('connect ECONNREFUSED 140.82.112.9:443');
-    }
-    if (url.includes('/api/tags')) {
-      if (ollama === 'ok') return json({ models: [{ name: 'qwen3:4b' }] });
-      throw new Error('connect ECONNREFUSED 127.0.0.1:11434');
     }
     throw new Error(`unexpected network call in test: ${url}`);
   });
@@ -114,10 +110,10 @@ test('runChecks: bun build → supported line names the bun version', async (t) 
   assert.match(node.detail, /bun 1\.1\.0 build/, 'bun runtime called out');
 });
 
-/* ---------------- probe lanes (lines 28–54, 85–91, 134–147) ---------------- */
+/* ---------------- probe lanes (lines 28–48, 76–86, 125–138) ---------------- */
 
-test('runChecks: github down + ollama down + real gh spawn (PATH inert) → three warns, 2 fetches', async (t) => {
-  const net = mockNet(t, { github: 'fail', ollama: 'fail' });
+test('runChecks: github down + real gh spawn (PATH inert) → two warns, 1 fetch', async (t) => {
+  const net = mockNet(t, { github: 'fail' });
   hermeticHome(t); // AIO_NO_GH unset → probeGhAuth really spawns `gh auth status`
   fs.rmSync(MANIFEST, { force: true });
 
@@ -127,13 +123,10 @@ test('runChecks: github down + ollama down + real gh spawn (PATH inert) → thre
   assert.equal(live.level, 'warn');
   assert.match(live.detail, /github unreachable \(connect ECONNREFUSED/, 'failure reason surfaced');
   assert.match(live.detail, /aio ask will still try npm\/crates/);
-  const ollama = check(r, 'ollama');
-  assert.equal(ollama.level, 'warn');
-  assert.match(ollama.detail, /not reachable — ask rerank skipped/);
   const gh = check(r, 'gh auth');
   assert.equal(gh.level, 'warn', 'gh present but unauthenticated/missing → warn');
   assert.match(gh.detail, /not logged in/);
-  assert.equal(net.mock.callCount(), 2, 'github + ollama probed once each');
+  assert.equal(net.mock.callCount(), 1, 'github probed once');
   assert.equal(r.ok, false, 'warns alone never fail; a missing manifest does');
 });
 
@@ -321,7 +314,7 @@ function sandboxChild(t, home) {
 }
 
 test('runDoctor --fix: healthy spawn → setup re-run, after-fix report, exit 0', async (t) => {
-  mockNet(t, { github: 'fail', ollama: 'fail' });
+  mockNet(t, { github: 'fail' });
   const home = hermeticHome(t); // no block, no agent dirs → nothing to inject
   sandboxChild(t, home);
   fs.rmSync(MANIFEST, { force: true });
@@ -337,7 +330,7 @@ test('runDoctor --fix: healthy spawn → setup re-run, after-fix report, exit 0'
 });
 
 test('runDoctor --fix --json: healthy spawn → machine payload with mode "fix"', async (t) => {
-  mockNet(t, { github: 'fail', ollama: 'fail' });
+  mockNet(t, { github: 'fail' });
   const home = hermeticHome(t);
   sandboxChild(t, home);
   fs.rmSync(MANIFEST, { force: true });
@@ -350,7 +343,7 @@ test('runDoctor --fix --json: healthy spawn → machine payload with mode "fix"'
   assert.equal(p.schemaVersion, 1);
   assert.deepEqual(p.fix, { attempted: true, ok: true }, 'machine-readable fix outcome (no error key on success)');
   assert.equal(p.ok, true, `issues: ${p.issues} (${p.checks.filter((c) => c.level === 'bad').map((c) => c.detail).join('; ')})`);
-  assert.equal(p.checks.length, 9, 'still exactly 9 checks after a fix');
+  assert.equal(p.checks.length, 8, 'still exactly 8 checks after a fix');
   assert.equal(r.ok, p.ok, 'r.ok mirrors the payload');
   assert.equal(r.exit, 0, 'exit mirrors ok');
 });

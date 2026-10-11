@@ -38,15 +38,6 @@ function probeLive() {
     .catch((e) => ({ ok: false, msg: e.message }));
 }
 
-function probeOllama() {
-  return fetch(`${process.env.OLLAMA_HOST || 'http://localhost:11434'}/api/tags`, {
-    signal: AbortSignal.timeout(1500),
-  })
-    .then((res) => res.json())
-    .then((data) => ({ ok: true, models: (data.models || []).map((m) => m.name).slice(0, 4).join(', ') }))
-    .catch(() => ({ ok: false }));
-}
-
 function probeGhAuth() {
   if (process.env.AIO_NO_GH === '1') return Promise.resolve({ state: 'off' });
   return new Promise((resolve) => {
@@ -56,13 +47,13 @@ function probeGhAuth() {
   });
 }
 
-/** Run all checks. Returns { checks, issues, warns, ok } — always 9 checks (B-09). */
+/** Run all checks. Returns { checks, issues, warns, ok } — always 8 checks (B-09). */
 export async function runChecks() {
   const home = os.homedir();
   const checks = [];
 
-  // Kick off the three probes together, then report in stable order (P-02).
-  const [live, ollama, gh] = await Promise.all([probeLive(), probeOllama(), probeGhAuth()]);
+  // Kick off the two probes together, then report in stable order (P-02).
+  const [live, gh] = await Promise.all([probeLive(), probeGhAuth()]);
 
   // 1. Node — supported line is >= 22 (package engines); older runs are unsupported (B-08).
   //    Load floor >= 20.10: below it aio never loaded at all (6e), so only those are "bad".
@@ -171,14 +162,7 @@ export async function runChecks() {
         : line('warn', 'gh auth', msg('doctorGhNoAuth'))
   );
 
-  // 8. Ollama (info — powers `aio ask` AI rerank)
-  checks.push(
-    ollama.ok
-      ? line('ok', 'ollama', msg('doctorOllamaOk', { models: ollama.models || 'none' }))
-      : line('warn', 'ollama', msg('doctorOllamaDown'))
-  );
-
-  // 9. MCP ledger — always reported (B-09); missing ledger + state = attribution lost (S-01)
+  // 8. MCP ledger — always reported (B-09); missing ledger + state = attribution lost (S-01)
   if (!fs.existsSync(ledgerFile()) && Object.keys(state).length) {
     checks.push(line('warn', 'mcp ledger', msg('doctorLedgerMissing')));
   } else {

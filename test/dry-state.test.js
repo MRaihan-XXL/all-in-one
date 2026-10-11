@@ -11,7 +11,6 @@ import path from 'node:path';
 
 process.env.AIO_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-dry-state-')); // state/backups/hashes → temp dir (must precede src imports)
 process.env.AIO_NO_GH = '1'; // no gh subprocess in tests
-process.env.AIO_NO_AI = '1'; // deterministic: no Ollama rerank
 
 const { injectBlock, stripBlock, ensureJsonEntry, ensureTomlEntry } = await import('../src/write.js');
 const { STATE_DIR } = await import('../src/paths.js');

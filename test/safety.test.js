@@ -6,7 +6,6 @@ import os from 'node:os';
 import path from 'node:path';
 
 process.env.AIO_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-safety-')); // backups/state → temp dir, never ~/.aio
-process.env.AIO_NO_AI = '1'; // deterministic: no Ollama
 
 const { injectBlock, ensureJsonEntry, stripBlock, BLOCK_START, BLOCK_END } = await import('../src/write.js');
 const { STATE_DIR, BACKUP_DIR } = await import('../src/paths.js');

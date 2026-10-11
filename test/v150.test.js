@@ -1,7 +1,7 @@
 // v150.test.js — v1.5.0 regression coverage: consent gate (src/consent.js),
 // shared target list (src/targets.js), block drift C-02 (src/write.js),
 // `aio init` (src/init.js), status hand-edit reporting (src/status.js),
-// ask ok-invariant B-01 (src/search.js), doctor 9-check report (src/doctor.js).
+// ask ok-invariant B-01 (src/search.js), doctor 8-check report (src/doctor.js).
 // Isolated state + temp fixtures — never ~/.aio, never the real user home.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -11,7 +11,6 @@ import path from 'node:path';
 
 process.env.AIO_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-v150-')); // state/backups/hashes → temp dir (must precede src imports)
 process.env.AIO_NO_GH = '1'; // no gh subprocess in tests
-process.env.AIO_NO_AI = '1'; // deterministic: no Ollama rerank
 
 const { decide, gatedRun } = await import('../src/consent.js');
 const { blockTargets, zedTarget, globalWanted } = await import('../src/targets.js');
@@ -407,21 +406,21 @@ test('runAsk: every source fails → sources=[] + errors present → ok=false (B
   assert.equal(r.json.stored, 0, 'zero storage even on failure');
 });
 
-/* ---------------- 7. src/doctor.js — 9-check report ---------------- */
+/* ---------------- 7. src/doctor.js — 8-check report ---------------- */
 
-test('runDoctor --check: exactly 9 tagged check lines — one per expected label, in runChecks order', async (t) => {
+test('runDoctor --check: exactly 8 tagged check lines — one per expected label, in runChecks order', async (t) => {
   process.env.AIO_OFFLINE = '1';
   t.after(() => delete process.env.AIO_OFFLINE);
   t.mock.method(globalThis, 'fetch', async (input) => {
     throw new Error(`no network in doctor test: ${input}`);
-  }); // offline skips github; mocked fetch makes the ollama probe fail deterministically
+  }); // offline skips github; the fetch mock keeps any stray call deterministic
   fs.writeFileSync(path.join(STATE_DIR, 'aio-context.md'), SLIM_MANIFEST);
 
   const r = await runDoctor({ check: true });
 
   assert.equal(typeof r.text, 'string');
   const tagged = r.text.split('\n').filter((l) => /^\[(ok|~~|!!)\] /.test(l));
-  assert.equal(tagged.length, 9, `expected exactly 9 check lines:\n${r.text}`);
+  assert.equal(tagged.length, 8, `expected exactly 8 check lines:\n${r.text}`);
   // `${tag} ${id.padEnd(14)} ${detail}` → id occupies chars 5..18 after the 4-char tag
   const ids = tagged.map((l) => l.slice(5, 19).trim());
   const expected = [
@@ -432,7 +431,6 @@ test('runDoctor --check: exactly 9 tagged check lines — one per expected label
     'agent blocks',
     'agents',
     'gh auth',
-    'ollama',
     'mcp ledger',
   ];
   assert.deepEqual([...ids].sort(), [...expected].sort(), 'exactly one line per expected label');

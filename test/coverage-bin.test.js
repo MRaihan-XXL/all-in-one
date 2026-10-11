@@ -9,7 +9,7 @@
 //   USERPROFILE/HOME/APPDATA → temp → no writes to the real home, rollback strips
 //                        only temp files
 //   AIO_STATE_DIR      → temp → manifests/backups/ledgers land there
-//   AIO_OFFLINE/NO_GH  → no probes; OLLAMA_HOST → closed port (instant refuse)
+//   AIO_OFFLINE/NO_GH  → no probes
 // Never spawned: bare `aio` writes are ok (--yes runs in temp only); verify
 // (and its `evolve` alias) is safe because its npm-test step fails at the empty PATH.
 import { test } from 'node:test';
@@ -38,7 +38,6 @@ const ENV = {
   AIO_OFFLINE: '1',
   AIO_NO_GH: '1',
   AIO_RATE: '0',
-  OLLAMA_HOST: 'http://127.0.0.1:1',
   NO_COLOR: '1',
 };
 

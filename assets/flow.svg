@@ -207,9 +207,6 @@
       <circle cx="770" cy="210" r="2.5" fill="#FF4A1C"/>
       <text x="782" y="214" class="mono" font-size="10" fill="#9AA0A8">BM25 rank · ≥2 rows/source</text>
       <rect x="782" y="219" width="118" height="2" rx="1" fill="#FF4A1C" opacity="0.55" class="gw" style="animation-delay:1.45s"/>
-      <circle cx="770" cy="232" r="2.5" fill="#FF4A1C"/>
-      <text x="782" y="236" class="mono" font-size="10" fill="#9AA0A8">qwen3 rerank (optional · ≤3.5s)</text>
-      <rect x="782" y="241" width="92" height="2" rx="1" fill="#FF4A1C" opacity="0.4" class="gw" style="animation-delay:1.65s"/>
     </g>
   </g>
 
