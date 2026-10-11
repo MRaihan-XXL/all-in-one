@@ -41,7 +41,7 @@ block('Help (English, default)', 'node bin/aio.js --help', run(['--help']));
 block('Help (Bahasa Indonesia)', 'AIO_LANG=id node bin/aio.js --help', run(['--help'], { AIO_LANG: 'id' }));
 block('Version', 'node bin/aio.js -v', run(['-v']));
 block('Status (read-only health report)', 'node bin/aio.js status', run(['status']));
-block('Doctor (9 checks, CI gate)', 'node bin/aio.js doctor --check', run(['doctor', '--check']));
+block('Doctor (8 checks, CI gate)', 'node bin/aio.js doctor --check', run(['doctor', '--check']));
 block('Skill list (installed skills)', 'node bin/aio.js skill list', run(['skill', 'list']));
 block('Setup (dry-run plan, nothing written)', 'node bin/aio.js --dry-run', run(['--dry-run']));
 block(

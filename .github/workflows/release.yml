@@ -189,6 +189,9 @@ jobs:
   publish:
     needs: [binary, finalize]
     runs-on: ubuntu-latest
+    # GitHub-side guard: the job waits for the `npm` environment's protection
+    # rules (required reviewer) before it can touch NPM_TOKEN or publish.
+    environment: npm
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5

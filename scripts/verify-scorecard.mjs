@@ -120,9 +120,15 @@ check('robustness', 'corrupt-ledger preserve-aside present', has('src/paths.js',
 {
   const files = [...list('src', /\.js$/).map((f) => path.join('src', f)), 'bin/aio.js',
     ...list('scripts', /\.(?:js|mjs)$/).map((f) => path.join('scripts', f)),
-    ...list('test', /\.js$/).map((f) => path.join('test', f))];
-  const leaked = files.filter((f) => /ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|ghu_[A-Za-z0-9]{20,}|npm_[A-Za-z0-9]{36}/.test(read(f)));
-  check('security', 'no hardcoded token literals in src/bin/scripts/test', leaked.length === 0, leaked.join(', '));
+    ...list('test', /\.js$/).map((f) => path.join('test', f)),
+    ...list('docs', /\.(?:md|json|mjs|js)$/).map((f) => path.join('docs', f)),
+    ...list('.github/workflows', /\.ya?ml$/).map((f) => path.join('.github', 'workflows', f))];
+  // every token family that could leak: github (classic+fine-grained+server),
+  // npm, aws (access+session), slack, and private key blocks — scanned across
+  // src/bin/scripts/test AND docs/workflows (prose and YAML copy-paste leaks).
+  const SECRET = /gh[pousr]_[A-Za-z0-9]{20,}|ghs_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{20,}|npm_[A-Za-z0-9]{36}|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----/;
+  const leaked = files.filter((f) => SECRET.test(read(f)));
+  check('security', 'no secret literals in src/bin/scripts/test/docs/workflows', leaked.length === 0, leaked.join(', '));
 }
 check('security', 'GH_TOKEN read from env (never hardcoded)',
   has('src/live.js', /process\.env\.GH_TOKEN/));
@@ -157,20 +163,36 @@ check('honesty', 'agent surfaces source errors (no fake empty)', has('src/agent.
   check('cli-ux', 'unknown flag warns, status exit stays 0|1 (pinned)',
     [0, 1].includes(bf.status) && /unknown flag: --bogus-flag/.test(bf.stderr),
     `status=${bf.status} ${(bf.stderr || bf.stdout).slice(0, 120)}`);
+  // Behavioral probes — the CLI must PROVE the contract, not just mention it:
+  // the offline verdict is checked end-to-end (exit code + rendered message),
+  // and doctor's machine payload must parse with a boolean verdict.
+  const offAsk = runNodeIso(['ask', 'offline probe']);
+  check('cli-ux', 'ask under AIO_OFFLINE=1 exits 1 with an offline verdict',
+    offAsk.status === 1 && /offline/i.test(offAsk.stdout),
+    `status=${offAsk.status} ${(offAsk.stdout || offAsk.stderr).slice(0, 100)}`);
+  const dj = runNodeIso(['doctor', '--json']);
+  let dok = false;
+  let dstat = `status=${dj.status}`;
+  try {
+    const parsed = JSON.parse(dj.stdout);
+    dok = typeof parsed.ok === 'boolean' && typeof parsed.issues === 'number';
+    dstat = `status=${dj.status} ok=${parsed.ok} issues=${parsed.issues}`;
+  } catch (e) { dstat = `unparsable stdout: ${e.message.slice(0, 80)}`; }
+  check('cli-ux', 'doctor --json parses with a boolean ok verdict (behavioral)', dok, dstat);
 }
 
 // ── 7. doctor ───────────────────────────────────────────────────────────────
 {
   // Environment-independent contract (B-09 / test/v150.test.js): always exactly
-  // 9 tagged check lines + version header, and `--check` exits 1 IFF any [!!]
+  // 8 tagged check lines + version header, and `--check` exits 1 IFF any [!!]
   // issue exists. A fresh machine (missing manifest) correctly reports [!!] → 1;
   // requiring exit 0 would only ever pass on an already-configured host.
   const d = runNodeIso(['doctor', '--check']);
   const out = `${d.stdout}\n${d.stderr}`;
   const tagged = out.split('\n').filter((l) => /^\[(ok|~~|!!)\] /.test(l));
   const issues = tagged.filter((l) => l.startsWith('[!!]')).length;
-  check('doctor', 'doctor --check: 9 tagged lines, version header, exit ⇔ [!!]',
-    tagged.length === 9 && out.includes(`v${pkg.version}`) && d.status === (issues > 0 ? 1 : 0),
+  check('doctor', 'doctor --check: 8 tagged lines, version header, exit ⇔ [!!]',
+    tagged.length === 8 && out.includes(`v${pkg.version}`) && d.status === (issues > 0 ? 1 : 0),
     `lines=${tagged.length} issues=${issues} exit=${d.status} ${out.slice(0, 140)}`);
 }
 
@@ -380,31 +402,45 @@ check('quality', 'eval script covers all query families (QUERIES array)',
   check('ci-gates', 'stats auto-gen + og render workflows present',
     fs.existsSync(path.join(ROOT, '.github', 'workflows', 'stats.yml'))
     && fs.existsSync(path.join(ROOT, '.github', 'workflows', 'og.yml')));
+  check('ci-gates', 'npm-auth-check runs on a weekly cron schedule',
+    /schedule:\s*\n\s*-\s*cron:/.test(read('.github/workflows/npm-auth-check.yml')));
+  check('ci-gates', 'npm publish job gated behind a protected GitHub environment',
+    /^\s*environment:\s*\w+/m.test(read('.github/workflows/release.yml')));
 }
 
 // ── 15. freshness (recorded artifacts must be recent) ────────────────────────
 {
-  const ageDays = (f) => (Date.now() - fs.statSync(path.join(ROOT, f)).mtimeMs) / 86400000;
-  check('freshness', 'docs/stats.json regenerated <= 14 days',
-    ageDays('docs/stats.json') <= 14, `${ageDays('docs/stats.json').toFixed(1)}d`);
-  // A git checkout rewrites mtimes in tree-write order, which can invert
-  // og-cover.png vs og.html on a fresh clone — last-commit time is the honest
-  // "when was this last touched" signal; fall back to mtime outside git.
-  // A DIRTY file (edited, not yet committed) has no honest commit time: git
-  // log would report the previous commit and mask the edit — use mtime there.
-  const touchTime = (f) => {
-    const d = spawnSync('git', ['-C', ROOT, 'status', '--porcelain', '--', f],
-      { encoding: 'utf8' });
-    if ((d.stdout || '').trim()) return fs.statSync(path.join(ROOT, f)).mtimeMs;
+  // Deterministic freshness: a CLEAN file's touch time is its last COMMIT time
+  // (machine-independent); an UNCOMMITTED edit has no honest commit time, so
+  // artifact-vs-source pairs fail loudly until both sides are committed —
+  // mtime guessing is reserved for age checks (checkout rewrites mtimes in
+  // tree-write order, which can invert ages on a fresh clone).
+  const dirty = (f) =>
+    (spawnSync('git', ['-C', ROOT, 'status', '--porcelain', '--', f],
+      { encoding: 'utf8' }).stdout || '').trim() !== '';
+  const commitTime = (f) => {
     const g = spawnSync('git', ['-C', ROOT, 'log', '-1', '--format=%ct', '--', f],
       { encoding: 'utf8' });
     const s = (g.stdout || '').trim();
     return (g.status === 0 && s) ? Number(s) * 1000
-      : fs.statSync(path.join(ROOT, f)).mtimeMs;
+      : fs.statSync(path.join(ROOT, f)).mtimeMs; // not in git (untracked / no repo)
   };
+  const touchTime = (f) => (dirty(f) ? fs.statSync(path.join(ROOT, f)).mtimeMs : commitTime(f));
+  const ageDays = (f) => (Date.now() - touchTime(f)) / 86400000;
+  check('freshness', 'docs/stats.json regenerated <= 14 days',
+    ageDays('docs/stats.json') <= 14, `${ageDays('docs/stats.json').toFixed(1)}d`);
+  // Artifact pairs: both sides committed + source never newer than artifact.
+  const pairDetail = (png, src) => {
+    if (!fs.existsSync(path.join(ROOT, png)) || !fs.existsSync(path.join(ROOT, src))) return 'missing file';
+    if (dirty(png) || dirty(src)) return `uncommitted: ${[png, src].filter(dirty).join(', ')} — commit both (commit-time-only)`;
+    return `shot ${new Date(commitTime(png)).toISOString().slice(0, 16)} vs src ${new Date(commitTime(src)).toISOString().slice(0, 16)}`;
+  };
+  const pairFresh = (png, src) =>
+    fs.existsSync(path.join(ROOT, png)) && fs.existsSync(path.join(ROOT, src))
+    && !dirty(png) && !dirty(src) && commitTime(png) >= commitTime(src);
   check('freshness', 'og-cover.png exists and is not older than its source',
-    fs.existsSync(path.join(ROOT, 'assets', 'og-cover.png'))
-    && touchTime('assets/og-cover.png') >= touchTime('scripts/og.html'));
+    pairFresh('assets/og-cover.png', 'scripts/og.html'),
+    pairDetail('assets/og-cover.png', 'scripts/og.html'));
   // (g) gallery screenshots must be re-rendered after their source edits
   const shotPairs = [
     ['assets/screenshots/flow.png', 'assets/flow.svg'],
@@ -416,11 +452,7 @@ check('quality', 'eval script covers all query families (QUERIES array)',
   ];
   for (const [png, src] of shotPairs) {
     check('freshness', `${png} not older than ${src}`,
-      fs.existsSync(path.join(ROOT, png)) && fs.existsSync(path.join(ROOT, src))
-      && touchTime(png) >= touchTime(src),
-      fs.existsSync(path.join(ROOT, png)) && fs.existsSync(path.join(ROOT, src))
-        ? `shot ${new Date(touchTime(png)).toISOString().slice(0, 16)} vs src ${new Date(touchTime(src)).toISOString().slice(0, 16)}`
-        : 'missing file');
+      pairFresh(png, src), pairDetail(png, src));
   }
   let ok = false, detail = 'unreadable';
   try {

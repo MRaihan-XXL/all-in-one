@@ -1,7 +1,7 @@
 name: Eval
 
 # Nightly relevance eval — `aio ask` against the 110-query golden set, live
-# sources. Deterministic ranking (AIO_NO_AI=1: BM25 + trust, no Ollama); the
+# sources. Deterministic ranking (BM25 + trust); the
 # network is the only variable, so a red run means the live lanes degraded —
 # worth a look, not a blocker: this workflow never runs on PRs. The result is
 # committed back as eval-result.json — the machine source for the README badge
@@ -25,7 +25,6 @@ jobs:
       - name: Relevance eval (hit@8 / hit@1 / MRR)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # enables the skills lane (gh api)
-          AIO_NO_AI: '1'
         run: node scripts/eval-relevance.mjs --write
       - name: Commit fresh eval-result.json
         run: |
