@@ -1,6 +1,5 @@
 // ask.test.js — `aio ask` live router. ALL network is mocked: zero real fetch.
 process.env.AIO_NO_GH = '1'; // ghSkills skips execFile — no shell in tests
-process.env.AIO_NO_AI = '1'; // deterministic: BM25/source order, no Ollama
 process.env.AIO_RATE = '0'; // ghRepos → ghThrottle: no spacing sleep in tests (7.5s/call otherwise)
 
 import { test } from 'node:test';
@@ -72,6 +71,7 @@ test('runAsk: live hits carry url + function + <src> tag, header says live:', as
     assert.ok(['repo', 'tool', 'skill'].includes(h.type), `${h.name} type`);
   }
   assert.equal(net.mock.callCount(), 2, 'github + npm probed exactly once each');
+  assert.match(r.text, /time: github \d+\.\d+s · npm \d+\.\d+s$/, 'footer: per-lane timing, last line');
 });
 
 test('runAsk: --json → machine payload with stored=0, sources, count', async (t) => {
@@ -86,6 +86,12 @@ test('runAsk: --json → machine payload with stored=0, sources, count', async (
   assert.equal(typeof p.count, 'number');
   assert.equal(p.count, p.hits.length, 'count matches hits');
   assert.ok(Array.isArray(p.hits) && p.hits.length >= 1);
+  assert.equal(p.ok, true, 'verdict surfaced in --json (was text-only)');
+  assert.equal(p.sourcesDetail.length, 2, 'a timing row per answering lane');
+  for (const d of p.sourcesDetail) {
+    assert.ok(['github', 'npm'].includes(d.name), `${d.name} detail name`);
+    assert.ok(Number.isFinite(d.ms) && typeof d.ok === 'boolean' && Number.isFinite(d.hits), `${d.name} detail shape`);
+  }
   assert.deepEqual(p, j.json, 'text and json payloads agree');
 });
 

@@ -11,7 +11,6 @@ import path from 'node:path';
 
 process.env.AIO_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-agent-state-')); // must precede the src import
 process.env.AIO_NO_GH = '1'; // skills lane never scheduled → no gh subprocess
-process.env.AIO_NO_AI = '1'; // deterministic ranking (no Ollama rerank)
 process.env.AIO_RATE = '0'; // ghThrottle: no spacing wait in tests
 
 // local-tools lane fixture: PATH → a dir holding ONLY jq + cargo (detectBinary
@@ -25,7 +24,7 @@ after(() => {
   fs.rmSync(BIN_DIR, { recursive: true, force: true });
 });
 
-const { runAgent } = await import('../src/agent.js');
+const { runAgent, buildRoute } = await import('../src/agent.js');
 
 const TASK = 'rust json chart';
 
@@ -152,7 +151,7 @@ test('runAgent --json → schema contract + ordered route, every lane probed exa
   assert.deepEqual(p, r.json, 'text and json payloads agree');
   assert.deepEqual(
     Object.keys(p).sort(),
-    ['count', 'engine', 'errors', 'hits', 'plan', 'route', 'schemaVersion', 'sources', 'stored', 'task'],
+    ['count', 'engine', 'errors', 'hits', 'ok', 'plan', 'route', 'schemaVersion', 'sources', 'sourcesDetail', 'stored', 'task'],
     'payload keys pinned'
   );
   assert.equal(p.schemaVersion, 1, 'schemaVersion pinned to 1');
@@ -162,6 +161,12 @@ test('runAgent --json → schema contract + ordered route, every lane probed exa
   assert.equal(p.count, p.hits.length, 'count matches hits');
   assert.deepEqual(p.sources, ['github', 'npm', 'crates', 'web', 'tools'], 'every scheduled lane answered');
   assert.deepEqual(p.errors, [], 'no lane failed');
+  assert.equal(p.ok, true, 'verdict surfaced in --json (was text-only)');
+  assert.equal(p.sourcesDetail.length, p.sources.length, 'a timing row per answered lane');
+  for (const d of p.sourcesDetail) {
+    assert.ok(d.name && Number.isFinite(d.ms) && typeof d.ok === 'boolean' && Number.isFinite(d.hits), `${d.name} detail shape`);
+    assert.equal(d.ok, true, `${d.name} answered`);
+  }
   assert.ok(p.hits.length >= 6, `pool spans the lanes (${p.hits.length})`);
   for (const h of p.hits) {
     assert.ok(['github', 'npm', 'crates', 'web', 'tools'].includes(h.src), `${h.name} src tag`);
@@ -209,6 +214,11 @@ test('runAgent text mode → plan checkboxes, numbered route, per-source lanes b
   assert.ok(r.text.includes('  <tools>'), 'tools lane printed');
   assert.ok(r.text.includes('  <web>'), 'web lane printed');
   assert.ok(r.text.includes('note: every lane is live and unvetted'), 'honesty note');
+  assert.match(
+    r.text,
+    /time: github \d+\.\d+s · npm \d+\.\d+s · crates \d+\.\d+s · web \d+\.\d+s · tools \d+\.\d+s$/,
+    'footer: per-lane timing in schedule order, last line'
+  );
   assert.ok(r.json.hits.length >= 1, 'structured payload still returned in text mode');
 });
 
@@ -270,4 +280,22 @@ test('runAgent: no keyword overlap → source-ranked fallback fills the pool (ne
   assert.deepEqual(keys, [...keys].sort((a, b) => a - b), 'route still ordered cheapest-first');
   assert.ok(keys.includes(1) && keys.includes(2) && keys.includes(4), 'web + npm + github routed');
   assert.ok(!keys.includes(0), 'no local tool matched this query');
+});
+
+// ---- Stage 0 pin (v1.9.2): the install-skill route must fire for skills rows.
+// Root cause of the old dead route: ghSkills rows carried src 'github', so
+// bySrc had no 'skills' group and take('skills') always returned []. ----
+test('buildRoute: a hit with src skills reaches the install skill step', () => {
+  const hits = [
+    { src: 'github', name: 'acme/pdf-tools', func: 'PDF splitting and merging', url: 'https://github.com/acme/pdf-tools' },
+    { src: 'skills', name: 'acme/sk-pdf', func: 'SKILL.md — SKILL.md', url: 'https://github.com/acme/sk-pdf' },
+  ];
+  const route = buildRoute(hits, 'pdf tools');
+  const steps = route.map((s) => s.step);
+  assert.ok(steps.includes('deep dive'), 'github hit → borrow step present');
+  assert.ok(steps.includes('install skill'), 'skills hit must reach the install skill step');
+  const inst = route.find((s) => s.step === 'install skill');
+  assert.equal(inst.use, 'aio skill add acme/sk-pdf');
+  const keys = routeKeys(route);
+  assert.deepEqual(keys, [...keys].sort((a, b) => a - b), 'order stays cheapest-first');
 });

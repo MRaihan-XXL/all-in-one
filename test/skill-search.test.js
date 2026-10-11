@@ -12,7 +12,6 @@ import path from 'node:path';
 
 process.env.AIO_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-skill-search-')); // must precede the src import
 process.env.AIO_NO_GH = '1'; // skills lane resolves [] without spawning (toggled per failing test)
-process.env.AIO_NO_AI = '1';
 process.env.AIO_RATE = '0';
 process.env.PATH = ''; // gh/git unreachable for every spawn in this process
 
@@ -124,6 +123,7 @@ test('skillSearch text mode → ranked rows with ready-to-run install commands',
   assert.ok(r.text.includes('note: public results are unvetted'), 'honesty note');
   assert.ok(!r.text.includes('source issues:'), 'no failures to report');
   assert.deepEqual(r.json.sources, ['skills', 'github'], 'both lanes answered');
+  assert.match(r.text, /time: skills \d+\.\d+s · github \d+\.\d+s$/, 'footer: per-lane timing, last line');
 });
 
 test('skillSearch --json → payload schema: schemaVersion 1, stored 0, commands per hit', async (t) => {
@@ -136,10 +136,16 @@ test('skillSearch --json → payload schema: schemaVersion 1, stored 0, commands
   assert.deepEqual(p, r.json, 'text and json payloads agree');
   assert.deepEqual(
     Object.keys(p).sort(),
-    ['commands', 'count', 'errors', 'hits', 'query', 'schemaVersion', 'sources', 'stored'],
+    ['commands', 'count', 'errors', 'hits', 'ok', 'query', 'schemaVersion', 'sources', 'sourcesDetail', 'stored'],
     'payload keys pinned'
   );
   assert.equal(p.schemaVersion, 1, 'schemaVersion pinned to 1');
+  assert.equal(p.ok, true, 'verdict surfaced in --json (was text-only)');
+  assert.equal(p.sourcesDetail.length, 2, 'a timing row per lane');
+  for (const d of p.sourcesDetail) {
+    assert.ok(['skills', 'github'].includes(d.name), `${d.name} detail name`);
+    assert.ok(Number.isFinite(d.ms) && typeof d.ok === 'boolean' && Number.isFinite(d.hits), `${d.name} detail shape`);
+  }
   assert.equal(p.query, 'pdf word convert');
   assert.equal(p.stored, 0, 'zero storage');
   assert.equal(p.count, p.hits.length, 'count matches hits');
