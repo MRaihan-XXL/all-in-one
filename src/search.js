@@ -254,7 +254,7 @@ export async function runAsk({ query, json }) {
     errors,
     count: hits.length,
     stored: 0, // zero storage — results are never persisted
-    rankWeight: trustW, // effective trust weight — 0.35 default, ledger-proven only when opted in
+    rankWeight: trustW, // effective trust weight — TRUST_W default, ledger-proven only when opted in
     hits,
   };
   if (json) return { ok, text: JSON.stringify(out, null, 2), json: out };
