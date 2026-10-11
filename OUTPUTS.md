@@ -9,7 +9,7 @@ node scripts/capture-outputs.mjs
 ```
 
 - package: `aio-connect@1.9.2`
-- captured: 2026-10-11T11:58:51.107Z
+- captured: 2026-10-11T12:45:20.811Z
 - host: win32 · node v26.3.0
 
 ## Help (English, default)
@@ -389,7 +389,7 @@ _exit 0_
 
 ```console
 $ node bin/aio.js ask "sqlite to parquet converter"
-aio ask — "sqlite to parquet converter" (live: github+npm · 2 results · 0.9s)
+aio ask — "sqlite to parquet converter" (live: github+npm · 2 results · 0.8s)
 
 note: ranked by keyword match + source popularity — public results are unvetted;
       verify before running npx/uvx or cloning (docs/THREATS.md).
@@ -401,7 +401,7 @@ note: ranked by keyword match + source popularity — public results are unvette
    ★206 · Python
    https://github.com/kindly/flatterer
    why: BM25 keyword match (#2) + trust mid
-time: github 0.8s · npm 0.2s
+time: github 0.8s · npm 0.6s
 ```
 
 _exit 0_
@@ -410,7 +410,7 @@ _exit 0_
 
 ```console
 $ node bin/aio.js ask "awesome animated chart library"
-aio ask — "awesome animated chart library" (live: github+npm · 7 results · 1.1s)
+aio ask — "awesome animated chart library" (live: github+npm · 7 results · 1.0s)
 
 note: ranked by keyword match + source popularity — public results are unvetted;
       verify before running npx/uvx or cloning (docs/THREATS.md).
@@ -442,7 +442,7 @@ note: ranked by keyword match + source popularity — public results are unvette
    ★1710 · Objective-C
    https://github.com/xyfeng/XYPieChart
    why: BM25 keyword match (#7) + trust mid
-time: github 1.0s · npm 0.2s
+time: github 0.9s · npm 0.5s
 ```
 
 _exit 0_
@@ -479,11 +479,11 @@ $ node scripts/verify-scorecard.mjs
   freshness     5/10  (5/11) FAIL
 
   FAIL [freshness] assets/screenshots/flow.png not older than assets/flow.svg → uncommitted: assets/screenshots/flow.png — commit both (commit-time-only)
-  FAIL [freshness] assets/screenshots/hero.png not older than assets/aio-hero.svg → uncommitted: assets/screenshots/hero.png, assets/aio-hero.svg — commit both (commit-time-only)
+  FAIL [freshness] assets/screenshots/hero.png not older than assets/aio-hero.svg → uncommitted: assets/screenshots/hero.png — commit both (commit-time-only)
   FAIL [freshness] assets/screenshots/demo.png not older than assets/aio-demo.svg → uncommitted: assets/screenshots/demo.png, assets/aio-demo.svg — commit both (commit-time-only)
   FAIL [freshness] assets/screenshots/disclosure.png not older than assets/aio-disclosure.svg → uncommitted: assets/screenshots/disclosure.png — commit both (commit-time-only)
-  FAIL [freshness] assets/screenshots/stats.png not older than assets/aio-stats.svg → uncommitted: assets/screenshots/stats.png, assets/aio-stats.svg — commit both (commit-time-only)
-  FAIL [freshness] assets/screenshots/site.png not older than index.html → uncommitted: assets/screenshots/site.png, index.html — commit both (commit-time-only)
+  FAIL [freshness] assets/screenshots/stats.png not older than assets/aio-stats.svg → uncommitted: assets/screenshots/stats.png — commit both (commit-time-only)
+  FAIL [freshness] assets/screenshots/site.png not older than index.html → uncommitted: assets/screenshots/site.png — commit both (commit-time-only)
 
 SUMMARY  97/100 — 14/15 aspects >= 10/10 — RELEASE BLOCKED
 ```
