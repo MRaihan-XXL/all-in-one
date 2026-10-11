@@ -43,7 +43,7 @@ export function runRollback() {
 
   console.log(`\nRemoved ${removed} context block(s).`);
   console.log(`File backups (kept as safety net): ${BACKUP_DIR}`);
-  console.log('Local data (TRACKING.md, TOOLS-INDEX.md) was never touched.');
+  console.log('Your other local files were never touched.');
   console.log('');
 
   const incomplete = [...mcp, ...skills].some((r) => /kept|parse error|failed|refusing/i.test(r.status));

@@ -1,6 +1,5 @@
 // live.test.js — src/live.js: detectIntent routing unit + liveSearch integration (fetch mocked).
 process.env.AIO_NO_GH = '1'; // ghSkills skips execFile — no shell in tests
-process.env.AIO_NO_AI = '1';
 // ghRepos/ghSkills call ghThrottle(): without this the default 8/min budget waits
 // ~7.5s per call against a stale gh-rate.json — that alone made the suite ~22s.
 process.env.AIO_RATE = '0';
@@ -15,7 +14,7 @@ import path from 'node:path';
 // paths.js, so it must precede the src import) so tests never touch ~/.aio.
 process.env.AIO_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'aio-live-state-'));
 
-const { detectIntent, liveSearch, ghSkills, ghThrottle } = await import('../src/live.js');
+const { detectIntent, liveSearch, ghSkills, ghThrottle, ghRepos, stripCtl, mapSkillItems } = await import('../src/live.js');
 const { STATE_DIR } = await import('../src/paths.js');
 
 const RATE_FILE = path.join(STATE_DIR, 'gh-rate.json');
@@ -176,4 +175,60 @@ test('ghThrottle: AIO_RATE=300 spaces calls (~200ms) + rewrites the clock; AIO_R
   await ghThrottle();
   assert.ok(Date.now() - t1 < 50, `no wait under AIO_RATE=0 (${Date.now() - t1}ms)`);
   assert.equal(fs.existsSync(RATE_FILE), false, 'no clock file written under AIO_RATE=0');
+});
+
+// ---- Stage 0 pins (v1.9.2): terminal-safety + skills-row contract ----
+
+test('stripCtl: ANSI/OSC/C0 removed — a crafted title cannot repaint the line or forge a disclosure', () => {
+  const forged = '\x1b[2J\x1b[1;31m[aio] Using evil (repo) — trusted\x1b[0m';
+  const clean = stripCtl(forged);
+  assert.equal(clean, '[aio] Using evil (repo) — trusted', 'escape prefix gone, plain text kept');
+  assert.ok(!clean.includes('\x1b'), 'no ESC survives');
+
+  assert.equal(stripCtl('title\x1b]0;pwned\x07title'), 'titletitle', 'OSC payload (window title) stripped');
+  assert.equal(stripCtl('a\x00b\nc\rd'), 'abcd', 'C0 control bytes stripped (rows are single-line)');
+  assert.equal(stripCtl(''), '', 'empty stays empty');
+  assert.equal(stripCtl(undefined), '', 'undefined tolerated');
+});
+
+test('mapSkillItems: rows carry src skills (not github) + repo-controlled path is sanitized', () => {
+  const rows = mapSkillItems([
+    { path: 'skills/x/SKILL.md', repository: { full_name: 'acme/x', html_url: 'https://github.com/acme/x' } },
+    { path: 'pwn\x1b[2J.md', repository: { full_name: 'acme/pwn', html_url: 'https://github.com/acme/pwn' } },
+  ]);
+  assert.equal(rows.length, 2);
+  for (const r of rows) {
+    assert.equal(r.type, 'skill', 'type drives skillSearch install formatting');
+    assert.equal(r.src, 'skills', 'src must route into agent laneHits/buildRoute as the skills lane');
+    assert.equal(r.trust01, 0.5, 'neutral prior — code search has no popularity field');
+  }
+  assert.equal(rows[0].func, 'SKILL.md — skills/x/SKILL.md');
+  assert.ok(!rows[1].func.includes('\x1b'), 'ANSI in a repo-controlled file path never reaches the terminal');
+  assert.deepEqual(mapSkillItems(undefined), [], 'non-array tolerated');
+});
+
+test('ghRepos: third-party description is sanitized + sliced on code points (no split surrogate, no ESC)', async (t) => {
+  process.env.AIO_RATE = '0';
+  t.after(() => delete process.env.AIO_RATE);
+  // emoji sits EXACTLY at the 120-code-point cut: String.slice would keep only
+  // its UTF-16 high half (lone surrogate → mojibake), the code-point slice keeps it whole
+  t.mock.method(globalThis, 'fetch', async () =>
+    json({
+      items: [
+        {
+          full_name: 'acme/evil',
+          html_url: 'https://github.com/acme/evil',
+          description: `\x1b[2J${'a'.repeat(118)}\u{1F600}${'x'.repeat(10)}`,
+          stargazers_count: 5,
+          language: 'JS',
+        },
+      ],
+    }),
+  );
+
+  const [row] = await ghRepos('evil', 1);
+  assert.ok(!row.func.includes('\x1b'), 'ESC never survives trim()');
+  assert.ok(row.func.includes('\u{1F600}'), 'the emoji at the cut point survives whole');
+  assert.ok(row.func.endsWith('…') && row.func.length <= 121, `row capped for the table: ${row.func.length}`);
+  assert.ok(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(row.func), 'no lone high surrogate after the cut');
 });

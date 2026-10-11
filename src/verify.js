@@ -11,6 +11,17 @@ import { getVersion } from './banner.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+/** npm without shell:true (DEP0190) / CVE-2024-27980 .cmd-spawn ban: Windows
+ *  goes through cmd.exe with an ARGV array (no string concat — no injection
+ *  surface), POSIX spawns npm directly. Same recipe as src/update.js's npmExec
+ *  and the repo's scripts/*.mjs. */
+function npmExec(args, opts = {}) {
+  const win = process.platform === 'win32';
+  const cmd = win ? process.env.ComSpec || 'cmd.exe' : 'npm';
+  const argv = win ? ['/d', '/s', '/c', 'npm', ...args] : args;
+  return execFileSync(cmd, argv, { windowsHide: true, ...opts });
+}
+
 function step(name, file, args = []) {
   const started = Date.now();
   try {
@@ -48,7 +59,7 @@ export async function runVerify() {
   const testStep = (() => {
     const started = Date.now();
     try {
-      execFileSync('npm', ['test'], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], timeout: 600000, shell: true });
+      npmExec(['test'], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], timeout: 600000 });
       return { name: 'npm test', ok: true, ms: Date.now() - started, out: 'all pass' };
     } catch (e) {
       const tail = (e.stdout ? String(e.stdout) : String(e.stderr)).trim().split('\n').slice(-4).join(' | ');

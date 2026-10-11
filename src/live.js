@@ -10,6 +10,7 @@ import path from 'node:path';
 import { getVersion } from './banner.js';
 import { STATE_DIR, writeAtomic } from './paths.js';
 import { detectBinary, listPathCommands } from './scan.js';
+import { msg } from './messages.js';
 
 const execFileP = promisify(execFile);
 const UA = { 'user-agent': `aio-connect/${getVersion()} (+https://github.com/MRaihan-XXL/all-in-one)` };
@@ -138,9 +139,25 @@ async function ghAuthHeaders() {
   return h;
 }
 
+/** Strip ANSI escapes + C0/C1 control bytes from third-party strings BEFORE
+ *  they reach a terminal (or a JSON consumer): a crafted repo description or
+ *  HN title could otherwise repaint the line, hide the "verify before running"
+ *  note or forge a fake `[aio] Using …` disclosure. Order matters: OSC first
+ *  (its payload may embed CSI lookalikes), then CSI, then bare ESC, then the
+ *  leftover control bytes — rows are single-line by contract. Exported: tests
+ *  pin the spoof case. */
+export function stripCtl(s) {
+  return String(s || '')
+    .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)?/g, '') // OSC … BEL / ST
+    .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '') // CSI (colors, cursor, erase)
+    .replace(/\x1b[@-Z\\-_]/g, '') // other Fe/Fs escapes
+    .replace(/[\x00-\x1f\x7f-\x9f]/g, ''); // leftover C0/C1 (incl. \n \t \r)
+}
+
 function trim(s, n) {
-  s = String(s || '').replace(/\s+/g, ' ').trim();
-  return s.length > n ? s.slice(0, n - 1) + '…' : s;
+  const t = stripCtl(String(s || '').replace(/\s+/g, ' ').trim());
+  const cps = [...t]; // code-point slice — String.slice can split a surrogate pair
+  return cps.length > n ? cps.slice(0, n - 1).join('') + '…' : t;
 }
 
 // GitHub ANDs every term — drop generic words or rich queries return 0 hits.
@@ -188,10 +205,27 @@ export async function ghRepos(q, n = 6) {
     type: 'repo',
     name: r.full_name,
     url: r.html_url,
-    func: trim(r.description, 120) || `${r.language || 'Repo'} repository (no description)`,
+    func: trim(r.description, 120) || msg('liveRepoNoDesc', { lang: stripCtl(r.language) || msg('liveRepoLangNone') }),
     meta: `★${r.stargazers_count}${r.language ? ` · ${r.language}` : ''}`,
     src: 'github',
     trust01: Math.min(1, Math.log10(1 + (r.stargazers_count || 0)) / 5),
+  }));
+}
+
+/** Map gh code-search items → search rows. Extracted PURE so the row contract
+ *  is testable without a gh binary. Rows carry src 'skills' — NOT 'github':
+ *  mislabeled skill rows hid real hits behind `[~] skills 0 hits — answered
+ *  empty` in `aio agent` (laneHits filters on src) and starved the
+ *  `install skill` route (buildRoute groups by src). Exported: tests pin it. */
+export function mapSkillItems(items) {
+  return (Array.isArray(items) ? items : []).map((f) => ({
+    type: 'skill',
+    name: f.repository.full_name,
+    url: f.repository.html_url,
+    func: stripCtl(`SKILL.md — ${f.path}`), // repo-controlled path — never trust it raw
+    meta: 'public skill (github code search)',
+    src: 'skills',
+    trust01: 0.5, // no popularity field in code search results → neutral prior
   }));
 }
 
@@ -213,15 +247,7 @@ export async function ghSkills(q, n = 6) {
     env: { ...process.env, GH_PAGER: '' },
   });
   const data = JSON.parse(stdout);
-  return (data.items || []).map((f) => ({
-    type: 'skill',
-    name: f.repository.full_name,
-    url: f.repository.html_url,
-    func: `SKILL.md — ${f.path}`,
-    meta: 'public skill (github code search)',
-    src: 'github',
-    trust01: 0.5, // no popularity field in code search results → neutral prior
-  }));
+  return mapSkillItems(data.items);
 }
 
 /** npm registry search — 3M+ packages. */
@@ -234,10 +260,12 @@ export async function npmSearch(q, n = 6) {
     type: 'tool',
     name: o.package.name,
     url: `https://www.npmjs.com/package/${o.package.name}`,
-    func: trim(o.package.description, 120) || 'npm package (no description)',
-    meta: [o.package.version ? `v${o.package.version}` : '', (o.package.keywords || []).slice(0, 3).join(' · ')]
-      .filter(Boolean)
-      .join(' · '),
+    func: trim(o.package.description, 120) || msg('liveNpmNoDesc'),
+    meta: stripCtl(
+      [o.package.version ? `v${o.package.version}` : '', (o.package.keywords || []).slice(0, 3).join(' · ')]
+        .filter(Boolean)
+        .join(' · '),
+    ), // keywords are free-form package.json text — never terminal-trusted
     src: 'npm',
     trust01: typeof o.score?.final === 'number' ? o.score.final : 0.5, // npm quality/popularity score
   }));
@@ -262,7 +290,7 @@ export async function cratesSearch(q, n = 5) {
       type: 'tool',
       name: c.id,
       url: `https://crates.io/crates/${c.id}`,
-      func: trim(c.description, 120) || 'Rust crate (no description)',
+      func: trim(c.description, 120) || msg('liveCrateNoDesc'),
       meta,
       src: 'crates',
       trust01: Math.min(1, Math.log10(1 + (c.downloads || c.recent_downloads || 0)) / 7),
@@ -322,9 +350,9 @@ export async function webSearch(q, n = 5) {
       const [, titles = [], descs = [], urls = []] = Array.isArray(a) ? a : [];
       return titles.map((t, i) => ({
         type: 'site',
-        name: t,
-        url: urls[i] || `https://en.wikipedia.org/wiki/${encodeURIComponent(t)}`,
-        func: trim(descs[i], 120) || 'Wikipedia article',
+        name: stripCtl(t), // article titles are external text — terminal-unsafe raw
+        url: stripCtl(urls[i] || `https://en.wikipedia.org/wiki/${encodeURIComponent(t)}`),
+        func: trim(descs[i], 120) || msg('liveWikiNoDesc'),
         meta: 'wikipedia',
         src: 'web',
         trust01: 0.5, // curated encyclopedia — neutral prior, no popularity field
@@ -338,9 +366,9 @@ export async function webSearch(q, n = 5) {
         .filter((h) => h.title)
         .map((h) => ({
           type: 'site',
-          name: h.title,
-          url: h.url || `https://news.ycombinator.com/item?id=${h.objectID}`,
-          func: `Hacker News discussion — ${h.points ?? 0} points by ${h.author ?? '?'}`,
+          name: stripCtl(h.title), // submitter-controlled title — never terminal-trusted
+          url: stripCtl(h.url || `https://news.ycombinator.com/item?id=${h.objectID}`),
+          func: msg('liveHnDiscussion', { pts: stripCtl(String(h.points ?? 0)), author: stripCtl(String(h.author ?? '?')) }),
           meta: 'hacker news',
           src: 'web',
           trust01: Math.min(1, Math.log10(1 + (h.points || 0)) / 3),
@@ -537,17 +565,32 @@ export async function liveSearch(query, { n = 8, all = false } = {}) {
       labels.push('tools');
     }
   }
-  const settled = await Promise.allSettled(jobs);
+  // Per-lane wall time: lanes run in parallel, so what "budget per source"
+  // means is each lane's own ms — surfaced as sourcesDetail so `--json`
+  // consumers can audit where the time went (the old payload could not tell
+  // a 4s npm call from a 17s rate-limited github one).
+  const timed = jobs.map((p) => {
+    const laneT0 = Date.now();
+    return p.then(
+      (v) => ({ ok: true, v, ms: Date.now() - laneT0 }),
+      (reason) => ({ ok: false, reason, ms: Date.now() - laneT0 }),
+    );
+  });
+  const settled = await Promise.all(timed); // wrappers never reject
   const entries = [];
   const sources = [];
   const errors = [];
+  const sourcesDetail = [];
   settled.forEach((r, i) => {
-    if (r.status === 'fulfilled') {
-      sources.push(labels[i]); // a lane that answered counts even with 0 hits (B-01)
-      if (Array.isArray(r.value) && r.value.length) entries.push(...r.value);
+    const name = labels[i];
+    const hits = r.ok && Array.isArray(r.v) ? r.v.length : 0;
+    sourcesDetail.push({ name, ms: r.ms, ok: r.ok, hits });
+    if (r.ok) {
+      sources.push(name); // a lane that answered counts even with 0 hits (B-01)
+      if (hits) entries.push(...r.v);
     } else {
-      errors.push({ src: labels[i], msg: String(r.reason?.message || r.reason || 'failed') });
+      errors.push({ src: name, msg: String(r.reason?.message || r.reason || 'failed') });
     }
   });
-  return { entries, sources, errors, web: it.web, offline: false };
+  return { entries, sources, errors, sourcesDetail, web: it.web, offline: false };
 }

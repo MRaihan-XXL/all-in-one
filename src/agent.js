@@ -37,8 +37,8 @@ const toks = (s) => String(s).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
  *  (npm/crates) are quality-gated when they have a choice: with >1 candidate,
  *  every pick must cover ≥1 core task token (≥4 chars, non-generic) — or the
  *  step drops and the deep-dive lane carries the task. A lone candidate is
- *  never filtered (there is nothing to choose between). */
-function buildRoute(hits, query) {
+ *  never filtered (there is nothing to choose between). Exported for tests. */
+export function buildRoute(hits, query) {
   const bySrc = new Map();
   for (const h of hits) {
     if (!bySrc.has(h.src)) bySrc.set(h.src, []);
@@ -85,7 +85,7 @@ export async function runAgent({ query, json }) {
     return { ok: false, text: msg('usageAgent'), json: null };
   }
   const t0 = Date.now();
-  const { entries, sources, errors = [], offline } = await liveSearch(query, { n: 10, all: true });
+  const { entries, sources, errors = [], sourcesDetail = [], offline } = await liveSearch(query, { n: 10, all: true });
 
   if (offline) {
     return {
@@ -114,10 +114,12 @@ export async function runAgent({ query, json }) {
   const ms = ((Date.now() - t0) / 1000).toFixed(1);
   const lanesRun = ['github', 'skills', 'npm', 'crates', 'web', 'tools'];
   const laneHits = (lane) => entries.filter((e) => e.src === lane).length; // honest per-lane count
+  const ok = sources.length > 0 || errors.length === 0;
   const out = {
     schemaVersion: 1, // bump only on breaking shape change (same contract as ask)
     task: query,
     engine: 'agent',
+    ok, // same verdict as the text checkboxes — JSON consumers get it too
     plan: lanesRun.map((lane) => ({
       lane,
       why: LANE_WHY[lane],
@@ -125,45 +127,50 @@ export async function runAgent({ query, json }) {
       hits: laneHits(lane), // >0 = real rows; 0 = answered but empty ([~] in text)
     })),
     sources,
+    sourcesDetail, // per-lane {name, ms, ok, hits} — auditable timing (Stage 3)
     errors,
     route,
     count: pool.length,
     stored: 0, // zero storage — coordination results are printed, never persisted
     hits: pool,
   };
-  const ok = sources.length > 0 || errors.length === 0;
   if (json) return { ok, text: JSON.stringify(out, null, 2), json: out };
 
   const lines = [
-    `aio agent — "${query}" (coordinating: ${sources.length ? sources.join('+') : 'no lane answered'} · ${pool.length} results · ${ms}s)`,
+    msg('agentHeader', {
+      query,
+      coordinating: sources.length ? sources.join('+') : msg('noLaneAnswered'),
+      n: pool.length,
+      sec: ms,
+    }),
     '',
-    `plan  ${lanesRun.join(' ∥ ')} — parallel, printed never stored`,
+    msg('agentPlan', { lanes: lanesRun.join(' ∥ ') }),
     `  ${out.plan
       .map((p) => {
         if (!p.answered) return `[ ] ${p.lane}`;
         // [~] = lane answered but brought 0 rows — the box stays unticked so the
         // plan never claims evidence it does not have.
-        return p.hits ? `[x] ${p.lane}` : `[~] ${p.lane} 0 hits — answered empty`;
+        return p.hits ? `[x] ${p.lane}` : `[~] ${msg('agentLaneEmpty', { lane: p.lane })}`;
       })
       .join('  ')}`,
   ];
   if (errors.length) {
-    lines.push('issues:');
+    lines.push(msg('agentIssues'));
     lines.push(...sourceErrorNote(errors));
   }
   lines.push('');
   if (route.length) {
-    lines.push('route (coordinated — cheapest first)');
+    lines.push(msg('agentRouteHead'));
     route.forEach((r, i) => {
       lines.push(`  ${i + 1}. [${r.step}] ${r.use}`);
       lines.push(`     ${r.why}`);
     });
   } else {
-    lines.push('route — no lane matched this task; refine the keywords and rerun.');
+    lines.push(msg('agentRouteNone'));
   }
   if (pool.length) {
     lines.push('');
-    lines.push('lanes (top hits per source)');
+    lines.push(msg('agentLanesHead'));
     for (const src of [...new Set(pool.map((h) => h.src))]) {
       const top = pool.filter((h) => h.src === src).slice(0, 3);
       lines.push(`  <${src}>`);
@@ -174,7 +181,11 @@ export async function runAgent({ query, json }) {
     }
   }
   lines.push('');
-  lines.push('note: every lane is live and unvetted — verify before running npx/cargo');
-  lines.push('      or cloning; report WHAT you used + EVERY link (docs/THREATS.md).');
+  lines.push(msg('agentNote'));
+  if (sourcesDetail.length) {
+    lines.push(
+      msg('timeFooter', { detail: sourcesDetail.map((s) => `${s.name} ${(s.ms / 1000).toFixed(1)}s`).join(' · ') }),
+    ); // footer: per-lane timing, honest worst-case visible
+  }
   return { ok, text: lines.join('\n'), json: out };
 }

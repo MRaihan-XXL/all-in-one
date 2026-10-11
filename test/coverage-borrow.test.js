@@ -2,8 +2,9 @@
 // borrowClone guards (invalid target / low disk / already borrowed / clone
 // failure) and every runBorrow output path (search, --get, --list, --clean).
 // NO network: global fetch is mocked. NO working `gh`/`git`: PATH points at an
-// empty dir so those execFileSync calls fail with ENOENT (borrow.js has no
-// AIO_NO_GH guard) — nothing is ever cloned or fetched for real.
+// empty dir so those execFileSync calls fail with ENOENT (env-token lookup
+// runs first, then the AIO_NO_GH-aware gh probe) — nothing is ever cloned or
+// fetched for real.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

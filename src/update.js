@@ -7,14 +7,31 @@ import { spawnSync, execFileSync } from 'node:child_process';
 import { msg } from './messages.js';
 import { getVersion } from './banner.js';
 
+/** Run npm WITHOUT shell:true (deprecated with an args array — DEP0190) and
+ *  without the CVE-2024-27980 ban on spawning .cmd files with shell:false:
+ *  Windows routes through cmd.exe with an ARGV array (never string concat —
+ *  no injection surface), POSIX spawns npm directly. Same recipe the repo's
+ *  scripts/verify-scorecard.mjs and scripts/stats.mjs already use. */
+function npmExec(args, opts = {}) {
+  const win = process.platform === 'win32';
+  const cmd = win ? process.env.ComSpec || 'cmd.exe' : 'npm';
+  const argv = win ? ['/d', '/s', '/c', 'npm', ...args] : args;
+  return execFileSync(cmd, argv, { windowsHide: true, ...opts });
+}
+
+function npmSpawn(args, opts = {}) {
+  const win = process.platform === 'win32';
+  const cmd = win ? process.env.ComSpec || 'cmd.exe' : 'npm';
+  const argv = win ? ['/d', '/s', '/c', 'npm', ...args] : args;
+  return spawnSync(cmd, argv, { windowsHide: true, ...opts });
+}
+
 /** Absolute path of the fresh global install (npm root -g + package bin). */
 export function globalBinPath(pkg = 'aio-connect') {
   try {
-    const root = execFileSync('npm', ['root', '-g'], {
+    const root = npmExec(['root', '-g'], {
       encoding: 'utf8',
-      shell: true,
       timeout: 30000,
-      windowsHide: true,
     }).trim();
     const bin = path.join(root, pkg, 'bin', 'aio.js');
     if (fs.existsSync(bin)) return bin;
@@ -32,11 +49,9 @@ export function runUpdate({ binPath, check = false }) {
   if (check) {
     let latest;
     try {
-      latest = execFileSync('npm', ['view', pkg, 'version'], {
+      latest = npmExec(['view', pkg, 'version'], {
         encoding: 'utf8',
-        shell: true,
         timeout: 30000,
-        windowsHide: true,
       }).trim();
     } catch (e) {
       console.error(msg('updateCheckFailed', { err: e.message }));
@@ -55,8 +70,7 @@ export function runUpdate({ binPath, check = false }) {
   }
 
   console.log(msg('updateUpdating', { pkg }));
-  const install = spawnSync('npm', ['install', '-g', pkg], {
-    shell: true,
+  const install = npmSpawn(['install', '-g', pkg], {
     stdio: 'inherit',
     cwd: os.homedir(),
   });

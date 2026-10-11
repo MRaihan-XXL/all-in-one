@@ -4,14 +4,23 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
-import { ghThrottle } from './live.js';
+import { ghThrottle, stripCtl } from './live.js';
 import { msg } from './messages.js';
 
 export const BORROW_DIR = path.join(os.tmpdir(), 'aio-borrow');
 const TTL_MS = 24 * 60 * 60 * 1000;
 const MIN_FREE_BYTES = 1024 * 1024 * 1024; // 1 GB guard
 
+/** Token lookup with the SAME documented precedence as live.js ghToken — env
+ *  first (GH_TOKEN, then GITHUB_TOKEN), then the `gh auth token` probe — so a
+ *  user who exports GH_TOKEN gets it honored here too (it used to be read
+ *  only after a failing gh spawn, i.e. never when gh worked). Kept sync +
+ *  uncached on purpose: live.js's cache would leak a token across this
+ *  module's test fixtures. AIO_NO_GH=1 = shell-free mode, no spawn. */
 function ghToken() {
+  const env = String(process.env.GH_TOKEN || '').trim() || String(process.env.GITHUB_TOKEN || '').trim();
+  if (env) return env;
+  if (process.env.AIO_NO_GH === '1') return '';
   try {
     return execFileSync('gh', ['auth', 'token'], {
       encoding: 'utf8',
@@ -19,7 +28,7 @@ function ghToken() {
       timeout: 5000, // a hung `gh` must not stall the whole borrow call
     }).trim();
   } catch {
-    return process.env.GITHUB_TOKEN || '';
+    return '';
   }
 }
 
@@ -73,7 +82,7 @@ export async function ghSearch(query, limit = 8) {
   return (data.items || []).map((r) => ({
     name: r.full_name,
     url: r.html_url,
-    desc: r.description || 'No description provided.',
+    desc: stripCtl(r.description) || 'No description provided.', // third-party text → terminal-safe
     stars: r.stargazers_count,
     lang: r.language || '',
     pushed: (r.pushed_at || '').slice(0, 10),
@@ -163,17 +172,17 @@ export async function runBorrow({ query, get, clean, list, json }) {
   if (clean) {
     const r = borrowClean();
     const txt =
-      `aio borrow --clean — ${r.n} clone(s) removed, ${fmtBytes(r.freed)} freed from ${r.dir}` +
-      (purged.length ? `\nTTL purge: ${purged.length} expired (>24h): ${purged.join(', ')}` : '');
+      msg('borrowCleanHead', { n: r.n, freed: fmtBytes(r.freed), dir: r.dir }) +
+      (purged.length ? `\n${msg('borrowTtlPurgeNamed', { n: purged.length, names: purged.join(', ') })}` : '');
     return { ok: true, text: txt, json: { schemaVersion: 1, ...r, purged } };
   }
 
   if (list) {
     const items = listBorrowed();
     const txt = items.length
-      ? `aio borrow --list — ${items.length} temp clone(s) in ${BORROW_DIR}\n` +
-        items.map((i) => `- ${i.name} — age ${i.ageH}h — ${i.path}`).join('\n')
-      : `aio borrow — nothing borrowed (dir: ${BORROW_DIR})`;
+      ? `${msg('borrowListHead', { n: items.length, dir: BORROW_DIR })}\n` +
+        items.map((i) => msg('borrowListItem', { name: i.name, age: i.ageH, path: i.path })).join('\n')
+      : msg('borrowListEmpty', { dir: BORROW_DIR });
     return { ok: true, text: txt, json: { schemaVersion: 1, items } };
   }
 
@@ -181,10 +190,10 @@ export async function runBorrow({ query, get, clean, list, json }) {
     try {
       const r = borrowClone(get);
       const txt =
-        `aio borrow — ${get} → ${r.status}\n` +
-        `path: ${r.path}\n` +
-        'use it now; auto-purged after 24h (or `aio borrow --clean`).\n' +
-        `free disk: ${fmtBytes(freeBytes(BORROW_DIR))}`;
+        `${msg('borrowGetHead', { target: get, status: r.status })}\n` +
+        `${msg('borrowPath', { path: r.path })}\n` +
+        `${msg('borrowUseNote')}\n` +
+        `${msg('borrowFreeDisk', { free: fmtBytes(freeBytes(BORROW_DIR)) })}`;
       return { ok: true, text: txt, json: { schemaVersion: 1, ...r, url: `https://github.com/${get}` } };
     } catch (e) {
       return { ok: false, text: msg('borrowGetFailed', { err: e.message }), json: null };
@@ -194,11 +203,7 @@ export async function runBorrow({ query, get, clean, list, json }) {
   if (!query || !query.trim()) {
     return {
       ok: false,
-      text:
-        'usage:\n' +
-        '  aio borrow "<what you need>"   live GitHub search (link + function per hit)\n' +
-        '  aio borrow --get <owner/repo>  shallow-clone to temp (24h TTL)\n' +
-        '  aio borrow --list | --clean    inspect / wipe temp clones',
+      text: msg('usageBorrow'),
       json: null,
     };
   }
@@ -218,17 +223,17 @@ export async function runBorrow({ query, get, clean, list, json }) {
     const out = { schemaVersion: 1, query, count: hits.length, hits, purged };
     if (json) return { ok: true, text: JSON.stringify(out, null, 2), json: out };
     if (!hits.length) {
-      return { ok: true, json: out, text: `aio borrow — "${query}": no GitHub result. Refine keywords or check https://github.com/search` };
+      return { ok: true, json: out, text: msg('borrowNoResult', { query }) };
     }
-    const lines = [`aio borrow — "${query}" (GitHub live search \u00b7 ${hits.length} results)`];
-    if (purged.length) lines.push(`TTL purge: ${purged.length} expired clone(s) removed`);
+    const lines = [msg('borrowSearchHeader', { query, n: hits.length })];
+    if (purged.length) lines.push(msg('borrowTtlPurge', { n: purged.length }));
     lines.push('');
     hits.forEach((h, i) => {
       lines.push(`${i + 1}. ${h.name} — ${h.desc}`);
       lines.push(`   ${h.why}`);
       lines.push(`   ${h.url}`);
     });
-    lines.push('', `pin one: aio borrow --get ${hits[0].name}`);
+    lines.push('', msg('borrowPinOne', { name: hits[0].name }));
     return { ok: true, text: lines.join('\n'), json: out };
   } catch (e) {
     return { ok: false, text: msg('borrowSearchFailed', { err: e.message }), json: null };

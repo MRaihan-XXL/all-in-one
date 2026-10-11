@@ -101,3 +101,42 @@ test('runStatus: legacy manifest (no live marker) → issue reported', (t) => {
   assert.ok(r.issues.some((i) => i.includes('legacy')), r.issues.join('; '));
   assert.equal(r.ok, false);
 });
+
+// ---- Stage 0 pins (v1.9.2): TOCTOU guards (C-07 pattern, same as doctor) ----
+
+test('runStatus: manifest vanishes between check and stat (TOCTOU) → reported missing, no crash', (t) => {
+  t.mock.method(console, 'log', () => {});
+  mockHome(t);
+  fs.writeFileSync(MANIFEST, SLIM_MANIFEST);
+  t.after(() => fs.rmSync(MANIFEST, { force: true }));
+  const realStat = fs.statSync;
+  t.mock.method(fs, 'statSync', (p, ...rest) => {
+    if (String(p) === MANIFEST) {
+      const e = new Error(`ENOENT: no such file, stat '${p}'`);
+      e.code = 'ENOENT';
+      throw e;
+    }
+    return realStat.call(fs, p, ...rest);
+  });
+
+  const r = runStatus({}); // pre-fix this threw ENOENT out of runStatus
+  assert.match(r.lines.join('\n'), /manifest\s+MISSING/);
+  assert.ok(r.issues.some((i) => i.includes('manifest')), r.issues.join('; '));
+  assert.equal(r.ok, false);
+});
+
+test('blockState: file deleted between check and read (TOCTOU) → missing, no throw', (t) => {
+  const f = path.join(tmp, 'raced.md');
+  fs.writeFileSync(f, `# docs\n${BLOCK_START}\nhello\n${BLOCK_END}\n`);
+  const realRead = fs.readFileSync;
+  t.mock.method(fs, 'readFileSync', (p, ...rest) => {
+    if (String(p) === f) {
+      const e = new Error(`ENOENT: no such file, open '${p}'`);
+      e.code = 'ENOENT';
+      throw e;
+    }
+    return realRead.call(fs, p, ...rest);
+  });
+
+  assert.equal(blockState(f), 'missing', 'raced deletion classifies as missing, never throws');
+});
