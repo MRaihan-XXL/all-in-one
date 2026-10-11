@@ -61,10 +61,10 @@ Behavior changed — update the docs in the same PR. The docs mirror the CLI:
 | file read/written | `docs/CONFIG.md` (and the README zero-storage list) |
 | new trust surface / mitigation | `docs/THREATS.md` |
 | user-visible behavior | `CHANGELOG.md` `## [Unreleased]` |
-| requirement / scope | `PRD.md` |
+| requirement / scope | `../meta/PRD.md` |
 
-`README.md`, `CHANGELOG.md`, `PRD.md`, `docs/*.md`, `CONTRIBUTING.md` and
-`ROADMAP.md` are the only files a docs-only contribution needs to touch.
+`README.md`, `CHANGELOG.md`, `../meta/PRD.md`, `docs/*.md`, `CONTRIBUTING.md` and
+`../meta/ROADMAP.md` are the only files a docs-only contribution needs to touch.
 `TRACKING.md`, `TOOLS-INDEX.md` and `aio-context.md` are gitignored
 (machine-local) — they never belong in a commit.
 

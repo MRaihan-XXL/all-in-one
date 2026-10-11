@@ -22,7 +22,7 @@
 
 <p align="center">
   <a href="./OUTPUTS.md">📟 Output gallery</a> ·
-  <a href="./PRD.md">📜 PRD</a> ·
+  <a href="./meta/PRD.md">📜 PRD</a> ·
   <a href="./docs/flow.md">🌊 How it works</a> ·
   <a href="./docs/CONFIG.md">⚙️ What changes</a> ·
   <a href="./assets/logo-gallery.html">🎨 Brand kit</a>
@@ -290,7 +290,7 @@ Changes: added chart.js, wired the data feed.
   history — `aio ask` results are printed and discarded (**zero search
   storage — results printed, never saved**), and the npm package ships no
   database (`files` = bin, src, docs, README, CHANGELOG, LICENSE, sbom.cdx.json —
-  `test/` and `assets/` dropped in v1.7.0; current pack 117,337 bytes ≈
+  `test/` and `assets/` dropped in v1.7.0; current pack 117,344 bytes ≈
   114.6 KiB / 29 files).
   What aio *does* write: the
   manifest `~/.aio/aio-context.md`, one `AIO AUTO-CONTEXT` block per agent
@@ -406,7 +406,7 @@ agent's own (the `agent` web lane talks only to `en.wikipedia.org` and
   tag that is not the tip of `main`, then builds all 5 binaries and
   smoke-tests the ones the build OS can execute (`aio-darwin-x64` and
   `aio-linux-arm64` are cross-built and not yet smoked — see
-  [ROADMAP.md](./ROADMAP.md)).
+  [ROADMAP.md](./meta/ROADMAP.md)).
 - **npm provenance (v1.7.0)** — `npm publish --access public --provenance`
   (OIDC; `release.yml` grants `id-token: write`) attaches a Sigstore
   attestation from the tarball back to the source commit — check it with
@@ -448,8 +448,8 @@ rate limit, `Cache-Control` from Pages):
 | `https://mraihan-xxl.github.io/all-in-one/sbom.cdx.json` | CycloneDX SBOM of the published package |
 | `https://mraihan-xxl.github.io/all-in-one/eval-result.json` | last relevance-eval result (hit@8, hit@1, MRR) |
 
-Contribution workflow and conventions: **[CONTRIBUTING.md](./CONTRIBUTING.md)**.
-Planned work: **[ROADMAP.md](./ROADMAP.md)**.
+Contribution workflow and conventions: **[CONTRIBUTING.md](./.github/CONTRIBUTING.md)**.
+Planned work: **[ROADMAP.md](./meta/ROADMAP.md)**.
 Every command's real output, verbatim: **[OUTPUTS.md](./OUTPUTS.md)**.
 
 ## 📸 Screenshots

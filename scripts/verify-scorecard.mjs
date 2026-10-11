@@ -239,16 +239,16 @@ check('docs-sync', 'docs/SCORECARD.md present', fs.existsSync(path.join(ROOT, 'd
   check('docs-sync', 'no `evolve` in assets/*.svg or index.html (use verify)', bad.length === 0, bad.join(', '));
 }
 {
-  // (c) the disclosure enum has ONE source (write.js); help ×2, README and PRD
-  // must quote it verbatim, and every result type live.js emits must be a member
+  // (c) the disclosure enum has ONE source (write.js); help ×2, README and
+  // meta/PRD must quote it verbatim, and every result type live.js emits must be a member
   const enumStr = (read('src/write.js').match(/repo \| cli \| service \| skill \| site \| tool/) || [])[0];
-  const spots = ['bin/aio.js', 'README.md', 'PRD.md'];
+  const spots = ['bin/aio.js', 'README.md', 'meta/PRD.md'];
   const missing = enumStr ? spots.filter((f) => !read(f).includes(enumStr)) : [...spots];
   const binCount = (read('bin/aio.js').match(/repo \| cli \| service \| skill \| site \| tool/g) || []).length;
   const members = enumStr ? enumStr.split(' | ') : [];
   const emitted = [...read('src/live.js').matchAll(/type: '([a-z]+)'/g)].map((m) => m[1]);
   const foreign = emitted.filter((t) => !members.includes(t));
-  check('docs-sync', 'disclosure enum verbatim in help×2/README/PRD, live.js types are members',
+  check('docs-sync', 'disclosure enum verbatim in help×2/README/meta/PRD, live.js types are members',
     !!enumStr && missing.length === 0 && binCount === 2 && foreign.length === 0 && emitted.length > 0,
     `missing=[${missing.join(',')}] binHits=${binCount} foreign=[${foreign.join(',')}]`);
 }
