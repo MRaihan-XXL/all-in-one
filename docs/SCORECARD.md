@@ -48,7 +48,7 @@ Fix-wave invariants: atomic writes, exclusive locking, traversal guards.
 
 | check | what it asserts |
 |---|---|
-| `no hardcoded token literals in src/bin/scripts/test` | no file under `src/*.js`, `bin/aio.js`, `scripts/*.{js,mjs}` or `test/*.js` matches `ghp_…`/`gho_…`/`ghu_…` (20+ chars) or `npm_` + 36 chars |
+| `no secret literals in src/bin/scripts/test/docs/workflows` | no file under `src/*.js`, `bin/aio.js`, `scripts/*.{js,mjs}`, `test/*.js`, `docs/*.{md,json,js,mjs}` or `.github/workflows/*.yml` matches a literal token: github `gh[pousr]_` (20+ chars) / `ghs_`+36 / `github_pat_`, npm `npm_`+36, AWS `AKIA`/`ASIA`+16, slack `xox[baprs]-`, or a `-----BEGIN … PRIVATE KEY-----` block |
 | `GH_TOKEN read from env (never hardcoded)` | `src/live.js` reads `process.env.GH_TOKEN` |
 | `.env never shipped` | `files[]` does not include `.env` **and** `.gitignore` exists **and** has a line matching `^\.env` |
 | `git spawn never prompts (GIT_TERMINAL_PROMPT in borrow)` | `src/borrow.js` contains `GIT_TERMINAL_PROMPT` |
@@ -77,6 +77,8 @@ Real spawns of `bin/aio.js` (`node`, 30 s timeout, `NO_COLOR=1`).
 | `AIO_LANG=id help in Bahasa Indonesia` | `AIO_LANG=id aio --help` exits 0 and stdout matches `/Penggunaan/` |
 | `unknown command exits 1, names the command` | `aio frobnicate` exits 1 and stderr matches `/unknown command: frobnicate/` |
 | `unknown flag warns, status exit stays 0\|1 (pinned)` | hermetic spawn of `aio status --bogus-flag` (isolated temp state dir) → exit code ∈ {0, 1} **and** stderr matches `/unknown flag: --bogus-flag/`; detail is `status=…` plus the first 120 chars of stderr/stdout |
+| `ask under AIO_OFFLINE=1 exits 1 with an offline verdict` | hermetic spawn of `aio ask "offline probe"` → exit 1 **and** stdout matches `/offline/i` (the verdict is rendered, not just implied) |
+| `doctor --json parses with a boolean ok verdict (behavioral)` | hermetic spawn of `aio doctor --json` → stdout is pure JSON with `typeof ok === "boolean"` and `typeof issues === "number"`; detail carries `status/ok/issues` |
 
 ## 7. doctor (10 pts)
 
@@ -178,6 +180,8 @@ plus the two generated-artifact workflows).
 | `CI runs npm audit + guarded signature audit` | `ci.yml` runs `npm audit --omit=dev` and `npm audit signatures` (guarded: skipped honestly with the message `0 dependencies in lockfile … skipping (honest)` when the lockfile has 0 deps) |
 | `CI enforces SBOM freshness (regen + clean diff)` | `ci.yml` runs `node scripts/sbom.mjs` then `git diff --exit-code sbom.cdx.json` |
 | `stats auto-gen + og render workflows present` | `.github/workflows/stats.yml` (weekly `scripts/stats.mjs --write`, auto-commit `[skip ci]`) and `.github/workflows/og.yml` (windows-latest headless-Edge render of `assets/og-cover.png`) both exist |
+| `npm-auth-check runs on a weekly cron schedule` | `npm-auth-check.yml` carries a `schedule:` + `- cron:` entry (an expired/revoked NPM_TOKEN surfaces before release day, not as a misleading E404 on publish) |
+| `npm publish job gated behind a protected GitHub environment` | `release.yml`'s `publish` job declares `environment: <name>` — GitHub-side protection rules (required reviewer) must approve before NPM_TOKEN is usable |
 
 ## 15. freshness (10 pts)
 
@@ -229,7 +233,7 @@ node scripts/verify-scorecard.mjs     # scorecard only (never re-runs the test s
   metrics) are **not** scored here.
 - The scorecard asserts invariants; it does not judge code quality. A green
   run means the release promises hold, not that the suite was re-proven.
-- The spawn-based checks (cli-ux's unknown-flag probe, doctor) run hermetically
+- The spawn-based checks (cli-ux's unknown-flag, ask-offline and doctor probes) run hermetically
   against an isolated temp state dir (`AIO_STATE_DIR`) with `AIO_NO_GH=1`,
   `AIO_RATE=0`, `AIO_OFFLINE=1`, so results are environment-independent — a
   fresh CI runner scores the same as a configured host.

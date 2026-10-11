@@ -80,14 +80,14 @@ aio agent "<task>" = every lane at once (github ∥ skills ∥ npm ∥ crates �
 |---|---|
 | `aio` | scan → slim manifest → inject the auto-use block into every agent. **Consent gate**: prints the plan first — interactive → asks `Proceed with these writes? [y/N] `, non-TTY → plan only (exit 0, nothing written); `--yes` writes silent, `--dry-run`/`aio preview` = plan only |
 | `aio init [--copilot]` | **project scope**: inject the block into `./AGENTS.md` (official standard — Zed/Copilot/Cursor read it); `--copilot` also writes `.github/copilot-instructions.md` (pointer only). Same consent gate; not reversed by `rollback` |
-| `aio ask "csv ke chart"` | **live search** across GitHub (630M+ repos + public skills), npm (3M+ pkgs) and crates (340K+) in parallel (4 s per source), merge-ranked with BM25 + source diversity, blended 65% keyword relevance + 35% source popularity (stars/downloads/npm score); every hit prints **link + one-line function + `<github>`/`<npm>`/`<crates>` tag**; reranked by your local Ollama (qwen3) only when it is warm and fast; `--json` → `{schemaVersion: 1, …, stored: 0, hits}` (`stored: 0` = no search results stored) |
+| `aio ask "csv ke chart"` | **live search** across GitHub (630M+ repos + public skills), npm (3M+ pkgs) and crates (340K+) in parallel (4 s per source; the GitHub lane spaces requests under rate limits, so a full run can take up to ~8 s), merge-ranked with BM25 + source diversity, blended 65% keyword relevance + 35% source popularity (stars/downloads/npm score); every hit prints **link + one-line function + `<github>`/`<npm>`/`<crates>` tag**; `--json` → `{schemaVersion: 1, …, stored: 0, hits}` (`stored: 0` = no search results stored) |
 | `aio agent "csv ke interactive chart"` | **agentic coordinator** — runs EVERY lane in parallel (GitHub repos ∥ skills ∥ npm ∥ crates ∥ web: Wikipedia + Hacker News ∥ local tools on your PATH — curated tools are confirmed against your PATH with a PATHEXT-aware scan (no phantom suggestions) and print `local · on PATH` with `— on PATH: <full path>`; a CLI outside aio's curated list can still surface on an exact query-token match ≥ 3 chars, generic words filtered), then prints an ordered **cheapest-first route**: what to run now, read first, try via `npx`/`cargo`, clone with `aio borrow --get`, or install with `aio skill add`. Synthesis is rule-based by design (never a fake LLM decision) and `stored: 0` — `--json` → `{schemaVersion: 1, task, engine: 'agent', plan, sources, errors, route, count, stored: 0, hits}` |
 | `aio borrow "etl tool"` | **optional ephemeral fetch** — `--get owner/repo` shallow-clones to temp (**24 h TTL**, auto-purged), `--list` inspects, `--clean` wipes it. Not a fallback for `ask`: use it when you actually need the files locally |
 | `aio skill add <owner/repo\|url>` | **install a public `SKILL.md`** into `~/.agents/skills/<name>/SKILL.md` (the agentskills.io shared layout read by 40+ agents). Tries 3 locations on `raw.githubusercontent.com/…/HEAD` (`SKILL.md`, `<name>/SKILL.md`, `.agents/skills/<name>/SKILL.md`); `--file <path\|dir>` installs a local file instead; `--name <n>` overrides the name; `--sha256 <hex>` pins the download (the fetched content is hashed before install — bad format → `skillShaBadFormat`, mismatch → `skillShaMismatch`, exit 1); `--dry-run` prints the target and writes nothing. Idempotent, sha256-recorded in `~/.aio/skills-ledger.json`; never touches skills it did not write |
 | `aio skill list` / `aio skill remove <name>` | inspect installed skills (`[x] … aio` = aio-installed, `yours` = not tracked by aio's ledger) and remove one — `remove` refuses skills aio never wrote, so a user-owned skill stays yours |
 | `aio skill search "<query>" [--add]` | **live skill discovery in one step** — searches GitHub skill files (`gh` code search, needs auth) plus a repo fallback, prints ranked hits with ready-to-run `aio skill add …` commands; `--add` installs the top hit. `--json` → `{schemaVersion: 1, query, sources, errors, count, stored: 0, hits, commands}` (with `--add`, `commands` → `installed`); same ok-rule as `ask` — a failed lane is reported, never faked as "0 hits" |
 | `aio completion bash\|zsh\|fish\|pwsh` | print a shell completion script to stdout (static command/flag list — works offline and inside the compiled binary); add it to `~/.bashrc` / `~/.zshrc` / `~/.config/fish/completions/aio.fish` / `$PROFILE` as the script header says |
-| `aio doctor` | **9 checks**, every row tagged `[ok]`/`[~~]`/`[!!]`: node · state · live sources · manifest · agent blocks · agents · gh auth · Ollama · MCP ledger; `--fix` repairs, `--check` = CI gate, `--json` = machine output `{schemaVersion: 1, version, mode, ok, issues, warns, checks[]}` |
+| `aio doctor` | **8 checks**, every row tagged `[ok]`/`[~~]`/`[!!]`: node · state · live sources · manifest · agent blocks · agents · gh auth · MCP ledger; `--fix` repairs, `--check` = CI gate, `--json` = machine output `{schemaVersion: 1, version, mode, ok, issues, warns, checks[]}` |
 | `aio verify` | the whole self-upgrade pipeline in one run: setup (manifest+blocks) → doctor --check → npm test (never commits). `aio evolve` is kept as a hidden, deprecated alias for 2 releases (it prints an em-dash deprecation line to stderr) |
 | `aio status` | read-only health report — flags hand-edited blocks as `injected*` (drift) |
 | `aio update [--check]` | update from npm; `--check` is read-only — compares installed vs `npm view aio-connect version` (exit 0 up-to-date, 1 behind, 2 check failed) |
@@ -244,10 +244,9 @@ The binary and installer channels need no Node at all.
 | `NO_COLOR=1` | no ANSI colors (the banner is already colorless when piped) |
 | `AIO_OFFLINE=1` | `aio ask` short-circuits with an explicit offline message; `skill search` and `agent` do the same (live by design); `skill add` refuses remote installs |
 | `AIO_NO_GH=1` | skip the GitHub skills lane entirely |
-| `AIO_LANG=id` | full CLI output in Bahasa Indonesia (`aio --help` mirrors the English help line-for-line, and errors, doctor, status, update, skill and borrow messages come from the same EN/ID catalog in `src/messages.js`; commands/flags/env names stay English) |
+| `AIO_LANG=id` | runtime messages in Bahasa Indonesia — **156 message keys** in EN + ID (`src/messages.js`), covering help (`aio --help` mirrors the English line-for-line), `ask`, `agent`, `skill search`, `borrow`, doctor, status, update and the live-fallback copy. `AIO_LANG=en` is the default; commands/flags/env names, lane/source labels and every `--json` payload stay English by contract |
 | `AIO_STATE_DIR` | move the state dir off `~/.aio` |
 | `GH_TOKEN` / `gh auth login` | authenticated GitHub search (raises the rate budget, enables the skills lane) |
-| `OLLAMA_HOST`, `AIO_OLLAMA_MODEL`, `AIO_NO_AI=1` | optional local rerank for `aio ask` (warm only) |
 
 ### `--json` and the `schemaVersion` contract
 
@@ -291,8 +290,8 @@ Changes: added chart.js, wired the data feed.
   history — `aio ask` results are printed and discarded (**zero search
   storage — results printed, never saved**), and the npm package ships no
   database (`files` = bin, src, docs, README, CHANGELOG, LICENSE, sbom.cdx.json —
-  `test/` and `assets/` dropped in v1.7.0; current pack 118,657 bytes ≈
-  115.9 KiB / 31 files).
+  `test/` and `assets/` dropped in v1.7.0; current pack 119,772 bytes ≈
+  117.0 KiB / 31 files).
   What aio *does* write: the
   manifest `~/.aio/aio-context.md`, one `AIO AUTO-CONTEXT` block per agent
   file, timestamped backups under `~/.aio/backups/`, `~/.aio/config.json`,

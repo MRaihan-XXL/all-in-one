@@ -23,7 +23,6 @@ There is no repos directory and no install plan since v1.5.0 (`--repos`,
 | `en.wikipedia.org/w/api.php` (`action=opensearch`) | **`aio agent` only** — web-lane context (titles + descriptions) | 4 s timeout → lane error surfaced; the other lanes still answer |
 | `hn.algolia.com/api/v1/search` (`tags=story`) | **`aio agent` only** — Hacker News stories (comment objects have no title and are filtered at source) | 4 s timeout → lane error surfaced; the other lanes still answer |
 | `$PATH` (curated ~38-entry map ∩ `detectBinary`) | **`aio agent` only** — suggests tools already installed on this machine (suggestion only, never executed) | no `PATH` match → no row (no phantom suggestions); `aio ask` is unaffected — its fast probe budget is unchanged |
-| `OLLAMA_HOST` (default `http://localhost:11434`) / `AIO_OLLAMA_MODEL` | optional rerank — warm only, 3.5 s abort, skipped after 2.5 s elapsed | silent fallback to the BM25 order; `AIO_NO_AI=1` skips the call |
 
 Nothing else is read for search: there is **no database** (v1.3.0 deleted
 `ai-tools.db`, `src/catalog.js`, `scripts/build-db.mjs`) and no search history.
@@ -107,7 +106,7 @@ calls **across processes** with a shared clock file:
 |---|---|
 | `AIO_QUIET=1` or `AIO_NO_BANNER=1` | no banner printed (any value counts as set) |
 | `NO_COLOR=1` | no ANSI colors; the banner is already colorless when stdout is not a TTY |
-| `AIO_LANG=id` | `aio --help` prints the full Bahasa Indonesia help (`HELP_ID` mirrors the English text line-for-line; commands, flags and env var names stay English). Help text only — output of `ask`/`agent`/… stays as-is |
+| `AIO_LANG=id` | runtime messages in Bahasa Indonesia via the 156-key EN/ID catalog (`src/messages.js`): `aio --help` mirrors the English help line-for-line (`HELP_ID`), plus `ask`, `agent`, `skill search`, `borrow`, doctor, status, update and the live-fallback copy. `AIO_LANG=en` is the default. Stays English by contract: commands, flags and env var names, lane/source labels, and every `--json` payload |
 
 ### Machine-readable output (`--json`, `schemaVersion`)
 

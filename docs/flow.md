@@ -14,8 +14,8 @@ is no catalog-miss branch since v1.3.0):
 | # | Step | Meaning |
 |---|---|---|
 | 1 | **Your prompt** | plain-language input ("I need an awesome X"); no `/slash-command` needed |
-| 2 | **`aio ask "<what you need>"`** | **LIVE · ADAPTIVE · ≤ 4 s per source** — parallel lanes **github** (630M+ repos + `filename:SKILL.md` skill files, 6.8M+), **npm** (3M+ packages), **crates** (340K+), plus **web → your agent's own web search**; intent routing (rust → crates, skill words → skills, URL → web hint) and generic-word stripping for GitHub |
-| 3 | **top-8 + diversity** | sources merged and ranked: **BM25 blended with source trust (65% relevance + 35% popularity prior)**, source diversity (≥ 2 rows per answering source), qwen3 rerank only when warm (≤ 3.5 s); **every hit prints URL + one-line function + `<github>`/`<npm>`/`<crates>` tag**; **no search storage (results discarded)** |
+| 2 | **`aio ask "<what you need>"`** | **LIVE · ADAPTIVE · ≤ 4 s per source** (the GitHub lane spaces requests under rate limits, so a full run can take up to ~8 s) — parallel lanes **github** (630M+ repos + `filename:SKILL.md` skill files, 6.8M+), **npm** (3M+ packages), **crates** (340K+), plus **web → your agent's own web search**; intent routing (rust → crates, skill words → skills, URL → web hint) and generic-word stripping for GitHub |
+| 3 | **top-8 + diversity** | sources merged and ranked: **BM25 blended with source trust (65% relevance + 35% popularity prior)**, source diversity (≥ 2 rows per answering source); **every hit prints URL + one-line function + `<github>`/`<npm>`/`<crates>` tag**; **no search storage (results discarded)** |
 | 4 | **use ephemerally** | `npx` / `uvx` / copy — ephemeral, never a permanent install; or `aio borrow --get owner/repo` shallow-clones into `%TEMP%\aio-borrow` (**24 h TTL**, ≥ 1 GB free-disk guard) |
 | 5 | **report + disclosure** | disclosure `[aio] Using [<name>](<url>) (<type>) — <function>` (injected rule — compliance model-dependent): WHAT CHANGED + every repo/tool/site used, each as a markdown link + one-line function |
 | 6 | **`aio borrow --clean`** | wipe temp clones (`--list` inspects them first; expired clones are purged automatically) — then the loop continues with the next prompt |
@@ -48,7 +48,7 @@ is the authoritative diagram.
 | `aio borrow "<kw>"` | optional live GitHub search for what you want to **clone** — discovery itself is `ask`'s job, not a catalog-miss fallback |
 | `aio borrow --get <owner/repo>` | step 4 — shallow clone to temp, 24 h TTL |
 | `aio borrow --list` / `--clean` | step 6 — inspect / wipe temp clones |
-| `aio doctor [--check\|--fix]` | self-diagnosis — **9 checks**, rows tagged `[ok]`/`[~~]`/`[!!]`: node · state · live sources · manifest · agent blocks · agents · gh auth · Ollama · MCP ledger; `--check` = CI gate |
+| `aio doctor [--check\|--fix]` | self-diagnosis — **8 checks**, rows tagged `[ok]`/`[~~]`/`[!!]`: node · state · live sources · manifest · agent blocks · agents · gh auth · MCP ledger; `--check` = CI gate |
 | `aio evolve` | self-upgrade pipeline: setup (manifest + blocks) → `doctor --check` → `npm test`; never commits |
 | `aio update` / `aio rollback` | reinstall from npm (then re-runs setup with the fresh global copy) / remove everything aio injected |
 

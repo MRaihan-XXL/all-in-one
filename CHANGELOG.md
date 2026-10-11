@@ -53,7 +53,9 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Badges + ticker** — hero/demo badges bumped to v1.9.1; the ticker lists
   `verify` instead of the removed `evolve` alias.
 - **Scorecard hardening** — the `npm pack` spawn routes through `cmd.exe`
-  (retires the deprecated `shell: true` + args array, DEP0190); the freshness
+  (retires the deprecated `shell: true` + args array, DEP0190) (erratum:
+  premature — `shell: true` was still present in `src/update.js` and
+  `src/verify.js` until v1.9.2); the freshness
   gate compares dirty-tree-aware touch times, so an uncommitted edit is
   measured by its mtime instead of being masked by `git log`; the token-literal
   scan now covers `scripts/` and `test/` alongside `src/` and `bin/`; a new
@@ -110,9 +112,10 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   keeps context across blocks.
 - **Honest failures** — `bin/aio.js` failed dynamic import prints a message
   and exits 1 (not a stack trace); `src/scan.js` rejects symlinks presented
-  as directories; `aio doctor` / `aio status` rethrow `EISDIR` (read-race
-  guard); `aio update` killed by a signal no longer reports success
-  (exit 1).
+  as directories (erratum: claimed but never actually implemented —
+  `src/scan.js` contains no symlink rejection); `aio doctor` / `aio status`
+  rethrow `EISDIR` (read-race guard); `aio update` killed by a signal no
+  longer reports success (exit 1).
 
 ### Removed
 

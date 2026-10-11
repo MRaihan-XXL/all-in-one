@@ -178,13 +178,14 @@ scan (tokens/passwords/usernames) on tracked files passes.
   (`api.github.com`, 630M+ repos) plus `filename:SKILL.md` code search
   (6.8M+ skill files), npm (`registry.npmjs.org`, 3M+ packages) and
   crates.io (340K+ crates) queried **in parallel** with a 4 s per-source
-  timeout; intent routing (rust → crates, skill words → skills, URL → web
+  timeout (the GitHub lane spaces requests under rate limits, so a full run
+  can take up to ~8 s);
+  intent routing (rust → crates, skill words → skills, URL → web
   hint) and generic-word stripping for GitHub. Results are merge-ranked with
   **BM25**, a **source diversity** guarantee (≥ 2 rows per answering source),
   a **trust-weighted** final order (65% keyword relevance + 35% source
-  popularity prior — FR12), and an optional
-  qwen3 Ollama rerank only when warm and fast (≤ 3.5 s; skipped once elapsed
-  > 2.5 s). Every hit prints **URL + one-line function + source tag**;
+  popularity prior — FR12). Every hit prints **URL + one-line function +
+  source tag**;
   `--json` emits `{query, engine, sources, count, stored: 0, hits}`.
   **Zero search storage** — nothing searched is ever written to disk. Websites are
   covered by the agent's own web search; `AIO_OFFLINE=1` makes the offline
@@ -201,10 +202,10 @@ hit, `--json` (`stored: 0`), and the borrow lifecycle (24 h TTL purge,
 `--clean`, `--list`).
 
 ### FR10 — Self-diagnosis & self-upgrade (`doctor` / `verify`)
-- `aio doctor [--check|--fix]` runs **exactly 9 read-only checks**, each row
+- `aio doctor [--check|--fix]` runs **exactly 8 read-only checks**, each row
   tagged `[ok]` / `[~~]` / `[!!]` — Node, persisted state, live source
   reachability (no search storage), manifest freshness + live layout, agent
-  blocks, agents detected, `gh` auth, Ollama, MCP ledger
+  blocks, agents detected, `gh` auth, MCP ledger
   (B-08, B-09; network probes run in parallel) — and exits 1 when any issue
   exists (`--check` = CI gate); `--fix` re-runs the idempotent setup pipeline
   (safe fixes only).
@@ -347,13 +348,13 @@ measured 2026-10-01; suite **254 (253 pass · 1 skip · 0 fail)**, coverage
 | `aio preview` | Plan-only setup (alias of `--dry-run`) that also shows the exact block that would be written |
 | `aio init [--copilot]` | Project scope: same gate; injects the block into `./AGENTS.md`; `--copilot` also writes `.github/copilot-instructions.md` (pointer only). Not reversed by `rollback` |
 | `aio status` | Read-only health report (state, manifest, agent blocks — hand-edited blocks flagged `injected*`) |
-| `aio ask "<prompt>"` | **Live search router**: GitHub (630M+ repos + `filename:SKILL.md` skills, 6.8M+ files) + npm (3M+) + crates (340K+) in parallel, 4 s/source; BM25 merge + source diversity + optional warm-Ollama rerank; every hit prints link + one-line function + `<src>` tag; `--json` (`stored: 0`) |
+| `aio ask "<prompt>"` | **Live search router**: GitHub (630M+ repos + `filename:SKILL.md` skills, 6.8M+ files) + npm (3M+) + crates (340K+) in parallel, 4 s/source; BM25 merge + source diversity; every hit prints link + one-line function + `<src>` tag; `--json` (`stored: 0`) |
 | `aio agent "<task>"` | **Agentic coordinator (FR13)**: every lane in parallel — repos ∥ skills ∥ npm ∥ crates ∥ web (Wikipedia + Hacker News) ∥ local tools on `PATH` — then a rule-based, cheapest-first route (run now → read first → quick try → borrow → install skill); `--json` → `{schemaVersion: 1, task, engine: 'agent', plan, sources, errors, route, count, stored: 0, hits}`; zero storage |
 | `aio skill search "<query>" [--add]` | **Live skill discovery (FR13)**: GitHub skill files + repo fallback, ranked hits with ready-to-run `aio skill add …` commands; `--add` installs the top hit; `--json` (`stored: 0`); same ok-rule as `ask` |
 | `aio skill add <owner/repo\|url>` | Install a public `SKILL.md` into `~/.agents/skills/<name>/` (`--file`, `--name`, `--sha256 <hex>` content pin — bad format → `skillShaBadFormat`, mismatch → `skillShaMismatch`, exit 1 — `--dry-run`; sha256-claimed in `skills-ledger.json`); `aio skill list` / `aio skill remove <name>` inspect and remove — user-owned skills are never touched |
 | `aio completion bash\|zsh\|fish\|pwsh` | Print a shell completion script (static `COMMANDS`/`FLAGS` from `src/completion.js` — offline-safe, works in the compiled binary) |
 | `aio borrow "<kw>"` | Optional live GitHub search for what you want cloned; `--get <owner/repo>` shallow-clone to `%TEMP%\aio-borrow` (24 h TTL, 1 GB disk guard); `--list` / `--clean` |
-| `aio doctor [--check\|--fix]` | Self-diagnosis: 9 checks (node / state / live sources / manifest / agent blocks / agents / gh auth / Ollama / MCP ledger), rows tagged `[ok]`/`[~~]`/`[!!]`; `--check` = CI gate, `--fix` = safe repair |
+| `aio doctor [--check\|--fix]` | Self-diagnosis: 8 checks (node / state / live sources / manifest / agent blocks / agents / gh auth / MCP ledger), rows tagged `[ok]`/`[~~]`/`[!!]`; `--check` = CI gate, `--fix` = safe repair |
 | `aio verify` | Pipeline: setup (manifest + blocks) → `doctor --check` → `npm test`; never commits. `aio evolve` remains as a hidden, deprecated alias for 2 releases (em-dash deprecation line on stderr) |
 | `aio update [--check]` | Reinstall latest from npm → re-run setup automatically; `--check` is read-only (exit 0 up-to-date / 1 behind / 2 check failed) |
 | `aio rollback` | Remove injected block + reverse MCP additions from ledger |
@@ -369,8 +370,8 @@ non-interactive writes), `--dry-run` (plan only, write nothing), `--copilot`
 still works). Environment overrides:
 `AIO_STATE_DIR` (state dir, default `~/.aio`),
 `AIO_OFFLINE=1`, `AIO_NO_GH=1`, `AIO_LANG=id` (help in Bahasa Indonesia),
-`AIO_RATE=<n>`, `AIO_QUIET=1`/`AIO_NO_BANNER=1`, `NO_COLOR=1`, `OLLAMA_HOST`,
-`AIO_OLLAMA_MODEL`, `AIO_NO_AI`. There is no `--home` flag, no `AIO_HOME`
+`AIO_RATE=<n>`, `AIO_QUIET=1`/`AIO_NO_BANNER=1`, `NO_COLOR=1`. There is no
+`--home` flag, no `AIO_HOME`
 (since v1.3.0) and no
 `--repos` / `AIO_REPOS_DIR` (removed in v1.5.0).
 
@@ -537,13 +538,6 @@ measured 2026-10-06 (`eval-result.json`, nightly `eval.yml` auto-commits).
 
 ## 10. Known limitations
 
-- **`aio ask` rerank needs a warm local Ollama.** The BM25 + source-diversity
-  pass always runs; the `qwen3` rerank (default model `qwen3:4b`, override
-  with `AIO_OLLAMA_MODEL`) is attempted only while the run is still inside
-  the speed budget — 3.5 s abort, and skipped entirely once elapsed time
-  passes 2.5 s. No Ollama → silent fallback to the merged BM25 order
-  (`aio doctor` reports it as a warning, not an issue); set `AIO_NO_AI=1` to
-  skip the network call entirely.
 - **Live sources need network and can rate-limit.** Each source (GitHub, npm,
   crates) has a 4 s timeout and is skipped silently when it fails; GitHub
   code search needs an authenticated `gh` — without `gh` (or when `gh api`
