@@ -380,15 +380,25 @@ export async function skillSearch({ query, add = false, json = false }) {
     ['skills', ghSkills(q, 8)],
     ['github', ghRepos(q, 6)],
   ];
-  const settled = await Promise.allSettled(lanes.map(([, p]) => p));
+  const timed = lanes.map(([, p]) => {
+    const laneT0 = Date.now();
+    return p.then(
+      (v) => ({ ok: true, v, ms: Date.now() - laneT0 }),
+      (reason) => ({ ok: false, reason, ms: Date.now() - laneT0 }),
+    );
+  });
+  const settled = await Promise.all(timed); // wrappers never reject
   const hits = [];
   const sources = [];
   const errors = [];
+  const sourcesDetail = []; // per-lane {name, ms, ok, hits} — auditable timing (Stage 3)
   settled.forEach((r, i) => {
     const label = lanes[i][0];
-    if (r.status === 'fulfilled') {
+    const laneHits = r.ok && Array.isArray(r.v) ? r.v.length : 0;
+    sourcesDetail.push({ name: label, ms: r.ms, ok: r.ok, hits: laneHits });
+    if (r.ok) {
       sources.push(label);
-      if (Array.isArray(r.value)) hits.push(...r.value);
+      if (laneHits) hits.push(...r.v);
     } else {
       // skills lane needs auth — an unauthenticated/missing gh must say so
       // instead of pretending there are no skills.
@@ -409,7 +419,7 @@ export async function skillSearch({ query, add = false, json = false }) {
       const payload = { schemaVersion: 1, query: q, sources, errors, count: hits.length, stored: 0, hits, installed };
       return { ok: r.ok, text: JSON.stringify(payload, null, 2), json: payload };
     }
-    return { ok: r.ok, json: null, text: `aio skill search — "${q}" → installing top hit\n${r.text}` };
+    return { ok: r.ok, json: null, text: `${msg('skillSearchInstalling', { q })}\n${r.text}` };
   }
 
   const ms = ((Date.now() - t0) / 1000).toFixed(1);
@@ -417,7 +427,9 @@ export async function skillSearch({ query, add = false, json = false }) {
   const payload = {
     schemaVersion: 1, // bump only on breaking shape change (same contract as ask)
     query: q,
+    ok, // the verdict the text mode already shows — JSON consumers get it too
     sources,
+    sourcesDetail,
     errors,
     count: hits.length,
     stored: 0, // live search — nothing persisted
@@ -426,18 +438,25 @@ export async function skillSearch({ query, add = false, json = false }) {
   };
   if (json) return { ok, text: JSON.stringify(payload, null, 2), json: payload };
 
-  const lines = [`aio skill search — "${q}" (live: ${sources.join('+') || 'no lane answered'} · ${hits.length} hits · ${ms}s)`];
+  // text mode only below — the payload above stays EN in both locales (machine contract)
+  const engineText = msg('engineLive', { lanes: sources.join('+') || msg('noLaneAnswered') });
+  const timeLine = sourcesDetail.length
+    ? msg('timeFooter', { detail: sourcesDetail.map((s) => `${s.name} ${(s.ms / 1000).toFixed(1)}s`).join(' · ') })
+    : null;
+  const lines = [msg('skillSearchHeader', { q, engine: engineText, n: hits.length, sec: ms })];
   if (errors.length) {
-    lines.push(`source issues: ${errors.map((e) => `${e.src}: ${String(e.msg).slice(0, 80)}`).join(' | ')}`);
+    lines.push(msg('skillSourceIssues', { detail: errors.map((e) => `${e.src}: ${String(e.msg).slice(0, 80)}`).join(' | ') }));
   }
   if (!hits.length) {
-    lines.push(errors.length && !sources.length ? 'Live sources failed — fix the issue above, then retry.' : 'No skill found — refine keywords.');
+    lines.push(errors.length && !sources.length ? msg('liveSourcesFailed') : msg('skillSearchNoFound'));
+    if (timeLine) lines.push(timeLine);
     return { ok, json: payload, text: lines.join('\n') };
   }
   hits.forEach((h, i) => {
     lines.push(`${i + 1}. ${h.name} ${h.type === 'skill' ? '[skill]' : '[repo]'} — ${h.func}`);
-    lines.push(`   install: aio skill add ${h.name}`);
+    lines.push(`   ${msg('skillInstallRow', { name: h.name })}`);
   });
-  lines.push('note: public results are unvetted — read SKILL.md before trusting it (docs/THREATS.md).');
+  lines.push(msg('skillSearchNote'));
+  if (timeLine) lines.push(timeLine); // footer: per-lane timing, honest worst-case visible
   return { ok, json: payload, text: lines.join('\n') };
 }

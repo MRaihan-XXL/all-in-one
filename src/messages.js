@@ -1,7 +1,8 @@
 // messages.js — AIO_LANG=id user-facing message catalog: every [aio] error,
-// usage and note string lives here in BOTH languages. English strings are
-// byte-identical to the pre-i18n originals (the default locale — tests and
-// existing scripts see no change); AIO_LANG=id selects Bahasa Indonesia.
+// usage, note and text-mode report string lives here in BOTH languages.
+// English strings are byte-identical to the pre-i18n originals (the default
+// locale — tests and existing scripts see no change); AIO_LANG=id selects
+// Bahasa Indonesia. --json payloads stay EN in BOTH locales (machine contract).
 // Test parity: EN and ID must carry the same keys and the same {placeholders}.
 const EN = {
   /* ---- usage ---- */
@@ -24,12 +25,46 @@ const EN = {
   /* ---- bin dispatch ---- */
   cmdRequires: '[aio] {a} requires {hint}',
   unknownCommand: '[aio] unknown command: {cmd}',
+  tryHelp: "run 'aio --help' for usage",
   copilotOnlyInit: '[aio] --copilot only applies to `aio init` — ignoring',
   rollbackNoDryRun: '[aio] rollback cannot honor --dry-run — refusing to run; inspect first with `aio doctor`',
   dryRunOnlySetupInit: '[aio] --dry-run only applies to `aio setup` / `aio init` — ignoring',
   unknownFlag: '[aio] unknown flag: {tok} — ignoring',
   cmdFailed: '[aio] {cmd} failed: {err}',
   skillUnknownSub: '[aio] skill: unknown subcommand "{action}" — use add | list | remove | search',
+
+  /* ---- agent (text mode; --json payload + route step labels stay EN) ---- */
+  agentHeader: 'aio agent — "{query}" (coordinating: {coordinating} · {n} results · {sec}s)',
+  noLaneAnswered: 'no lane answered',
+  agentPlan: 'plan  {lanes} — parallel, printed never stored',
+  agentLaneEmpty: '{lane} 0 hits — answered empty',
+  agentIssues: 'issues:',
+  agentRouteHead: 'route (coordinated — cheapest first)',
+  agentRouteNone: 'route — no lane matched this task; refine the keywords and rerun.',
+  agentLanesHead: 'lanes (top hits per source)',
+  agentNote:
+    'note: every lane is live and unvetted — verify before running npx/cargo\n' +
+    '      or cloning; report WHAT you used + EVERY link (docs/THREATS.md).',
+
+  /* ---- ask text mode (--json engine/why stay EN) ---- */
+  engineLive: 'live: {lanes}',
+  engineNoSource: 'live: no source answered',
+  askHeader: 'aio ask — "{query}" ({engine} · {n} results · {sec}s{web})',
+  askHeaderWeb: ' · web → your web search',
+  askHeaderZero: 'aio ask — "{query}" ({engine} · {sec}s)',
+  liveSourcesFailed: 'Live sources failed — fix the issue above, then retry.',
+  askNoResult:
+    'No result from live sources. Refine keywords — or search the web with your own web-search tool',
+  askUrlHint: ' (URL detected in the prompt)',
+  askNote:
+    'note: ranked by keyword match + source popularity — public results are unvetted;\n' +
+    '      verify before running npx/uvx or cloning (docs/THREATS.md).',
+  askSourceIssues: 'source issues: {srcs} — see --json errors[]',
+  askNoUrl: '(no public URL)',
+  timeFooter: 'time: {detail}', // shared footer: ask/agent/skillSearch per-lane timing
+  errRateLimited: 'rate-limited — set GH_TOKEN / `gh auth login`, or retry later',
+  errTimeout: 'timeout (4s/source budget)',
+  errUnreachable: 'unreachable (network)',
 
   /* ---- skill ---- */
   skillPathNotFound: '[aio] skill: local path not found — {p}',
@@ -49,10 +84,43 @@ const EN = {
   skillMdRemoved: '[aio] skill {name}: SKILL.md removed — directory kept (not empty): {dir}',
   skillRemoved: '[aio] skill {name}: removed — {dir}',
   skillSearchNoHit: '[aio] skill search: no installable hit for "{q}"{lanes}',
+  skillSearchHeader: 'aio skill search — "{q}" ({engine} · {n} hits · {sec}s)',
+  skillSourceIssues: 'source issues: {detail}',
+  skillSearchNoFound: 'No skill found — refine keywords.',
+  skillSearchNote:
+    'note: public results are unvetted — read SKILL.md before trusting it (docs/THREATS.md).',
+  skillSearchInstalling: 'aio skill search — "{q}" → installing top hit',
+  skillInstallRow: 'install: aio skill add {name}',
 
   /* ---- borrow ---- */
   borrowGetFailed: '[aio] borrow --get failed: {err}',
   borrowSearchFailed: '[aio] borrow search failed: {err}',
+  usageBorrow:
+    'usage:\n' +
+    '  aio borrow "<what you need>"   live GitHub search (link + function per hit)\n' +
+    '  aio borrow --get <owner/repo>  shallow-clone to temp (24h TTL)\n' +
+    '  aio borrow --list | --clean    inspect / wipe temp clones',
+  borrowCleanHead: 'aio borrow --clean — {n} clone(s) removed, {freed} freed from {dir}',
+  borrowTtlPurgeNamed: 'TTL purge: {n} expired (>24h): {names}',
+  borrowListHead: 'aio borrow --list — {n} temp clone(s) in {dir}',
+  borrowListItem: '- {name} — age {age}h — {path}',
+  borrowListEmpty: 'aio borrow — nothing borrowed (dir: {dir})',
+  borrowGetHead: 'aio borrow — {target} → {status}',
+  borrowPath: 'path: {path}',
+  borrowUseNote: 'use it now; auto-purged after 24h (or `aio borrow --clean`).',
+  borrowFreeDisk: 'free disk: {free}',
+  borrowNoResult: 'aio borrow — "{query}": no GitHub result. Refine keywords or check https://github.com/search',
+  borrowSearchHeader: 'aio borrow — "{query}" (GitHub live search · {n} results)',
+  borrowTtlPurge: 'TTL purge: {n} expired clone(s) removed',
+  borrowPinOne: 'pin one: aio borrow --get {name}',
+
+  /* ---- live fallback copies (meta tags / src / type stay EN data) ---- */
+  liveRepoNoDesc: '{lang} repository (no description)',
+  liveRepoLangNone: 'Repo',
+  liveNpmNoDesc: 'npm package (no description)',
+  liveCrateNoDesc: 'Rust crate (no description)',
+  liveWikiNoDesc: 'Wikipedia article',
+  liveHnDiscussion: 'Hacker News discussion — {pts} points by {author}',
 
   /* ---- update ---- */
   updateCheckFailed: '[aio] update check failed: {err}',
@@ -91,8 +159,6 @@ const EN = {
   doctorGhOk: 'logged in — skills lane enabled (gh api search/code)',
   doctorGhOff: 'AIO_NO_GH=1 — skills lane disabled by choice',
   doctorGhNoAuth: 'not logged in — skills lane will report an error on use (run `gh auth login`)',
-  doctorOllamaOk: 'reachable — models: {models}',
-  doctorOllamaDown: 'not reachable — ask rerank skipped (source/BM25 order kept)',
   doctorLedgerMissing: 'ledger missing — re-run `aio` to re-record MCP entries for rollback',
   doctorLedgerGone: '{key}: entry gone from {file}',
   doctorLedgerNoFile: '{key}: {file} missing',
@@ -154,12 +220,46 @@ const ID = {
   /* ---- bin dispatch ---- */
   cmdRequires: '[aio] {a} butuh {hint}',
   unknownCommand: '[aio] perintah tidak dikenal: {cmd}',
+  tryHelp: "jalankan 'aio --help' untuk cara pakai",
   copilotOnlyInit: '[aio] --copilot hanya berlaku untuk `aio init` — diabaikan',
   rollbackNoDryRun: '[aio] rollback tidak mendukung --dry-run — menolak dijalankan; periksa dulu dengan `aio doctor`',
   dryRunOnlySetupInit: '[aio] --dry-run hanya berlaku untuk `aio setup` / `aio init` — diabaikan',
   unknownFlag: '[aio] flag tidak dikenal: {tok} — diabaikan',
   cmdFailed: '[aio] {cmd} gagal: {err}',
   skillUnknownSub: '[aio] skill: subperintah tidak dikenal "{action}" — gunakan add | list | remove | search',
+
+  /* ---- agent (text mode; --json payload + route step labels stay EN) ---- */
+  agentHeader: 'aio agent — "{query}" (mengoordinasi: {coordinating} · {n} hasil · {sec}s)',
+  noLaneAnswered: 'tidak ada lane yang menjawab',
+  agentPlan: 'rencana  {lanes} — paralel, dicetak tidak pernah disimpan',
+  agentLaneEmpty: '{lane} 0 hit — dijawab kosong',
+  agentIssues: 'masalah:',
+  agentRouteHead: 'rute (dikoordinasi — termurah dulu)',
+  agentRouteNone: 'rute — tidak ada lane yang cocok dengan tugas ini; perhalus kata kunci lalu jalankan ulang.',
+  agentLanesHead: 'lane (hit teratas per sumber)',
+  agentNote:
+    'catatan: setiap lane live dan belum diverifikasi — verifikasi sebelum menjalankan npx/cargo\n' +
+    '      atau meng-clone; laporkan APA yang kamu pakai + SETIAP tautan (docs/THREATS.md).',
+
+  /* ---- ask text mode (--json engine/why stay EN) ---- */
+  engineLive: 'live: {lanes}',
+  engineNoSource: 'live: tidak ada sumber yang menjawab',
+  askHeader: 'aio ask — "{query}" ({engine} · {n} hasil · {sec}s{web})',
+  askHeaderWeb: ' · web → pencarian web kamu',
+  askHeaderZero: 'aio ask — "{query}" ({engine} · {sec}s)',
+  liveSourcesFailed: 'Sumber live gagal — perbaiki masalah di atas, lalu coba lagi.',
+  askNoResult:
+    'Tidak ada hasil dari sumber live. Perhalus kata kunci — atau cari di web dengan tool web-search kamu sendiri',
+  askUrlHint: ' (URL terdeteksi di prompt)',
+  askNote:
+    'catatan: diurutkan dari kecocokan kata kunci + popularitas sumber — hasil publik belum diverifikasi;\n' +
+    '      verifikasi sebelum menjalankan npx/uvx atau meng-clone (docs/THREATS.md).',
+  askSourceIssues: 'masalah sumber: {srcs} — lihat --json errors[]',
+  askNoUrl: '(tanpa URL publik)',
+  timeFooter: 'waktu: {detail}', // footer bersama: timing per lane ask/agent/skillSearch
+  errRateLimited: 'dibatasi rate — set GH_TOKEN / `gh auth login`, atau coba lagi nanti',
+  errTimeout: 'timeout (anggaran 4s/sumber)',
+  errUnreachable: 'tidak terjangkau (jaringan)',
 
   /* ---- skill ---- */
   skillPathNotFound: '[aio] skill: path lokal tidak ditemukan — {p}',
@@ -179,10 +279,43 @@ const ID = {
   skillMdRemoved: '[aio] skill {name}: SKILL.md dihapus — folder disimpan (tidak kosong): {dir}',
   skillRemoved: '[aio] skill {name}: dihapus — {dir}',
   skillSearchNoHit: '[aio] skill search: tidak ada hit yang bisa dipasang untuk "{q}"{lanes}',
+  skillSearchHeader: 'aio skill search — "{q}" ({engine} · {n} hit · {sec}s)',
+  skillSourceIssues: 'masalah sumber: {detail}',
+  skillSearchNoFound: 'Skill tidak ditemukan — perhalus kata kunci.',
+  skillSearchNote:
+    'catatan: hasil publik belum diverifikasi — baca SKILL.md sebelum mempercayainya (docs/THREATS.md).',
+  skillSearchInstalling: 'aio skill search — "{q}" → memasang hit teratas',
+  skillInstallRow: 'pasang: aio skill add {name}',
 
   /* ---- borrow ---- */
   borrowGetFailed: '[aio] borrow --get gagal: {err}',
   borrowSearchFailed: '[aio] borrow search gagal: {err}',
+  usageBorrow:
+    'cara pakai:\n' +
+    '  aio borrow "<kata kunci>"    pencarian live GitHub (link + fungsi per hasil)\n' +
+    '  aio borrow --get <owner/repo>  shallow-clone ke temp (TTL 24 jam)\n' +
+    '  aio borrow --list | --clean    inspeksi / hapus clone temp',
+  borrowCleanHead: 'aio borrow --clean — {n} clone dihapus, {freed} dibebaskan dari {dir}',
+  borrowTtlPurgeNamed: 'TTL purge: {n} kedaluwarsa (>24 jam): {names}',
+  borrowListHead: 'aio borrow --list — {n} clone temp di {dir}',
+  borrowListItem: '- {name} — umur {age} jam — {path}',
+  borrowListEmpty: 'aio borrow — belum ada yang dipinjam (dir: {dir})',
+  borrowGetHead: 'aio borrow — {target} → {status}',
+  borrowPath: 'path: {path}',
+  borrowUseNote: 'pakai sekarang; otomatis dibuang setelah 24 jam (atau `aio borrow --clean`).',
+  borrowFreeDisk: 'disk bebas: {free}',
+  borrowNoResult: 'aio borrow — "{query}": tidak ada hasil GitHub. Perhalus kata kunci atau cek https://github.com/search',
+  borrowSearchHeader: 'aio borrow — "{query}" (pencarian live GitHub · {n} hasil)',
+  borrowTtlPurge: 'TTL purge: {n} clone kedaluwarsa dihapus',
+  borrowPinOne: 'pilih satu: aio borrow --get {name}',
+
+  /* ---- live fallback copies (meta tags / src / type stay EN data) ---- */
+  liveRepoNoDesc: '{lang} repositori (tanpa deskripsi)',
+  liveRepoLangNone: 'Repositori',
+  liveNpmNoDesc: 'paket npm (tanpa deskripsi)',
+  liveCrateNoDesc: 'crate Rust (tanpa deskripsi)',
+  liveWikiNoDesc: 'artikel Wikipedia',
+  liveHnDiscussion: 'Diskusi Hacker News — {pts} poin oleh {author}',
 
   /* ---- update ---- */
   updateCheckFailed: '[aio] cek update gagal: {err}',
@@ -221,8 +354,6 @@ const ID = {
   doctorGhOk: 'masuk — jalur skills aktif (gh api search/code)',
   doctorGhOff: 'AIO_NO_GH=1 — jalur skills dimatikan atas pilihan',
   doctorGhNoAuth: 'belum masuk — jalur skills akan melaporkan error saat dipakai (jalankan `gh auth login`)',
-  doctorOllamaOk: 'terjangkau — model: {models}',
-  doctorOllamaDown: 'tidak terjangkau — rerank ask dilewati (urutan sumber/BM25 dipertahankan)',
   doctorLedgerMissing: 'ledger hilang — jalankan ulang `aio` untuk mencatat ulang entri MCP agar rollback berfungsi',
   doctorLedgerGone: '{key}: entri hilang dari {file}',
   doctorLedgerNoFile: '{key}: {file} tidak ada',

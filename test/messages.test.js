@@ -85,3 +85,34 @@ test('{s} plural suffix: present in the EN render, stripped in the id render', (
     assert.doesNotMatch(id, /\{s\}|location/, 'no English suffix or raw placeholder survives');
   });
 });
+
+/* ---- text-mode keys added when hardcoded strings were routed through msg() ---- */
+
+test('msg: keys replaced from hardcoded literals stay byte-identical in EN', (t) => {
+  withLang(t, undefined, () => {
+    assert.equal(msg('tryHelp'), "run 'aio --help' for usage");
+    assert.equal(msg('liveSourcesFailed'), 'Live sources failed — fix the issue above, then retry.');
+    assert.equal(msg('agentRouteNone'), 'route — no lane matched this task; refine the keywords and rerun.');
+    assert.equal(msg('askNoUrl'), '(no public URL)');
+    assert.equal(msg('errTimeout'), 'timeout (4s/source budget)');
+    assert.equal(msg('skillSearchNoFound'), 'No skill found — refine keywords.');
+    assert.equal(msg('borrowTtlPurge', { n: 2 }), 'TTL purge: 2 expired clone(s) removed');
+    assert.equal(msg('liveHnDiscussion', { pts: '90', author: 'ada' }), 'Hacker News discussion — 90 points by ada');
+    assert.equal(msg('liveRepoNoDesc', { lang: 'Rust' }), 'Rust repository (no description)');
+  });
+});
+
+test('AIO_LANG=id: one new key per touched file renders in Bahasa', (t) => {
+  withLang(t, 'id', () => {
+    assert.equal(msg('tryHelp'), "jalankan 'aio --help' untuk cara pakai", 'bin/aio.js');
+    assert.equal(
+      msg('agentHeader', { query: 'tugas', coordinating: 'npm+web', n: 3, sec: '1.2' }),
+      'aio agent — "tugas" (mengoordinasi: npm+web · 3 hasil · 1.2s)',
+      'src/agent.js',
+    );
+    assert.equal(msg('engineNoSource'), 'live: tidak ada sumber yang menjawab', 'src/search.js');
+    assert.equal(msg('skillSearchNoFound'), 'Skill tidak ditemukan — perhalus kata kunci.', 'src/skill.js');
+    assert.equal(msg('borrowPinOne', { name: 'acme/one' }), 'pilih satu: aio borrow --get acme/one', 'src/borrow.js');
+    assert.equal(msg('liveNpmNoDesc'), 'paket npm (tanpa deskripsi)', 'src/live.js');
+  });
+});
