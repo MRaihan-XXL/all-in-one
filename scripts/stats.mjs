@@ -178,17 +178,25 @@ function convergePack() {
     return { size: j.size, files: j.entryCount };
   }
   const re = /current pack [\d,]+ bytes \u2248\n {2}[\d.]+ KiB \/ \d+ files/;
-  for (let i = 0; i < 5; i++) {
-    const p = packInfo();
-    const want = `current pack ${p.size.toLocaleString('en-US')} bytes \u2248\n  ${(p.size / 1024).toFixed(1)} KiB / ${p.files} files`;
-    if (!re.test(readme)) throw new Error('stats: README pack line not found - refusing to publish stale numbers');
-    const next = readme.replace(re, want);
-    if (next === readme) break; // converged - README matches the measured tarball
-    readme = next;
-    fs.writeFileSync(readmePath, readme); // packInfo reads README from disk
-    if (i === 4) throw new Error('stats: pack line failed to converge after 5 passes');
+  if (!re.test(readme)) throw new Error('stats: README pack line not found - refusing to publish stale numbers');
+  const p = packInfo();
+  // The tarball is gzipped and the packed README *describes* it, so editing the
+  // digits can shift the packed size by +-1-3 bytes - the measured value is not
+  // always a fixed point (a 2-cycle never settled within the old 5 passes).
+  // Probe a small window around the measurement and keep the first size that
+  // reproduces itself (self-consistent line = what the scorecard compares).
+  for (const off of [0, -1, 1, -2, 2, -3, 3]) {
+    const c = p.size + off;
+    const line = `current pack ${c.toLocaleString('en-US')} bytes \u2248\n  ${(c / 1024).toFixed(1)} KiB / ${p.files} files`;
+    const next = readme.replace(re, line);
+    if (next === readme) return; // disk already self-consistent
+    fs.writeFileSync(readmePath, next);
+    if (packInfo().size === c) {
+      readme = next;
+      return;
+    }
   }
-  fs.writeFileSync(readmePath, readme); // also persists count/eval patches
+  throw new Error('stats: pack line failed to converge (no self-consistent size within +-3 bytes)');
 }
 
 // index.html - the stats card alt attribute (same prose counts, comma form)

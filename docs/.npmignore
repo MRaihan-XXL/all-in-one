@@ -2,3 +2,6 @@
 # (repo gates read it from disk; consumers never link to it) — kept out of
 # the tarball to stay inside the 120 kB pack budget.
 SCORECARD.md
+# design explainer for the README flow animation — lives in the repo (README
+# nav link resolves there on GitHub/npm) but stays out of the 120 kB budget.
+flow.md
