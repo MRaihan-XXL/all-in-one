@@ -9,7 +9,7 @@ node scripts/capture-outputs.mjs
 ```
 
 - package: `aio-connect@1.9.2`
-- captured: 2026-10-11T12:45:20.811Z
+- captured: 2026-10-11T12:46:28.608Z
 - host: win32 · node v26.3.0
 
 ## Help (English, default)
@@ -389,7 +389,7 @@ _exit 0_
 
 ```console
 $ node bin/aio.js ask "sqlite to parquet converter"
-aio ask — "sqlite to parquet converter" (live: github+npm · 2 results · 0.8s)
+aio ask — "sqlite to parquet converter" (live: github+npm · 2 results · 1.3s)
 
 note: ranked by keyword match + source popularity — public results are unvetted;
       verify before running npx/uvx or cloning (docs/THREATS.md).
@@ -401,7 +401,7 @@ note: ranked by keyword match + source popularity — public results are unvette
    ★206 · Python
    https://github.com/kindly/flatterer
    why: BM25 keyword match (#2) + trust mid
-time: github 0.8s · npm 0.6s
+time: github 1.2s · npm 0.2s
 ```
 
 _exit 0_
@@ -442,7 +442,7 @@ note: ranked by keyword match + source popularity — public results are unvette
    ★1710 · Objective-C
    https://github.com/xyfeng/XYPieChart
    why: BM25 keyword match (#7) + trust mid
-time: github 0.9s · npm 0.5s
+time: github 0.9s · npm 0.2s
 ```
 
 _exit 0_
@@ -476,19 +476,12 @@ $ node scripts/verify-scorecard.mjs
   coverage-floor 10/10  (3/3) ok
   i18n         10/10  (4/4) ok
   ci-gates     10/10  (7/7) ok
-  freshness     5/10  (5/11) FAIL
+  freshness    10/10  (11/11) ok
 
-  FAIL [freshness] assets/screenshots/flow.png not older than assets/flow.svg → uncommitted: assets/screenshots/flow.png — commit both (commit-time-only)
-  FAIL [freshness] assets/screenshots/hero.png not older than assets/aio-hero.svg → uncommitted: assets/screenshots/hero.png — commit both (commit-time-only)
-  FAIL [freshness] assets/screenshots/demo.png not older than assets/aio-demo.svg → uncommitted: assets/screenshots/demo.png, assets/aio-demo.svg — commit both (commit-time-only)
-  FAIL [freshness] assets/screenshots/disclosure.png not older than assets/aio-disclosure.svg → uncommitted: assets/screenshots/disclosure.png — commit both (commit-time-only)
-  FAIL [freshness] assets/screenshots/stats.png not older than assets/aio-stats.svg → uncommitted: assets/screenshots/stats.png — commit both (commit-time-only)
-  FAIL [freshness] assets/screenshots/site.png not older than index.html → uncommitted: assets/screenshots/site.png — commit both (commit-time-only)
-
-SUMMARY  97/100 — 14/15 aspects >= 10/10 — RELEASE BLOCKED
+SUMMARY  100/100 — 15/15 aspects >= 10/10
 ```
 
-_exit 1_
+_exit 0_
 
 ---
 
