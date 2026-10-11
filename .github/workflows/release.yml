@@ -202,3 +202,20 @@ jobs:
       - run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # secondary alias package `agent-live-search` (npm name verified free):
+      # version + dep synced to the just-published version so both move together.
+      - name: Sync alias version to released version
+        run: |
+          node -e "
+            const fs = require('fs');
+            const ver = require('./package.json').version;
+            const p = 'alias/agent-live-search/package.json';
+            const j = JSON.parse(fs.readFileSync(p, 'utf8'));
+            j.version = ver;
+            j.dependencies['aio-connect'] = '^' + ver;
+            fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n');
+            console.log('alias agent-live-search@' + ver + ' -> aio-connect@^' + ver);
+          "
+      - run: npm publish ./alias/agent-live-search --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

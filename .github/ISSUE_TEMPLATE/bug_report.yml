@@ -1,0 +1,56 @@
+name: Bug report
+description: Something in aio misbehaved - reproducible steps and verbatim output
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        `aio` prints **every** upstream error verbatim (message, exit code, stderr)
+        - please paste it as-is, no paraphrasing.
+  - type: input
+    id: version
+    attributes:
+      label: aio version
+      description: Output of `aio --version` (include `node -v` if it looks Node-related).
+      placeholder: aio 1.9.2 (node v22.x, win32)
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduce
+      description: Exact commands, including any `AIO_*` env vars (values of tokens redacted).
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual output
+      description: "Verbatim output or error, exit code. Also useful - `aio doctor --check` output, plus the log dir (`~/.aio/logs/`, override with `AIO_LOG`)."
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected output
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: Windows 11 / macOS 14 / Ubuntu 24.04 - terminal - proxy?
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I ran `aio doctor --check` (its failure is pasted above if it failed)
+          required: true
+        - label: I searched existing issues
+          required: true

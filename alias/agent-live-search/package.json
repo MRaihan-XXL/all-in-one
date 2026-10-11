@@ -1,0 +1,41 @@
+{
+  "name": "agent-live-search",
+  "version": "1.9.2",
+  "description": "Alias of aio-connect - auto-connect your AI agents to LIVE search across GitHub (630M+ repos, public skills), npm & crates. Zero search storage, no slash-commands.",
+  "type": "module",
+  "bin": {
+    "agent-live-search": "bin/agent-live-search.js"
+  },
+  "files": [
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "aio-connect": "^1.9.2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "live-search",
+    "code-search",
+    "search-cli",
+    "developer-tools"
+  ],
+  "author": "MRaihan-XXL",
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MRaihan-XXL/all-in-one.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MRaihan-XXL/all-in-one/issues"
+  },
+  "homepage": "https://mraihan-xxl.github.io/all-in-one/",
+  "publishConfig": {
+    "access": "public"
+  }
+}
