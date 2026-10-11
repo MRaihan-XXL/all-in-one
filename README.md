@@ -13,7 +13,7 @@
   <a href="./CHANGELOG.md"><img src="https://img.shields.io/badge/release-v1.9.1-cb3837" alt="release v1.9.1 (2026-10-08)"></a>
   <a href="https://www.npmjs.com/package/aio-connect"><img src="https://img.shields.io/npm/v/aio-connect?color=cb3837" alt="npm version"></a>
   <a href="https://github.com/MRaihan-XXL/all-in-one/actions/workflows/ci.yml"><img src="https://github.com/MRaihan-XXL/all-in-one/actions/workflows/ci.yml/badge.svg" alt="CI 3-OS"></a>
-  <img src="https://img.shields.io/badge/eval-hit%401%2097.4%25%20%C2%B7%20MRR%200.985%20%C2%B7%20n%3D114-2ea44f" alt="eval: hit@1 97.4%  MRR 0.985  n=114 (2026-10-09)">
+  <img src="https://img.shields.io/badge/eval-hit%401%2099.1%25%20%C2%B7%20MRR%200.994%20%C2%B7%20n%3D114-2ea44f" alt="eval: hit@1 99.1%  MRR 0.994  n=114 (2026-10-11)">
   <img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="license: GPL-3.0">
   <img src="https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg" alt="node >= 22">
   <img src="https://img.shields.io/badge/agents-8-orange.svg" alt="8 agents supported">
@@ -301,6 +301,11 @@ Changes: added chart.js, wired the data feed.
   no queries and no results) and `~/.aio/skills-ledger.json` (name, path,
   sha256 and source of each skill — written **only after an explicit
   `aio skill add`**) — all listed in [docs/CONFIG.md](./docs/CONFIG.md).
+- **Opt-in only**: with `AIO_SELF_TUNE=1` set, `aio ask` may read one more
+  local file — `~/.aio/self-tune-ledger.json`, a **local, never-uploaded**
+  rank-weight ledger written only by the repo-side harness (`node
+  scripts/self-tune.mjs`); delete it to reset to the default rank weight.
+  Zero cloud storage is unchanged.
 - `aio borrow --get` clones into `%TEMP%/aio-borrow` with a **24-hour TTL** —
   the next run purges it, `--clean` wipes everything now.
 - CLI tools are consumed via `npx` / `uvx` — never installed permanently.
@@ -423,7 +428,8 @@ node bin/aio.js agent "csv to interactive chart"
 node bin/aio.js doctor --check
 node scripts/capture-outputs.mjs  # regenerate OUTPUTS.md (verbatim CLI output gallery, never hand-typed)
 powershell -ExecutionPolicy Bypass -File scripts/screenshots.ps1  # re-render assets/screenshots/*.png from the animated SVGs (Edge headless)
-node scripts/eval-relevance.mjs --write   # from a repo checkout (scripts/ ships in the repo, not the npm tarball): live 114-query golden set → hit@8 = 114/114 (100%), hit@1 = 111/114 (97.4%), MRR 0.985, measured 2026-10-09
+node scripts/eval-relevance.mjs --write   # from a repo checkout (scripts/ ships in the repo, not the npm tarball): live 114-query golden set → hit@8 = 114/114 (100%), hit@1 = 113/114 (99.1%), MRR 0.994, measured 2026-10-11
+AIO_SELF_TUNE=1 node scripts/self-tune.mjs   # Cell harness (repo-only, network required): 13-point BM25:trust grid over the same 114-query golden set (fetch-once + offline re-rank; fitness = hit@1 + MRR) → KEEP or PROMOTE vs TRUST_W; --write patches src/search.js when strictly fitter; AIO_SELF_TUNE=1 also writes the local per-class ledger
 ```
 
 Static JSON endpoints (GitHub Pages, same origin as the site — no auth, no

@@ -7,7 +7,7 @@ Everything `aio` reads or writes on your machine, in execution order.
 | Source | Used for | If missing |
 |---|---|---|
 | `$PATH` **or** the agent's config dir | detect agents (`opencode`, `claude`, `kimi`, `jcode`, `freebuff`, `hermes`, `codex`, `gemini`) and `codebase-memory-mcp` | agent reported *not installed* |
-| `$AIO_STATE_DIR` (default `~/.aio`) | state dir: `config.json`, `aio-context.md`, `backups/`, `block-hashes.json`, MCP ledger | created on first run |
+| `$AIO_STATE_DIR` (default `~/.aio`) | state dir: `config.json`, `aio-context.md`, `backups/`, `block-hashes.json`, MCP ledger, `self-tune-ledger.json` (opt-in local experience — read at `aio ask` time only when `AIO_SELF_TUNE=1`) | created on first run |
 
 There is no repos directory and no install plan since v1.5.0 (`--repos`,
 `AIO_REPOS_DIR` removed).
@@ -99,6 +99,33 @@ calls **across processes** with a shared clock file:
 - `AIO_RATE=<n>` overrides calls-per-minute; `AIO_RATE=0` disables spacing.
 - The wait is capped at 8 s (an honest 403 beats an unbounded stall); a
   read-only home degrades to in-process spacing only.
+
+### Self-tuned ranking (`AIO_SELF_TUNE`)
+
+`AIO_SELF_TUNE=1` is **opt-in**: with it set, `aio ask` may swap the rank
+trust weight (`TRUST_W`, committed default 0.1 after the v1.9.2 grid) per
+query class (`directional`, `entity`, `natural`) for classes the local
+experience ledger proved — the
+class must have `n >= 5` and a fitness (`hit@1` + MRR) at least the global
+winner's. Without the env var the behavior is the committed default and no
+ledger is read.
+
+| File | Written by | Contents |
+|---|---|---|
+| `~/.aio/self-tune-ledger.json` (or `$AIO_STATE_DIR/self-tune-ledger.json`) | only the repo-side harness `AIO_SELF_TUNE=1 node scripts/self-tune.mjs` (`scripts/` ships in the repo, not the npm tarball) — never by `aio` itself and never uploaded | per-class weight winners + global winner (fitness, hit@1, MRR, n) from a 13-point grid over the shared 114-query golden set (`scripts/golden.mjs`) |
+
+- **Local only, never uploaded** — the ledger is machine-local experience;
+  zero cloud storage is unchanged.
+- **Reset by delete**: removing the file returns `aio ask` to the default
+  `TRUST_W = 0.1` for every class.
+- A corrupt ledger is moved aside as `*.corrupt-*.json` with a warning
+  (`preserved as …, falling back to default rank weights`) — ranking falls
+  back to the default, the bad file is kept for inspection.
+- The harness itself needs network (fetch-once, then offline re-rank) and
+  refuses to promote a winner when any query hit a failed source or came back
+  entryless (`UNRELIABLE`, nothing written) — a rate-limited fetch measures a
+  different corpus than production; `aio ask` reads the ledger offline — it is
+  a local file.
 
 ### Output control (`AIO_QUIET`, `NO_COLOR`, `AIO_LANG`)
 
