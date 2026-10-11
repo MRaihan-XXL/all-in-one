@@ -193,6 +193,7 @@ const EN = {
 
   /* ---- state / consent / rollback / setup ---- */
   configUnreadable: '[aio] warning: {file} is unreadable — preserved as {kept}, continuing with empty state',
+  tuneLedgerCorrupt: '[aio] warning: {file} is unreadable — preserved as {kept}, falling back to default rank weights',
   nodeVersionWarn: '[aio] warning: Node {version} detected — Node >= 22 recommended',
   consentNonInteractive: '[aio] non-interactive session — plan shown above, nothing written. Re-run with --yes to apply.',
   consentCancelled: '[aio] cancelled — no files written. Re-run with --yes to apply without prompting.',
@@ -388,6 +389,7 @@ const ID = {
 
   /* ---- state / consent / rollback / setup ---- */
   configUnreadable: '[aio] peringatan: {file} tidak terbaca — disimpan sebagai {kept}, lanjut dengan state kosong',
+  tuneLedgerCorrupt: '[aio] peringatan: {file} tidak terbaca — disimpan sebagai {kept}, kembali ke bobot ranking default',
   nodeVersionWarn: '[aio] peringatan: Node {version} terdeteksi — Node >= 22 disarankan',
   consentNonInteractive: '[aio] sesi non-interaktif — rencana ditampilkan di atas, tidak ada yang ditulis. Jalankan ulang dengan --yes untuk menerapkan.',
   consentCancelled: '[aio] dibatalkan — tidak ada file yang ditulis. Jalankan ulang dengan --yes tanpa konfirmasi.',

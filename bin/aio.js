@@ -86,7 +86,8 @@ const HELP_EN = `
     AIO_OFFLINE=1, AIO_NO_GH=1, AIO_STATE_DIR, GH_TOKEN,
     AIO_RATE=<calls/min|0> (GitHub search budget; 0 disables spacing),
     AIO_QUIET=1 / AIO_NO_BANNER=1 (no banner), AIO_LANG=id (help text in
-    Bahasa Indonesia), NO_COLOR=1
+    Bahasa Indonesia), NO_COLOR=1, AIO_SELF_TUNE=1 (adaptive rank ledger —
+    local only, never leaves this machine)
 
   Note
     aioc is an alias of the same binary — Adobe's App Builder CLI (@adobe/aio)
@@ -187,7 +188,8 @@ const HELP_ID = `
     AIO_OFFLINE=1, AIO_NO_GH=1, AIO_STATE_DIR, GH_TOKEN,
     AIO_RATE=<panggilan/menit|0> (anggaran pencarian GitHub; 0 menonaktifkan
     jeda), AIO_QUIET=1 / AIO_NO_BANNER=1 (tanpa banner), AIO_LANG=id (teks
-    bantuan Bahasa Indonesia), NO_COLOR=1
+    bantuan Bahasa Indonesia), NO_COLOR=1, AIO_SELF_TUNE=1 (ledger ranking
+    adaptif — lokal saja, tidak pernah keluar dari mesin ini)
 
   Catatan
     aioc adalah alias dari binari yang sama — Adobe's App Builder CLI (@adobe/aio)

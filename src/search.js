@@ -2,10 +2,75 @@
 // merged + ranked with BM25 blended with source trust (stars/downloads/npm score).
 // No search storage: every result is printed only — never written to disk or
 // database.
+import fs from 'node:fs';
+import path from 'node:path';
 import { liveSearch } from './live.js';
 import { msg } from './messages.js';
+import { STATE_DIR, preserveCorrupt } from './paths.js';
 
 /* ---------------- BM25 (in-memory merge ranker) ---------------- */
+
+/** Committed rank weight (trust share; BM25 share = 1 - TRUST_W). The Cell
+ *  harness (scripts/self-tune.mjs) grids this against the golden set and a
+ *  strictly fitter winner is committed here — each release is the next
+ *  "offspring". Default 0.65 relevance + 0.35 trust (FR12). */
+export const TRUST_W = 0.1;
+
+/** Query-shape classes for Mahoraga's local experience ledger — deterministic
+ *  proxies only: direction words first, then bare identifiers, else natural. */
+export function queryClass(q) {
+  const s = String(q || '').trim();
+  if (/\bto\b/i.test(s)) return 'directional';
+  if (!/\s/.test(s)) return 'entity';
+  return 'natural';
+}
+
+const TUNE_LEDGER = path.join(STATE_DIR, 'self-tune-ledger.json');
+let tuneCache = { mtime: -2, ledger: null };
+
+function readTuneLedger() {
+  let mtime = -1;
+  try {
+    mtime = fs.statSync(TUNE_LEDGER).mtimeMs;
+  } catch {
+    /* absent = no local experience yet */
+  }
+  if (mtime === -1) {
+    if (tuneCache.mtime !== -1) tuneCache = { mtime: -1, ledger: null };
+    return null;
+  }
+  if (tuneCache.mtime === mtime) return tuneCache.ledger;
+  let ledger = null;
+  try {
+    ledger = JSON.parse(fs.readFileSync(TUNE_LEDGER, 'utf8'));
+  } catch {
+    // Corrupt local experience must not crash ranking, but it is also the only
+    // copy of what went wrong: move it aside and say so — never swallow it.
+    const kept = preserveCorrupt(TUNE_LEDGER);
+    console.error(msg('tuneLedgerCorrupt', { file: TUNE_LEDGER, kept }));
+    ledger = null;
+  }
+  tuneCache = { mtime, ledger };
+  return ledger;
+}
+
+/** Effective trust weight — TRUST_W by default (env off = zero extra I/O).
+ *  Mahoraga (opt-in AIO_SELF_TUNE=1) swaps in a per-class weight ONLY when the
+ *  local ledger proved it: n >= 5 and class fitness >= the global winner's.
+ *  Local machine only — experience never leaves this machine (zero-storage). */
+export function resolveTrustW(query) {
+  if (process.env.AIO_SELF_TUNE !== '1') return TRUST_W;
+  const ledger = readTuneLedger();
+  const cls = ledger?.classes?.[queryClass(query)];
+  if (!cls || typeof cls.w !== 'number' || cls.w < 0 || cls.w > 1 || !(cls.n >= 5)) {
+    return TRUST_W;
+  }
+  const g = ledger?.global;
+  if (typeof cls.fitness === 'number' && typeof g?.fitness === 'number' && cls.fitness < g.fitness) {
+    return TRUST_W;
+  }
+  return cls.w;
+}
 
 function tokenize(s) {
   return String(s)
@@ -33,11 +98,12 @@ function trustTier(t) {
 
 /** Standard BM25 (k1=1.2, b=0.75) over an in-memory list. Tiny corpus → build per call.
  *  Entries carrying a numeric `trust01` (source popularity: stars / downloads / npm
- *  score, mapped to [0,1]) are re-ranked 65% relevance + 35% trust — keyword overlap
+ *  score, mapped to [0,1]) are re-ranked (1 - w) relevance + w trust — keyword overlap
  *  stays the gate, trust only orders the matches (supply-chain signal, FR12).
- *  Score is also scaled by query-term coverage so a single rare-term hit cannot
- *  outrank a candidate matching most of the query. */
-export function bm25Search(query, entries, limit = 8) {
+ *  w = opts.trustW (Cell harness grids it) or resolveTrustW(query) (Mahoraga /
+ *  default TRUST_W). Score is also scaled by query-term coverage so a single
+ *  rare-term hit cannot outrank a candidate matching most of the query. */
+export function bm25Search(query, entries, limit = 8, opts = {}) {
   const raw = tokenize(query);
   const q = raw.filter((t) => !QSTOP.has(t));
   if (!q.length) return [];
@@ -68,9 +134,13 @@ export function bm25Search(query, entries, limit = 8) {
   const maxScore = matched.reduce((m, s) => Math.max(m, s.score), 0) || 1;
   const blend = matched.some((s) => typeof s.entry.trust01 === 'number');
   if (blend) {
+    const w =
+      typeof opts.trustW === 'number'
+        ? Math.min(1, Math.max(0, opts.trustW))
+        : resolveTrustW(query);
     for (const s of matched) {
       const t = typeof s.entry.trust01 === 'number' ? Math.min(1, Math.max(0, s.entry.trust01)) : 0;
-      s.score = 0.65 * (s.score / maxScore) + 0.35 * t;
+      s.score = (1 - w) * (s.score / maxScore) + w * t;
     }
   }
   return matched
@@ -131,6 +201,25 @@ export function sourceErrorNote(errors) {
   });
 }
 
+/** Merge-rank one query's fetched pool: BM25+trust, source fallback, diversity,
+ *  dedupe, coverage gate. Exported so the Cell harness re-ranks the SAME pool at
+ *  alternative weights without refetching (fetch-once grid, scripts/self-tune.mjs).
+ *  Comments live here with the logic they explain. */
+export function rankHits(query, entries, opts = {}) {
+  // Merge-rank everything (source order carries stars/relevance; BM25 aligns to the query).
+  const ranked = bm25Search(query, entries, 8, opts);
+  let pool = (ranked.length ? ranked : entries.slice(0, 8)).map((h) =>
+    h.why ? h : { ...h, why: `source-ranked by ${h.src || 'live'}` }
+  );
+  pool = dedupe(diversify(pool, entries, 10));
+  // Near-name noise gate: a hit covering <60% of the query's content terms is a
+  // guess, not an answer — "word-wrap" for "pdf to word". BM25 rows carry cov;
+  // source-ranked fallback rows (no cov) always pass. Never starve the pool:
+  // if the gate would empty it, the unfiltered pool stands.
+  const strict = pool.filter((h) => (h.cov ?? 1) >= 0.6);
+  return strict.length ? strict : pool;
+}
+
 /** `aio ask` → { ok, text, json }. Every hit carries url + function (item 3). */
 export async function runAsk({ query, json }) {
   if (!query || !query.trim()) {
@@ -147,20 +236,8 @@ export async function runAsk({ query, json }) {
     };
   }
 
-  // Merge-rank everything (source order carries stars/relevance; BM25 aligns to the query).
-  const ranked = bm25Search(query, entries, 8);
-  let pool = (ranked.length ? ranked : entries.slice(0, 8)).map((h) =>
-    h.why ? h : { ...h, why: `source-ranked by ${h.src || 'live'}` }
-  );
-  pool = dedupe(diversify(pool, entries, 10));
-  // Near-name noise gate: a hit covering <60% of the query's content terms is a
-  // guess, not an answer — "word-wrap" for "pdf to word". BM25 rows carry cov;
-  // source-ranked fallback rows (no cov) always pass. Never starve the pool:
-  // if the gate would empty it, the unfiltered pool stands.
-  const strict = pool.filter((h) => (h.cov ?? 1) >= 0.6);
-  pool = strict.length ? strict : pool;
-
-  const hits = pool;
+  const trustW = resolveTrustW(query);
+  const hits = rankHits(query, entries, { trustW });
 
   const engine = sources.length ? `live: ${sources.join('+')}` : 'live: no source answered';
   const ms = ((Date.now() - t0) / 1000).toFixed(1);
@@ -177,6 +254,7 @@ export async function runAsk({ query, json }) {
     errors,
     count: hits.length,
     stored: 0, // zero storage — results are never persisted
+    rankWeight: trustW, // effective trust weight — 0.35 default, ledger-proven only when opted in
     hits,
   };
   if (json) return { ok, text: JSON.stringify(out, null, 2), json: out };
