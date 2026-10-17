@@ -13,7 +13,7 @@
   <a href="./CHANGELOG.md"><img src="https://img.shields.io/badge/release-v1.9.2-cb3837" alt="release v1.9.2 (2026-10-11)"></a>
   <a href="https://www.npmjs.com/package/aio-connect"><img src="https://img.shields.io/npm/v/aio-connect?color=cb3837" alt="npm version"></a>
   <a href="https://github.com/MRaihan-XXL/all-in-one/actions/workflows/ci.yml"><img src="https://github.com/MRaihan-XXL/all-in-one/actions/workflows/ci.yml/badge.svg" alt="CI 3-OS"></a>
-  <img src="https://img.shields.io/badge/eval-hit%401%2098.2%25%20%C2%B7%20MRR%200.99%20%C2%B7%20n%3D114-2ea44f" alt="eval: hit@1 98.2%  MRR 0.99  n=114 (2026-10-16)">
+  <img src="https://img.shields.io/badge/eval-hit%401%2098.2%25%20%C2%B7%20MRR%200.991%20%C2%B7%20n%3D114-2ea44f" alt="eval: hit@1 98.2%  MRR 0.991  n=114 (2026-10-17)">
   <img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="license: GPL-3.0">
   <img src="https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg" alt="node >= 22">
   <img src="https://img.shields.io/badge/agents-8-orange.svg" alt="8 agents supported">
@@ -434,7 +434,7 @@ node bin/aio.js doctor --check
 node scripts/capture-outputs.mjs  # regenerate OUTPUTS.md (verbatim CLI output gallery, never hand-typed)
 powershell -ExecutionPolicy Bypass -File scripts/screenshots.ps1  # re-render assets/screenshots/*.png from the animated SVGs (Edge headless)
 node scripts/demo-gif.mjs        # regenerate assets/screenshots/demo.gif — a real ~30 s terminal run (aio ask live results + aio status + zero-storage end card; needs Edge headless, ffmpeg on PATH, network)
-node scripts/eval-relevance.mjs --write   # from a repo checkout (scripts/ ships in the repo, not the npm tarball): live 114-query golden set → hit@8 = 114/114 (100%), hit@1 = 112/114 (98.2%), MRR 0.99, measured 2026-10-16
+node scripts/eval-relevance.mjs --write   # from a repo checkout (scripts/ ships in the repo, not the npm tarball): live 114-query golden set → hit@8 = 114/114 (100%), hit@1 = 112/114 (98.2%), MRR 0.991, measured 2026-10-17
 # scripts/golden.mjs — module: the shared 114-query golden set imported by eval-relevance.mjs, self-tune.mjs and the scorecard gate (one corpus, no drift)
 AIO_SELF_TUNE=1 node scripts/self-tune.mjs   # Cell harness (repo-only, network required): 13-point BM25:trust grid over the same 114-query golden set (fetch-once + offline re-rank; fitness = hit@1 + MRR) → KEEP or PROMOTE vs TRUST_W; --write patches src/search.js when strictly fitter; AIO_SELF_TUNE=1 also writes the local per-class ledger
 ```
